@@ -53,6 +53,25 @@ services:
       - rce-cql
     restart: unless-stopped
 
+  synthea-seed:
+    build:
+      context: .
+      dockerfile: infra/synthea/Dockerfile
+    profiles: ['seed-data']
+    environment:
+      HAPI_BASE_URL: http://hapi:8080/fhir
+      SYNTHEA_REFERENCE_DATE: ${SYNTHEA_REFERENCE_DATE:-20260726}
+      SYNTHEA_CHILD_COUNT: ${SYNTHEA_CHILD_COUNT:-6}
+      SYNTHEA_ADOLESCENT_COUNT: ${SYNTHEA_ADOLESCENT_COUNT:-4}
+      SYNTHEA_ADULT_COUNT: ${SYNTHEA_ADULT_COUNT:-12}
+      SYNTHEA_OLDER_ADULT_COUNT: ${SYNTHEA_OLDER_ADULT_COUNT:-8}
+    depends_on:
+      hapi:
+        condition: service_healthy
+    networks:
+      - rce-cql
+    restart: 'no'
+
   api:
     build:
       context: .

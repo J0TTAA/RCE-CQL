@@ -5,7 +5,7 @@
 | Estado | REVIEW |
 | Fecha | 2026-07-26 |
 | Objetivo | Iniciar NestJS y dejar la plataforma completa conectada por un Compose raiz. |
-| Bloqueo residual | Docker CLI no disponible para ejecutar servicios reales. |
+| Bloqueo residual | SPA y paquete de contratos pendientes para cerrar TASK-1.8. |
 
 ## Alcance
 
@@ -35,4 +35,4 @@
 ## Evidencia
 
 - `docs/evidence/M1/runs/20260726T094853Z/summary.md`
-- El cierre Docker queda pendiente de instalar o habilitar un runtime Compose.
+- `docs/evidence/M0/runs/20260726T115807Z/summary.md` para servicios Docker reales.

@@ -6,7 +6,7 @@
 |---|---|
 | Tipo de documento | Especificacion de requisitos de software |
 | Estado | Propuesto |
-| Version | 0.1.0 |
+| Version | 0.2.0 |
 | Fecha | 2026-07-26 |
 | Referencia metodologica | ISO/IEC/IEEE 29148:2018 |
 
@@ -200,6 +200,7 @@ El flujo educativo esperado es:
 | REQ-D-006 | Los datos de paciente DEBEN usar recursos FHIR R4. | MUST | Integracion |
 | REQ-D-007 | Los escenarios entregados DEBEN contener exclusivamente datos sinteticos. | MUST | Inspeccion |
 | REQ-D-008 | Las dependencias CQL DEBEN resolverse desde una fuente autorizada y versionada. | MUST | Seguridad/Integracion |
+| REQ-D-009 | La poblacion local de demostracion DEBE generarse de forma reproducible, registrar su procedencia y poder distinguirse de otros datos FHIR. | MUST | Inspeccion/Integracion |
 
 ## 12. Requisitos no funcionales
 
@@ -285,7 +286,7 @@ Los valores siguientes son objetivos para un equipo local de demostracion:
 | Pacientes | REQ-F-025 a REQ-F-031 | DESIGN 9.7 y 12.4 | TASK 6.x |
 | CDS Hooks | REQ-F-032 a REQ-F-042 | DESIGN 10.4 y 12.5 | TASK 5.x |
 | Auditoria/acceso | REQ-F-043 a REQ-F-050 | DESIGN 13 y 14 | TASK 7.x |
-| Datos | REQ-D-001 a REQ-D-008 | DESIGN 11 | TASK 3.x y 4.x |
+| Datos | REQ-D-001 a REQ-D-009 | DESIGN 8, 11 y 15 | TASK 1.x, 3.x y 4.x |
 | Calidad | REQ-NF-001 a REQ-NF-026 | DESIGN 13 a 17 | TASK 1.x, 7.x y 8.x |
 
 La trazabilidad detallada se mantendra en las tablas de cada tarea y en los casos de prueba automatizados.

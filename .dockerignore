@@ -5,6 +5,7 @@
 **/node_modules
 **/dist
 **/coverage
+**/output
 docs/evidence/**/runs
 *.log
 .env

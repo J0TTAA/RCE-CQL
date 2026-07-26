@@ -8,12 +8,16 @@
 | HAPI FHIR | Imagen `hapiproject/hapi:v8.10.0-3` | Base logica FHIR y motor Clinical Reasoning. |
 | CQL Translation Service | Imagen `cqframework/cql-translation-service:v2.9.0` | Valida y traduce CQL a ELM JSON. |
 | PostgreSQL | Imagen `postgres:18.4` | Persistencia privada de HAPI. |
+| Synthea | Imagen construida desde `infra/synthea` | Genera y carga pacientes FHIR R4 exclusivamente en HAPI local. |
 | Frontend | Se agregara en `apps/web` | Monaco, pacientes, reglas y cards educativas. |
 
 El CQL Engine no se crea dentro de Nest ni se copia a este repositorio. La
 evaluacion se ejecuta en Clinical Reasoning de HAPI. El traductor es otro
 proceso porque traducir CQL a ELM y evaluar ELM contra pacientes son tareas
 distintas.
+
+Synthea tampoco es un servicio permanente. Es un job opcional que termina
+despues de generar y cargar la poblacion por la API FHIR.
 
 ## Despliegue con HAPI institucional
 
@@ -85,6 +89,22 @@ Eliminar tambien la base sintetica:
 ```powershell
 docker compose down --volumes
 ```
+
+## Poblar HAPI con pacientes realistas
+
+La poblacion de demostracion se genera con Synthea 4.0.0 y semillas fijas. No
+contiene datos de personas reales. Incluye ninos, adolescentes, adultos y
+adultos mayores con recursos clinicos longitudinales FHIR R4.
+
+```bash
+docker compose --profile local-hapi --profile seed-data build synthea-seed
+docker compose --profile local-hapi --profile seed-data run --rm synthea-seed
+```
+
+El comando es idempotente despues de una carga completa. La composicion,
+consultas de verificacion, limitaciones demograficas y recuperacion ante una
+carga interrumpida estan en
+[SYNTHETIC_DATA.md](./SYNTHETIC_DATA.md).
 
 ## Solo backend
 

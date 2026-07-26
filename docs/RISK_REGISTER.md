@@ -8,6 +8,6 @@
 | RISK-004 | El starter HAPI se expone sin seguridad. | Media | Alto | Solo red local de Compose; navegador accede por Nest en el producto. | OPEN |
 | RISK-005 | Se introducen datos identificables durante clases. | Baja | Critico | Fixtures sinteticos, tags de procedencia y revision de logs. | OPEN |
 | RISK-006 | Los diagnosticos del traductor no entregan locators utilizables por Monaco. | Media | Medio | Activar locators/detailed-errors y verificar respuesta en TASK-0.5. | OPEN |
-| RISK-007 | La maquina no dispone de Docker y bloquea M0. | Alta | Alto | Instalar/habilitar Docker Desktop o runtime Compose compatible. | ACTIVE |
+| RISK-007 | La maquina no dispone de Docker y bloquea M0. | Alta | Alto | Docker Compose fue habilitado y los servicios base se verificaron en Fedora. | CLOSED |
 | RISK-008 | Requisitos, diseno y tareas se desalinean. | Media | Medio | `scripts/validate-sdd.ps1` y trazabilidad actualizada por cambio. | MITIGATED |
 | RISK-009 | Una simulacion UI se interpreta como interoperabilidad real. | Media | Alto | Prohibir mocks como evidencia de gates de integracion. | MITIGATED |

@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | BLOCKED |
+| Estado | IN_PROGRESS |
 | Hito | M0 |
 | Tareas | TASK-0.1 a TASK-0.9 |
 | Riesgo | Alto |
-| Bloqueo | Docker CLI no disponible |
+| Bloqueo | Faltan FHIRHelpers, Library/PlanDefinition y `$apply` real |
 
 ## Objetivo
 

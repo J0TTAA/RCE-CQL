@@ -24,10 +24,11 @@
 | Evidencia | Requisito | Tarea | Estado |
 |---|---|---|---|
 | Matriz de versiones candidatas | REQ-NF-002 | TASK-0.1 | VERIFIED-DOC |
-| Compose fijado | REQ-NF-024, REQ-NF-025 | TASK-0.2 | BLOCKED-Docker |
-| CapabilityStatement con Clinical Reasoning | REQ-F-049, REQ-NF-003 | TASK-0.3 | PENDING |
+| Compose fijado | REQ-NF-024, REQ-NF-025 | TASK-0.2 | VERIFIED |
+| CapabilityStatement con Clinical Reasoning | REQ-F-049, REQ-NF-003 | TASK-0.3 | VERIFIED |
 | FHIRHelpers y pacientes sinteticos | REQ-F-008, REQ-D-007 | TASK-0.4 | PENDING |
-| CQL traducido a ELM real | REQ-F-005, REQ-NF-003 | TASK-0.5 | PENDING |
+| CQL traducido a ELM real | REQ-F-005, REQ-NF-003 | TASK-0.5 | VERIFIED-PARTIAL |
+| Poblacion Synthea reproducible | REQ-D-007, REQ-D-009 | TASK-1.9 | PENDING-RUN |
 | Library y PlanDefinition reales | REQ-D-001 a REQ-D-005 | TASK-0.6 | PENDING |
 | Resultado `$apply` real | REQ-F-020, REQ-NF-003 | TASK-0.7 | PENDING |
 | Estrategia de draft probada | REQ-F-019 | TASK-0.8 | PENDING |

@@ -6,7 +6,7 @@
 |---|---|
 | Tipo de documento | Software Design Description |
 | Estado | En desarrollo |
-| Version | 0.2.0 |
+| Version | 0.3.0 |
 | Fecha | 2026-07-26 |
 | Referencia estructural | IEEE 1016-2009 |
 | Backend | NestJS + TypeScript |
@@ -100,6 +100,7 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-011 | Un Compose principal en la raiz | Un solo comando debe conectar API, HAPI, traductor y PostgreSQL sin duplicar configuraciones del spike. | Los servicios propios se construyen desde el workspace y los motores externos usan imagenes fijadas. |
 | ADR-012 | Fundacion paralela al spike M0 | La ausencia local de Docker no impide implementar y probar configuracion, puertos y contratos no clinicos de Nest. | M0 sigue bloqueando WBS 3-6 y ninguna prueba simulada cierra compatibilidad clinica. |
 | ADR-013 | HAPI local por perfil y HAPI institucional por URL | Desarrollo necesita datos sinteticos aislados, mientras el despliegue debe reutilizar el servidor institucional existente. | `local-hapi` nunca se habilita en el servidor y Nest mantiene el mismo `FhirGatewayPort` en ambos modos. |
+| ADR-014 | Synthea versionado como job local reproducible | Aporta historias FHIR R4 realistas sin usar datos identificables ni crear un generador clinico propio. | La demografia base es estadounidense; los casos pedagogicos exactos siguen requiriendo fixtures controlados. |
 
 ## 7. Vista de contexto
 
@@ -132,6 +133,7 @@ flowchart TB
     subgraph Private["Red privada"]
         Backend --> Translator["cql-translation-service"]
         Backend --> Hapi["hapi-fhir"]
+        Seed["synthea-seed\njob opcional"] --> Hapi
         Hapi --> Postgres[("hapi-postgres")]
     end
 ```
@@ -143,6 +145,7 @@ flowchart TB
 | `cql-translation-service` | CQL a ELM | No |
 | `hapi-fhir` | API FHIR y Clinical Reasoning | Mediante PostgreSQL |
 | `hapi-postgres` | Persistencia interna HAPI | Volumen Docker |
+| `synthea-seed` | Generacion y carga inicial de FHIR R4 sintetico | No; termina despues de cargar HAPI |
 
 Implementacion local actual:
 
@@ -150,7 +153,8 @@ Implementacion local actual:
 - `hapi` usa `hapiproject/hapi:v8.10.0-3` e incluye el motor Clinical Reasoning.
 - `cql-translator` usa `cqframework/cql-translation-service:v2.9.0` y solo traduce CQL a ELM.
 - `postgres` es almacenamiento privado de HAPI; Nest no accede a sus tablas.
-- `compose.yaml` en la raiz conecta los cuatro servicios sobre la red privada `rce-cql`.
+- `synthea-seed` usa Synthea 4.0.0 con checksum, semillas y fecha de referencia fijas; solo existe bajo el perfil `seed-data`.
+- `compose.yaml` en la raiz conecta los servicios permanentes y el job opcional sobre la red privada `rce-cql`.
 
 ## 9. Vista de descomposicion
 
@@ -709,12 +713,15 @@ rce-backend-nest
 cql-translation-service
 hapi-fhir
 hapi-postgres
+synthea-seed (job opcional)
 ```
 
 - Solo frontend y backend publican puertos normales.
 - HAPI puede publicar puerto de depuracion solo en development.
 - PostgreSQL permanece privado y usa volumen persistente.
 - HAPI se configura con Clinical Reasoning habilitado.
+- Synthea carga por la API FHIR, registra una marca idempotente y no accede a PostgreSQL.
+- El job de seed no forma parte del perfil de HAPI institucional.
 
 ### 15.2 Perfil con HAPI externo
 

@@ -14,8 +14,6 @@ CQL -> ELM -> Library/PlanDefinition -> HAPI Clinical Reasoning -> resultado
 
 Versiones candidatas y estado de verificacion: [COMPATIBILITY_MATRIX.md](./docs/COMPATIBILITY_MATRIX.md).
 
-Bloqueo local actual: Docker CLI no esta instalado o no esta disponible en `PATH`.
-
 ## Documentos fuente
 
 1. [REQUIREMENTS.md](./docs/REQUIREMENTS.md): que debe cumplir el sistema.
@@ -25,6 +23,7 @@ Bloqueo local actual: Docker CLI no esta instalado o no esta disponible en `PATH
 5. [TRACEABILITY.md](./docs/TRACEABILITY.md): relacion entre aceptacion, diseno, tareas y evidencia.
 6. [RISK_REGISTER.md](./docs/RISK_REGISTER.md): riesgos activos y mitigaciones.
 7. [DEVELOPMENT.md](./docs/DEVELOPMENT.md): servicios, comandos y endpoints locales.
+8. [SYNTHETIC_DATA.md](./docs/SYNTHETIC_DATA.md): generacion y carga reproducible de pacientes.
 
 ## Trabajo actual
 
@@ -61,6 +60,13 @@ El servicio `cql-translator` solo transforma y valida CQL a ELM. El motor de
 evaluacion clinica esta incluido en HAPI mediante Clinical Reasoning. NestJS no
 reimplementa ninguno de los dos: coordina llamadas, aplica permisos y expone la
 API del RCE.
+
+Poblar el HAPI local con 30 pacientes Synthea:
+
+```bash
+docker compose --profile local-hapi --profile seed-data build synthea-seed
+docker compose --profile local-hapi --profile seed-data run --rm synthea-seed
+```
 
 Para desplegar contra un HAPI institucional existente, usar
 `.env.server.example`. Ese modo levanta la API y el traductor, pero no crea HAPI

@@ -6,7 +6,7 @@
 |---|---|
 | Tipo de documento | Plan de implementacion / WBS |
 | Estado | En ejecucion |
-| Version | 0.2.0 |
+| Version | 0.3.0 |
 | Fecha | 2026-07-26 |
 | Base | Requisitos y SDD del proyecto |
 
@@ -87,10 +87,10 @@ Objetivo: demostrar la cadena tecnica antes de construir features.
 | ID | Tarea/entregable | Dependencias | Requisitos | Tamano | Estado |
 |---|---|---|---|---|---|
 | TASK-0.1 | Seleccionar y registrar versiones candidatas de HAPI, traductor y tooling CQL. | Ninguna | REQ-NF-002 | S | DONE |
-| TASK-0.2 | Crear Compose minimo con HAPI, PostgreSQL y CQL Translation Service. | 0.1 | REQ-NF-024, REQ-NF-025 | M | BLOCKED |
-| TASK-0.3 | Habilitar Clinical Reasoning y comprobar `/metadata`. | 0.2 | REQ-F-049, REQ-NF-003 | S | TODO |
+| TASK-0.2 | Crear Compose minimo con HAPI, PostgreSQL y CQL Translation Service. | 0.1 | REQ-NF-024, REQ-NF-025 | M | DONE |
+| TASK-0.3 | Habilitar Clinical Reasoning y comprobar `/metadata`. | 0.2 | REQ-F-049, REQ-NF-003 | S | DONE |
 | TASK-0.4 | Instalar FHIRHelpers R4 y un paciente sintetico minimo. | 0.2 | REQ-F-008, REQ-D-007, REQ-D-008 | M | TODO |
-| TASK-0.5 | Traducir un fixture CQL a ELM mediante HTTP. | 0.2, 0.4 | REQ-F-005, REQ-NF-003 | S | TODO |
+| TASK-0.5 | Traducir un fixture CQL a ELM mediante HTTP. | 0.2, 0.4 | REQ-F-005, REQ-NF-003 | S | REVIEW |
 | TASK-0.6 | Construir manualmente Library y PlanDefinition compatibles. | 0.5 | REQ-D-001 a REQ-D-005 | M | TODO |
 | TASK-0.7 | Ejecutar `$apply` contra el paciente y documentar respuesta real. | 0.3, 0.6 | REQ-F-020, REQ-NF-003 | M | TODO |
 | TASK-0.8 | Verificar `$apply` sobre draft o documentar fallback temporal. | 0.7 | REQ-F-019 | S | TODO |
@@ -98,10 +98,9 @@ Objetivo: demostrar la cadena tecnica antes de construir features.
 
 Gate `M0`: no comienza WBS 3-6 hasta completar TASK-0.9.
 
-Bloqueo actual de TASK-0.2: la configuracion esta integrada en el `compose.yaml`
-principal, pero Docker CLI no esta instalado o disponible en `PATH`. No se
-considera verificada hasta levantar los servicios y conservar la evidencia del
-run.
+Los servicios base fueron levantados en Fedora y el readiness comprobo HAPI,
+Clinical Reasoning y el traductor. El gate M0 sigue abierto hasta demostrar
+FHIRHelpers, Library/PlanDefinition y `$apply`.
 
 ## 6. WBS 1 - Fundacion del repositorio
 
@@ -117,11 +116,12 @@ Objetivo: establecer una base reproducible para frontend, backend e infraestruct
 | TASK-1.6 | Implementar `/health/live` y esqueleto de readiness. | 1.3 | REQ-F-047, REQ-F-048 | S | DONE |
 | TASK-1.7 | Generar OpenAPI y convenciones de DTOs. | 1.2, 1.4 | REQ-I-005, REQ-I-006 | S | DONE |
 | TASK-1.8 | Integrar backend y frontend vacios en Docker Compose. | 1.1 a 1.7 | REQ-NF-024, REQ-NF-025 | M | REVIEW |
+| TASK-1.9 | Integrar generador Synthea reproducible y carga idempotente en HAPI local. | 0.2 | REQ-D-007, REQ-D-009 | M | REVIEW |
 
 Evidencia de TASK-1.2 a TASK-1.7:
-`docs/evidence/M1/runs/20260726T094853Z/summary.md`. TASK-1.1 espera la SPA y
-el paquete de contratos; TASK-1.8 espera esos servicios y una ejecucion Docker
-real.
+`docs/evidence/M1/runs/20260726T094853Z/summary.md`. TASK-1.1 y TASK-1.8 esperan
+la SPA y el paquete de contratos. TASK-1.9 espera ejecutar y contar la poblacion
+real en el HAPI local.
 
 ## 7. WBS 2 - Adaptadores externos
 

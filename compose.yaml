@@ -1,0 +1,99 @@
+name: rce-cql
+
+services:
+  postgres:
+    image: postgres:18.4
+    profiles: ['local-hapi']
+    environment:
+      POSTGRES_DB: ${HAPI_DB_NAME:-hapi}
+      POSTGRES_USER: ${HAPI_DB_USER:-hapi}
+      POSTGRES_PASSWORD: ${HAPI_DB_PASSWORD:-rce-cql-local-only}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${HAPI_DB_USER:-hapi} -d ${HAPI_DB_NAME:-hapi}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - hapi-postgres-data:/var/lib/postgresql
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+  hapi:
+    image: hapiproject/hapi:v8.10.0-3
+    profiles: ['local-hapi']
+    environment:
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/config/application-local.yaml
+      HAPI_DB_NAME: ${HAPI_DB_NAME:-hapi}
+      HAPI_DB_USER: ${HAPI_DB_USER:-hapi}
+      HAPI_DB_PASSWORD: ${HAPI_DB_PASSWORD:-rce-cql-local-only}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'java', '-cp', '/app', 'HealthCheck']
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 90s
+    ports:
+      - '127.0.0.1:${HAPI_PORT:-8080}:8080'
+    volumes:
+      - ./infra/hapi/application-local.yaml:/app/config/application-local.yaml:ro
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+  cql-translator:
+    image: cqframework/cql-translation-service:v2.9.0
+    profiles: ['local-translator']
+    ports:
+      - '127.0.0.1:${CQL_TRANSLATOR_PORT:-8081}:8080'
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      API_PREFIX: api/v1
+      HAPI_BASE_URL: ${HAPI_BASE_URL:-http://hapi:8080/fhir}
+      HAPI_AUTH_BEARER_TOKEN: ${HAPI_AUTH_BEARER_TOKEN:-}
+      CQL_TRANSLATOR_BASE_URL: ${CQL_TRANSLATOR_BASE_URL:-http://cql-translator:8080}
+      DEPENDENCY_TIMEOUT_MS: ${DEPENDENCY_TIMEOUT_MS:-5000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+    depends_on:
+      hapi:
+        condition: service_healthy
+        required: false
+      cql-translator:
+        condition: service_started
+        required: false
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/v1/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    ports:
+      - '127.0.0.1:${API_PORT:-3000}:3000'
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+volumes:
+  hapi-postgres-data:
+
+networks:
+  rce-cql:
+    driver: bridge

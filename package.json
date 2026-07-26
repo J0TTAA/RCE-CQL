@@ -1,0 +1,23 @@
+{
+  "name": "rce-cql",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RCE educativo con autoria CQL, HAPI FHIR y CDS Hooks",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24.18.0 <25",
+    "npm": ">=11"
+  },
+  "scripts": {
+    "build": "npm run build --workspace @rce-cql/api",
+    "dev:api": "npm run dev --workspace @rce-cql/api",
+    "start:api": "npm run start --workspace @rce-cql/api",
+    "lint": "npm run lint --workspace @rce-cql/api",
+    "format:check": "npm run format:check --workspace @rce-cql/api",
+    "test": "npm run test --workspace @rce-cql/api",
+    "typecheck": "npm run typecheck --workspace @rce-cql/api"
+  }
+}

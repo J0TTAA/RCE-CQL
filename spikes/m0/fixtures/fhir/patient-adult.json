@@ -1,0 +1,23 @@
+{
+  "resourceType": "Patient",
+  "id": "rce-m0-adult",
+  "meta": {
+    "tag": [
+      {
+        "system": "https://rce-cql.local/tags",
+        "code": "synthetic",
+        "display": "Synthetic educational data"
+      }
+    ]
+  },
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "SyntheticAdult",
+      "given": ["Alex"]
+    }
+  ],
+  "gender": "unknown",
+  "birthDate": "1985-01-15"
+}

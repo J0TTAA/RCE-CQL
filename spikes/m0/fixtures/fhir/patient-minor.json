@@ -1,0 +1,23 @@
+{
+  "resourceType": "Patient",
+  "id": "rce-m0-minor",
+  "meta": {
+    "tag": [
+      {
+        "system": "https://rce-cql.local/tags",
+        "code": "synthetic",
+        "display": "Synthetic educational data"
+      }
+    ]
+  },
+  "active": true,
+  "name": [
+    {
+      "use": "official",
+      "family": "SyntheticMinor",
+      "given": ["Sam"]
+    }
+  ],
+  "gender": "unknown",
+  "birthDate": "2012-08-20"
+}

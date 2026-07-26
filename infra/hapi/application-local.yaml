@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/${HAPI_DB_NAME}
+    username: ${HAPI_DB_USER}
+    password: ${HAPI_DB_PASSWORD}
+    driverClassName: org.postgresql.Driver
+  jpa:
+    properties:
+      hibernate.dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
+      hibernate.search.enabled: false
+
+hapi:
+  fhir:
+    fhir_version: R4
+    cr:
+      enabled: true
+    cdshooks:
+      enabled: true

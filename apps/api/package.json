@@ -1,0 +1,43 @@
+{
+  "name": "@rce-cql/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend NestJS del RCE educativo",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
+    "lint": "eslint src --max-warnings=0",
+    "format": "prettier --write \"src/**/*.ts\" \"*.{json,mjs,ts}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.{json,mjs,ts}\"",
+    "test": "tsx --test src/common/logging/json-logger.service.spec.ts src/config/environment.spec.ts src/modules/cql/infrastructure/cql-translation-http.adapter.spec.ts src/modules/fhir/infrastructure/hapi-fhir-http.adapter.spec.ts src/modules/health/health.service.spec.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "11.1.28",
+    "@nestjs/config": "4.0.4",
+    "@nestjs/core": "11.1.28",
+    "@nestjs/platform-express": "11.1.28",
+    "@nestjs/swagger": "11.4.6",
+    "class-transformer": "0.5.1",
+    "class-validator": "0.15.1",
+    "helmet": "8.3.0",
+    "joi": "18.2.3",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@types/express": "5.0.6",
+    "@types/node": "24.13.3",
+    "eslint": "9.39.5",
+    "globals": "17.7.0",
+    "prettier": "3.9.6",
+    "tsx": "4.23.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.65.0"
+  },
+  "engines": {
+    "node": ">=24.18.0 <25"
+  }
+}

@@ -22,6 +22,15 @@ log() {
   printf '[synthea-seed] %s\n' "$*"
 }
 
+dump_java_error_report() {
+  local report
+  for report in /tmp/rce-synthea-hs-err-*.log /tmp/hs_err_pid*.log /hs_err_pid*.log; do
+    [[ -f "${report}" ]] || continue
+    printf '\n[synthea-seed] JVM fatal error report: %s\n' "${report}" >&2
+    sed -n '1,180p' "${report}" >&2 || true
+  done
+}
+
 fail() {
   printf '[synthea-seed] ERROR: %s\n' "$*" >&2
   exit 1
@@ -306,9 +315,14 @@ patient_count() {
 }
 
 main() {
+  trap 'dump_java_error_report' ERR
   validate_config
   WORK_DIR="$(mktemp -d /tmp/rce-synthea.XXXXXX)"
   trap 'rm -rf "${WORK_DIR}"' EXIT
+
+  log 'Java runtime'
+  java -version 2>&1 | sed 's/^/[synthea-seed] /'
+  log "JAVA_TOOL_OPTIONS=${JAVA_TOOL_OPTIONS:-<unset>}"
 
   wait_for_hapi
 

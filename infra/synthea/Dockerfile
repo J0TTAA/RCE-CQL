@@ -1,6 +1,6 @@
 FROM eclipse-temurin:21-jdk-alpine
 
-ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -Xms128m -Xmx1024m"
+ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xms128m -Xmx1024m -XX:ErrorFile=/tmp/rce-synthea-hs-err-%p.log"
 
 ARG SYNTHEA_VERSION=4.0.0
 ARG SYNTHEA_SHA256=ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1

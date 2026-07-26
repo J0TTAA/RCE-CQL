@@ -38,6 +38,8 @@ docker compose --profile local-hapi --profile seed-data run --rm synthea-seed
 ```
 
 La primera construccion descarga el JAR oficial de Synthea 4.0.0 y verifica su SHA-256 antes de crear la imagen. La generacion y la carga pueden tardar varios minutos.
+El contenedor usa JDK 21 LTS y `SerialGC`; esta combinacion evita un crash
+nativo observado con Java 25/Alpine durante la generacion de cohortes pequenas.
 
 El cargador usa solamente la API FHIR de HAPI. No accede a PostgreSQL y sigue el [orden de carga recomendado por Synthea](https://github.com/synthetichealth/synthea/wiki/FHIR-Transaction-Bundles):
 

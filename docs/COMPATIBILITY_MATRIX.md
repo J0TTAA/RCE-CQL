@@ -13,17 +13,17 @@
 
 ## Versiones candidatas
 
-| Componente              | Version/imagen fijada                        | Relacion                                    | Estado               |
-| ----------------------- | -------------------------------------------- | ------------------------------------------- | -------------------- |
-| HAPI FHIR JPA Starter   | `hapiproject/hapi:v8.10.0-3`                 | HAPI FHIR 8.10.0                            | VERIFIED-BASE        |
-| HAPI Clinical Reasoning | `4.9.0` incluida por la imagen               | Capacidad opcional para evolucion posterior | VERIFIED-AVAILABLE   |
-| CQL Translation Service | `cqframework/cql-translation-service:v2.9.0` | Expone CQL Tools 4.7.0                      | VERIFIED-TRANSLATION |
-| CQL Tools               | `4.7.0`                                      | Traductor y validacion semantica CQL a ELM  | VERIFIED-TRANSLATION |
-| FHIR                    | `R4 4.0.1`                                   | Modelo base del MVP                         | SELECTED             |
-| CQL                     | `1.5.3` como baseline normativa R4           | Lenguaje de reglas                          | SELECTED             |
-| PostgreSQL              | `postgres:18.4`                              | Persistencia interna de HAPI                | VERIFIED-BASE        |
-| Synthea                 | `4.0.0`, JAR con SHA-256 fijado              | Genera pacientes e historias FHIR R4        | UNVERIFIED-SEED      |
-| Runtime Synthea         | `eclipse-temurin:25.0.3_9-jre-alpine-3.23`   | Java 25 recomendado por Synthea 4.0.0       | UNVERIFIED-SEED      |
+| Componente              | Version/imagen fijada                        | Relacion                                                                 | Estado               |
+| ----------------------- | -------------------------------------------- | ------------------------------------------------------------------------ | -------------------- |
+| HAPI FHIR JPA Starter   | `hapiproject/hapi:v8.10.0-3`                 | HAPI FHIR 8.10.0                                                         | VERIFIED-BASE        |
+| HAPI Clinical Reasoning | `4.9.0` incluida por la imagen               | Capacidad opcional para evolucion posterior                              | VERIFIED-AVAILABLE   |
+| CQL Translation Service | `cqframework/cql-translation-service:v2.9.0` | Expone CQL Tools 4.7.0                                                   | VERIFIED-TRANSLATION |
+| CQL Tools               | `4.7.0`                                      | Traductor y validacion semantica CQL a ELM                               | VERIFIED-TRANSLATION |
+| FHIR                    | `R4 4.0.1`                                   | Modelo base del MVP                                                      | SELECTED             |
+| CQL                     | `1.5.3` como baseline normativa R4           | Lenguaje de reglas                                                       | SELECTED             |
+| PostgreSQL              | `postgres:18.4`                              | Persistencia interna de HAPI                                             | VERIFIED-BASE        |
+| Synthea                 | `4.0.0`, JAR con SHA-256 fijado              | Genera pacientes e historias FHIR R4                                     | UNVERIFIED-SEED      |
+| Runtime Synthea         | `eclipse-temurin:21-jdk-alpine`              | JDK LTS compatible; SerialGC evita el crash observado con Java 25/Alpine | UNVERIFIED-SEED      |
 
 ## Decision sobre cql-engine
 

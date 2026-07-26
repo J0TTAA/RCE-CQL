@@ -1,4 +1,6 @@
-FROM eclipse-temurin:25.0.3_9-jre-alpine-3.23
+FROM eclipse-temurin:21-jdk-alpine
+
+ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -Xms128m -Xmx1024m"
 
 ARG SYNTHEA_VERSION=4.0.0
 ARG SYNTHEA_SHA256=ed43c20ad40ba5c3bc724503a5af032715fe3c491620b766148e7c2361e6ecc1

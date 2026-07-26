@@ -6,7 +6,7 @@
 |---|---|
 | Tipo de documento | Software Design Description |
 | Estado | En desarrollo |
-| Version | 0.3.0 |
+| Version | 0.4.0 |
 | Fecha | 2026-07-26 |
 | Referencia estructural | IEEE 1016-2009 |
 | Backend | NestJS + TypeScript |
@@ -101,6 +101,7 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-012 | Fundacion paralela al spike M0 | La ausencia local de Docker no impide implementar y probar configuracion, puertos y contratos no clinicos de Nest. | M0 sigue bloqueando WBS 3-6 y ninguna prueba simulada cierra compatibilidad clinica. |
 | ADR-013 | HAPI local por perfil y HAPI institucional por URL | Desarrollo necesita datos sinteticos aislados, mientras el despliegue debe reutilizar el servidor institucional existente. | `local-hapi` nunca se habilita en el servidor y Nest mantiene el mismo `FhirGatewayPort` en ambos modos. |
 | ADR-014 | Synthea versionado como job local reproducible | Aporta historias FHIR R4 realistas sin usar datos identificables ni crear un generador clinico propio. | La demografia base es estadounidense; los casos pedagogicos exactos siguen requiriendo fixtures controlados. |
+| ADR-015 | Prototipo frontend externo y componentes portables a Vite | Permite iterar la experiencia en v0 sin abrir `apps/web` antes del gate M0 ni acoplar el resultado a Next.js. | El prototipo se revisa contra `docs/frontend`; la integracion ocurre por componentes y adapters, no copiando una pagina monolitica. |
 
 ## 7. Vista de contexto
 
@@ -161,6 +162,8 @@ Implementacion local actual:
 ### 9.1 Frontend
 
 La implementacion de referencia sera React con Vite, TypeScript y Monaco Editor.
+La especificacion visual, arquitectura de componentes y prompt de prototipado se
+mantienen en [frontend/README.md](./frontend/README.md).
 
 Rutas:
 
@@ -811,7 +814,6 @@ Los escenarios AC-001 a AC-010 se automatizaran o documentaran como pruebas repe
 
 ## 19. Decisiones abiertas
 
-- Libreria de componentes visuales del frontend.
 - Proveedor de identidad para despliegue multiusuario.
 - Terminologias exactas de los escenarios finales.
 - Politica de retencion de GuidanceResponse y AuditEvent.

@@ -24,6 +24,7 @@ Versiones candidatas y estado de verificacion: [COMPATIBILITY_MATRIX.md](./docs/
 6. [RISK_REGISTER.md](./docs/RISK_REGISTER.md): riesgos activos y mitigaciones.
 7. [DEVELOPMENT.md](./docs/DEVELOPMENT.md): servicios, comandos y endpoints locales.
 8. [SYNTHETIC_DATA.md](./docs/SYNTHETIC_DATA.md): generacion y carga reproducible de pacientes.
+9. [Frontend README](./docs/frontend/README.md): SDD visual y prompt para la maqueta v0.
 
 ## Trabajo actual
 

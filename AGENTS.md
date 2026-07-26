@@ -13,7 +13,11 @@ Si hay contradiccion, requisitos define el comportamiento, diseno define la solu
 
 ## Gate actual
 
-El proyecto esta en `M0`. No crear el monorepo NestJS/React ni implementar funcionalidades de WBS 1-8 hasta cerrar `TASK-0.9` con evidencia real.
+El proyecto esta en `M0`. El frontend mock/Vite puede implementarse como maqueta
+educativa separada, siempre que no se presente como evidencia de interoperabilidad
+CQL/FHIR ni llame directamente a HAPI o al traductor. Las funcionalidades
+clinicas de backend de WBS 3-6 siguen bloqueadas hasta cerrar `TASK-0.9` con
+evidencia real.
 
 ## Reglas tecnicas
 

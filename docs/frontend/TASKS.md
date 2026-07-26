@@ -2,12 +2,12 @@
 
 ## RCE educativo CQL
 
-| Campo       | Valor                                       |
-| ----------- | ------------------------------------------- |
-| Estado      | Planificado                                 |
-| Version     | 0.2.0                                       |
-| Fecha       | 2026-07-26                                  |
-| Gate actual | Solo prototipo externo; no crear `apps/web` |
+| Campo       | Valor                                                                |
+| ----------- | -------------------------------------------------------------------- |
+| Estado      | Planificado                                                          |
+| Version     | 0.2.0                                                                |
+| Fecha       | 2026-07-26                                                           |
+| Gate actual | Implementacion mock en `apps/web`; integracion real bloqueada por M0 |
 
 ## 1. Estados
 
@@ -42,18 +42,19 @@ Salida del gate:
 
 ## 3. Gate FE-P1 - Fundacion real
 
-Estas tareas permanecen `BLOCKED` hasta que el gate M0 principal autorice
-`apps/web`.
+Estas tareas pueden avanzar como implementacion mock de frontend. La integracion
+real con Nest/HAPI permanece bloqueada hasta que el gate M0 principal autorice
+features clinicas completas.
 
-| ID          | Entregable                                                             | Dependencias | Requisitos                          | Estado  |
-| ----------- | ---------------------------------------------------------------------- | ------------ | ----------------------------------- | ------- |
-| FE-TASK-1.1 | Crear workspace React/Vite/TypeScript y scripts de calidad.            | M0, 0.8      | FE-REQ-047, 048                     | BLOCKED |
-| FE-TASK-1.2 | Fijar Tailwind, primitives, Lucide y Monaco.                           | 1.1          | FE-ADR-003 a 005                    | BLOCKED |
-| FE-TASK-1.3 | Implementar tokens, globals y primitives revisadas.                    | 1.2          | FE-REQ-041 a 045, 051               | BLOCKED |
-| FE-TASK-1.4 | Implementar router, providers y AppShell.                              | 1.3          | FE-REQ-001 a 007                    | BLOCKED |
-| FE-TASK-1.5 | Definir `RceUiApi`, tipos y MockRceUiApi.                              | 1.1          | FE-REQ-016, 029, 049, 050, 054, 056 | BLOCKED |
-| FE-TASK-1.6 | Agregar lint, typecheck, unit tests y Storybook o harness equivalente. | 1.2          | FE-REQ-038 a 046                    | BLOCKED |
-| FE-TASK-1.7 | Implementar SessionProvider y menu de sandbox anonimo.                 | 1.4, 1.5     | FE-REQ-003, 053 a 057               | BLOCKED |
+| ID          | Entregable                                                  | Dependencias | Requisitos                          | Estado  |
+| ----------- | ----------------------------------------------------------- | ------------ | ----------------------------------- | ------- |
+| FE-TASK-1.1 | Crear workspace React/Vite/TypeScript y scripts de calidad. | 0.8          | FE-REQ-047, 048                     | PLANNED |
+| FE-TASK-1.2 | Fijar primitives, Lucide y Monaco.                          | 1.1          | FE-ADR-003 a 005                    | PLANNED |
+| FE-TASK-1.3 | Implementar tokens, globals y primitives revisadas.         | 1.2          | FE-REQ-041 a 045, 051               | PLANNED |
+| FE-TASK-1.4 | Implementar router, providers y AppShell.                   | 1.3          | FE-REQ-001 a 007                    | PLANNED |
+| FE-TASK-1.5 | Definir `RceUiApi`, tipos y MockRceUiApi.                   | 1.1          | FE-REQ-016, 029, 049, 050, 054, 056 | PLANNED |
+| FE-TASK-1.6 | Agregar lint, typecheck, unit tests y build.                | 1.2          | FE-REQ-038 a 046                    | PLANNED |
+| FE-TASK-1.7 | Implementar SessionProvider y menu de sandbox anonimo.      | 1.4, 1.5     | FE-REQ-003, 053 a 057               | PLANNED |
 
 ## 4. Gate FE-P2 - Features
 

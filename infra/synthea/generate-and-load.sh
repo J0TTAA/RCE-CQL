@@ -171,12 +171,29 @@ tag_bundle() {
     --arg cohort_system "${COHORT_TAG_SYSTEM}" \
     --arg cohort "${cohort}" \
     '
-      if .resourceType != "Bundle" or .type != "transaction" then
-        error("Expected a FHIR transaction Bundle")
+      if .resourceType != "Bundle" then
+        error("Expected a FHIR Bundle")
       else
-        .entry |= map(
+        .type = "transaction"
+        | .entry = ((.entry // []) | map(
           if .resource then
             .resource as $resource
+            |
+            .request = (
+              .request // (
+                if (($resource.id // "") != "") then
+                  {
+                    method: "PUT",
+                    url: ($resource.resourceType + "/" + $resource.id)
+                  }
+                else
+                  {
+                    method: "POST",
+                    url: $resource.resourceType
+                  }
+                end
+              )
+            )
             |
             .resource.meta = (
               (.resource.meta // {})
@@ -197,7 +214,7 @@ tag_bundle() {
           else
             .
           end
-        )
+        ))
       end
     ' "${source_file}" >"${tagged_file}"
 }

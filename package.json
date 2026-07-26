@@ -13,11 +13,15 @@
   },
   "scripts": {
     "build": "npm run build --workspace @rce-cql/api",
+    "build:web": "npm run build --workspace @rce-cql/web",
     "dev:api": "npm run dev --workspace @rce-cql/api",
+    "dev:web": "npm run dev --workspace @rce-cql/web",
+    "preview:web": "npm run preview --workspace @rce-cql/web",
     "start:api": "npm run start --workspace @rce-cql/api",
     "lint": "npm run lint --workspace @rce-cql/api",
     "format:check": "npm run format:check --workspace @rce-cql/api",
     "test": "npm run test --workspace @rce-cql/api",
-    "typecheck": "npm run typecheck --workspace @rce-cql/api"
+    "typecheck": "npm run typecheck --workspace @rce-cql/api",
+    "typecheck:web": "npm run typecheck --workspace @rce-cql/web"
   }
 }

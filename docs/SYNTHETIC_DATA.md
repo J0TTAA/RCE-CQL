@@ -45,6 +45,8 @@ El cargador usa solamente la API FHIR de HAPI. No accede a PostgreSQL y sigue el
 2. Bundles de `Practitioner`.
 3. Bundles de pacientes con sus historias clinicas.
 
+Los bundles de referencia de Synthea se normalizan a `transaction` antes de enviarlos a HAPI. Si un recurso no trae `entry.request`, el cargador crea una operacion `PUT ResourceType/id` cuando existe `id`, o `POST ResourceType` cuando no existe.
+
 Al finalizar crea `Basic/rce-synthea-4-0-0-v1` con estado `completed`. Si se ejecuta otra vez, detecta esa marca y no duplica pacientes.
 
 ## Comprobacion
@@ -58,6 +60,8 @@ curl -sG http://localhost:8080/fhir/Patient \
 ```
 
 El resultado esperado con la configuracion por defecto es `30`.
+
+Usa el caracter `|` literal dentro de `--data-urlencode`. No pegues `%7C` en ese valor, porque `--data-urlencode` lo volveria a codificar.
 
 Listar nombre, sexo administrativo y fecha de nacimiento:
 

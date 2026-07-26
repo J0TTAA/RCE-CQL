@@ -1,11 +1,11 @@
 # WO-0001 - Prueba de arquitectura CQL/FHIR
 
-| Campo | Valor |
-|---|---|
-| Estado | IN_PROGRESS |
-| Hito | M0 |
-| Tareas | TASK-0.1 a TASK-0.9 |
-| Riesgo | Alto |
+| Campo   | Valor                                                      |
+| ------- | ---------------------------------------------------------- |
+| Estado  | IN_PROGRESS                                                |
+| Hito    | M0                                                         |
+| Tareas  | TASK-0.1 a TASK-0.9                                        |
+| Riesgo  | Alto                                                       |
 | Bloqueo | Faltan FHIRHelpers, Library/PlanDefinition y `$apply` real |
 
 ## Objetivo
@@ -27,7 +27,7 @@ Demostrar con versiones fijadas que CQL valido puede traducirse a ELM, empaqueta
 - Backend NestJS y frontend React.
 - Monaco Editor.
 - API CDS Hooks propia.
-- Autenticacion multiusuario.
+- Implementacion de modo aula anonimo o autenticacion institucional.
 - Pacientes reales.
 - Despliegue externo.
 - Implementacion propia de CQL o ELM.

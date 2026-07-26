@@ -5,7 +5,7 @@
 | Campo     | Valor                                    |
 | --------- | ---------------------------------------- |
 | Estado    | Propuesto para maqueta                   |
-| Version   | 0.1.0                                    |
+| Version   | 0.2.0                                    |
 | Fecha     | 2026-07-26                               |
 | Deriva de | `docs/REQUIREMENTS.md`                   |
 | Audiencia | Alumno, docente y desarrollador frontend |
@@ -15,7 +15,8 @@
 Definir una interfaz educativa de alta fidelidad que permita explorar pacientes
 sinteticos, editar y probar reglas CQL y observar recomendaciones CDS sin salir
 del RCE. La maqueta debe servir como referencia visual y como fuente de
-componentes para la futura SPA React/Vite.
+componentes para la futura SPA React/Vite. La experiencia de clase debe abrirse
+desde una sola URL sin login visible y mostrar un sandbox anonimo por navegador.
 
 ## 2. Alcance
 
@@ -26,12 +27,13 @@ Incluye:
 - Catalogo, editor, validacion y prueba visual de reglas CQL.
 - Visualizacion de ELM y diagnosticos.
 - Cards CDS y confirmacion de sugerencias.
+- Sesion anonima de aula y sandbox visible para soporte docente.
 - Mocks interactivos aislados del render.
 - Estados responsive, accesibles, vacios, cargando y de error.
 
 No incluye:
 
-- Backend, base de datos, autenticacion real ni despliegue.
+- Backend, base de datos, autenticacion real, pantallas de login ni despliegue.
 - Parser, traductor o evaluador CQL implementado en frontend.
 - Acceso directo desde el navegador a HAPI o CQL Translation Service.
 - Datos de pacientes reales.
@@ -40,6 +42,7 @@ No incluye:
 ## 3. Principios de experiencia
 
 - La primera pantalla es la aplicacion utilizable, nunca una landing page.
+- La primera visita no pide cuenta: el sistema entra directo a un sandbox.
 - La interfaz prioriza lectura, comparacion y acciones repetidas.
 - El alumno siempre puede distinguir fuente CQL, ELM, metadata y resultado.
 - Las acciones con efecto clinico muestran alcance y requieren confirmacion.
@@ -55,7 +58,7 @@ No incluye:
 | ---------- | ----------------------------------------------------------------------- | --------- | ------------- |
 | FE-REQ-001 | La maqueta DEBE abrir directamente dentro del shell del RCE.            | MUST      | Inspeccion    |
 | FE-REQ-002 | La navegacion DEBE incluir Pacientes, Reglas y Actividad CDS.           | MUST      | Demostracion  |
-| FE-REQ-003 | El encabezado DEBE mostrar entorno, conectividad y rol activo.          | MUST      | Demostracion  |
+| FE-REQ-003 | El encabezado DEBE mostrar entorno, conectividad, rol activo y sandbox. | MUST      | Demostracion  |
 | FE-REQ-004 | La interfaz DEBE indicar claramente que los datos son sinteticos.       | MUST      | Inspeccion    |
 | FE-REQ-005 | El usuario DEBE poder cambiar entre un rol Alumno y Docente simulado.   | MUST      | Demostracion  |
 | FE-REQ-006 | La navegacion activa DEBE reconocerse por icono, texto y estado visual. | MUST      | Accesibilidad |
@@ -122,14 +125,19 @@ No incluye:
 
 ## 6. Requisitos tecnicos de la maqueta
 
-| ID         | Requisito                                                                                                         | Prioridad | Verificacion |
-| ---------- | ----------------------------------------------------------------------------------------------------------------- | --------- | ------------ |
-| FE-REQ-047 | Los componentes de aplicacion DEBEN ser React + TypeScript portables a Vite.                                      | MUST      | Revision     |
-| FE-REQ-048 | La maqueta NO DEBE depender de Server Components, Server Actions, API routes ni navegacion especifica de Next.js. | MUST      | Revision     |
-| FE-REQ-049 | Los datos mock DEBEN residir fuera de componentes visuales y exponerse mediante interfaces asincronas.            | MUST      | Revision     |
-| FE-REQ-050 | Ningun componente DEBE llamar directamente a HAPI o CQL Translation Service.                                      | MUST      | Revision     |
-| FE-REQ-051 | Los componentes compartidos DEBEN derivar estilos de tokens CSS, no de colores repetidos ad hoc.                  | MUST      | Revision CSS |
-| FE-REQ-052 | El prototipo DEBE usar identificadores y pacientes explicitamente ficticios.                                      | MUST      | Inspeccion   |
+| ID         | Requisito                                                                                                           | Prioridad | Verificacion |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- | --------- | ------------ |
+| FE-REQ-047 | Los componentes de aplicacion DEBEN ser React + TypeScript portables a Vite.                                        | MUST      | Revision     |
+| FE-REQ-048 | La maqueta NO DEBE depender de Server Components, Server Actions, API routes ni navegacion especifica de Next.js.   | MUST      | Revision     |
+| FE-REQ-049 | Los datos mock DEBEN residir fuera de componentes visuales y exponerse mediante interfaces asincronas.              | MUST      | Revision     |
+| FE-REQ-050 | Ningun componente DEBE llamar directamente a HAPI o CQL Translation Service.                                        | MUST      | Revision     |
+| FE-REQ-051 | Los componentes compartidos DEBEN derivar estilos de tokens CSS, no de colores repetidos ad hoc.                    | MUST      | Revision CSS |
+| FE-REQ-052 | El prototipo DEBE usar identificadores y pacientes explicitamente ficticios.                                        | MUST      | Inspeccion   |
+| FE-REQ-053 | La maqueta DEBE entrar en modo aula sin pantalla de login, registro ni seleccion obligatoria de usuario.            | MUST      | Demostracion |
+| FE-REQ-054 | MockRceUiApi DEBE entregar una SessionContext anonima con classroomId, sandboxId, rol y expiracion.                 | MUST      | Revision     |
+| FE-REQ-055 | La UI DEBE mostrar un identificador corto de sandbox y accion Reiniciar sandbox dentro del menu de sesion.          | MUST      | Demostracion |
+| FE-REQ-056 | Las operaciones mock de reglas, pacientes, cards y actividad DEBEN recibir el sandbox activo desde el provider.     | MUST      | Revision     |
+| FE-REQ-057 | La maqueta DEBE indicar que cambios y reglas pertenecen a Mi sandbox sin crear una pantalla de gestion de usuarios. | SHOULD    | Inspeccion   |
 
 ## 7. Criterios de aceptacion frontend
 
@@ -147,6 +155,7 @@ No incluye:
 | FE-AC-010 | Usar teclado              | Navegacion, editor, tabs, dialogs y formularios conservan foco visible. |
 | FE-AC-011 | Capturar desktop y mobile | No hay overflow horizontal de pagina, solapes ni texto cortado.         |
 | FE-AC-012 | Revisar codigo exportado  | Mocks, UI y contratos estan separados y no hay APIs Next.js.            |
+| FE-AC-013 | Abrir la maqueta          | Entra directo, muestra sandbox anonimo y permite reiniciarlo sin login. |
 
 ## 8. Trazabilidad al sistema
 
@@ -157,5 +166,6 @@ No incluye:
 | Pacientes              | REQ-F-025 a REQ-F-031, REQ-D-006, REQ-D-007  |
 | Cards y sugerencias    | REQ-F-034 a REQ-F-040, REQ-NF-021            |
 | Roles                  | REQ-F-045, REQ-F-046                         |
+| Modo aula anonimo      | REQ-F-051 a REQ-F-055, REQ-I-007             |
 | Accesibilidad          | REQ-NF-019 a REQ-NF-021                      |
 | Limites de integracion | REQ-I-001, CON-003 a CON-008                 |

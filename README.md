@@ -77,6 +77,7 @@ ni PostgreSQL locales. Los detalles estan en
 ## Principios no negociables
 
 - Solo pacientes sinteticos.
+- En clase, una sola URL puede servir a varios alumnos mediante sandbox anonimo por navegador.
 - El frontend nunca accede directamente a HAPI ni al traductor.
 - NestJS no evalua CQL con reglas ad hoc en TypeScript.
 - Una traduccion o evaluacion simulada nunca cuenta como evidencia de integracion.

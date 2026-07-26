@@ -5,7 +5,7 @@
 | Campo                   | Valor                        |
 | ----------------------- | ---------------------------- |
 | Estado                  | Propuesto para maqueta       |
-| Version                 | 0.1.0                        |
+| Version                 | 0.2.0                        |
 | Fecha                   | 2026-07-26                   |
 | Implementacion objetivo | React + Vite + TypeScript    |
 | Prototipado             | v0 con componentes portables |
@@ -15,7 +15,8 @@
 La interfaz debe sentirse como un RCE docente pequeno y creible: silencioso,
 compacto y orientado al trabajo. El foco no es presentar el producto sino
 permitir que un alumno alterne rapidamente entre paciente, regla CQL, resultado
-ELM y recomendacion CDS.
+ELM y recomendacion CDS. En modo aula, la primera visita entra directo al RCE sin
+login visible y muestra un sandbox anonimo por navegador.
 
 ## 2. Decisiones frontend
 
@@ -30,11 +31,14 @@ ELM y recomendacion CDS.
 | FE-ADR-007 | Mock API asincrona y determinista                     | Permite demostrar estados sin falsificar integracion real.                                         | Los resultados dependen de fixtures, nunca de logica clinica en componentes. |
 | FE-ADR-008 | Desktop denso con adaptacion mobile                   | La clase se demostrara principalmente en notebook, pero debe poder revisarse en tablet y telefono. | Paneles multiples se convierten en tabs/drawers en viewport estrecho.        |
 | FE-ADR-009 | Tema claro unico en MVP                               | Reduce superficie visual y facilita revisar contrastes.                                            | Dark mode queda fuera de la primera maqueta.                                 |
+| FE-ADR-010 | Sesion anonima visible, no gestion de usuarios        | Todos entran por una URL y el backend separa el trabajo por sandbox.                               | Topbar/menu muestran sandbox corto y reinicio; no hay pantalla de login.     |
 
 ## 3. Arquitectura de informacion
 
 ```text
 RCE CQL
+|-- Sesion anonima
+|   `-- Mi sandbox
 |-- Pacientes
 |   |-- Listado
 |   `-- Ficha clinica
@@ -68,7 +72,7 @@ flujo central sean visibles en el primer viewport.
 
 ```text
 +----------------------+--------------------------------------------------+
-| RCE CQL              | Breadcrumb                  Entorno  Rol  Usuario |
+| RCE CQL              | Breadcrumb             Entorno  Rol  Sandbox/Menu |
 |----------------------|--------------------------------------------------|
 | Pacientes            |                                                  |
 | Reglas CQL           |                Contenido de ruta                 |
@@ -89,7 +93,8 @@ flujo central sean visibles en el primer viewport.
 ### 4.2 Mobile
 
 - Sidebar dentro de un drawer abierto desde menu iconico.
-- Topbar conserva titulo corto, entorno y menu; rol pasa al menu de usuario.
+- Topbar conserva titulo corto, entorno y menu; rol y sandbox pasan al menu de
+  sesion.
 - Toolbars permiten wrap en dos lineas estables.
 - Tablas usan columnas prioritarias y un menu de acciones; no fuerzan scroll de
   toda la pagina.
@@ -128,6 +133,7 @@ Cabecera no flotante:
 
 - Nombre sintetico, identificador, edad, fecha de nacimiento y sexo.
 - Badge `Datos sinteticos`.
+- Badge compacto `Mi sandbox` cuando existan cambios privados del navegador.
 - Acciones: editar dato y reevaluar.
 - Tabs debajo de la identidad clinica.
 
@@ -165,6 +171,7 @@ Tabla con filtros persistentes en la URL mock:
 | Hook       | `patient-view`, `order-select` u `order-sign` |
 | Activacion | Switch solo para Docente y published          |
 | Modificada | Fecha y autor sintetico                       |
+| Alcance    | Mi sandbox o compartida                       |
 | Acciones   | Abrir, duplicar version, retirar              |
 
 El boton `Nueva regla` es el unico CTA primario de la pagina.
@@ -292,7 +299,8 @@ src/
 |-- app/
 |   |-- App.tsx
 |   |-- router.tsx
-|   `-- providers.tsx
+|   |-- providers.tsx
+|   `-- session-provider.tsx
 |-- components/
 |   |-- ui/
 |   `-- layout/
@@ -329,7 +337,8 @@ src/
 | --------------------- | ---------------------------------------------------- |
 | `AppShell`            | Sidebar, topbar, route outlet y responsive shell.    |
 | `AppSidebar`          | Navegacion y salud de servicios.                     |
-| `AppTopbar`           | Breadcrumb, entorno, rol y usuario.                  |
+| `AppTopbar`           | Breadcrumb, entorno, rol y sandbox anonimo.          |
+| `SessionMenu`         | Sandbox corto, expiracion, rol y reinicio.           |
 | `PageHeader`          | Titulo, metadata y acciones de una ruta.             |
 | `ResponsiveDataTable` | Tabla desktop y columnas prioritarias mobile.        |
 | `AsyncStateBoundary`  | Loading, error, empty y retry sin cambiar geometria. |
@@ -373,6 +382,15 @@ type RuleLifecycle = 'draft' | 'validated' | 'published' | 'retired';
 type CdsIndicator = 'info' | 'warning' | 'critical';
 type DependencyState = 'up' | 'degraded' | 'down';
 
+interface UiSessionContext {
+  anonymousSessionId: string;
+  classroomId: string;
+  sandboxId: string;
+  sandboxLabel: string;
+  role: UserRole;
+  expiresAt: string;
+}
+
 interface UiDiagnostic {
   id: string;
   severity: 'error' | 'warning' | 'info';
@@ -406,6 +424,8 @@ Puerto mock:
 
 ```typescript
 interface RceUiApi {
+  getSession(): Promise<UiSessionContext>;
+  resetSandbox(): Promise<UiSessionContext>;
   listPatients(query: PatientQuery): Promise<PatientListResult>;
   getPatientChart(id: string): Promise<PatientChartView>;
   updateClinicalResource(input: UpdateResourceInput): Promise<UpdateResult>;
@@ -420,7 +440,9 @@ interface RceUiApi {
 
 El mock retorna Promises con latencia corta determinista. No inspecciona el CQL
 ni calcula condiciones clinicas. Los fixtures validos/invalidos y los resultados
-por paciente estan predefinidos.
+por paciente estan predefinidos. Todas las operaciones reciben el sandbox desde
+`SessionProvider`; ningun componente visual puede inventar o enviar un sandbox
+arbitrario como fuente de autoridad.
 
 ## 9. Estado e interacciones
 
@@ -454,6 +476,19 @@ representa esa respuesta.
 - HAPI down: pacientes y evaluacion deshabilitados; editor local sigue visible.
 - Translator down: Guardar disponible; Validar y Ver ELM deshabilitados.
 - Degraded debe usar texto e icono, no solo un punto de color.
+
+### 9.4 Sesion anonima
+
+```text
+sin cookie -> creando sesion -> sandbox listo
+sandbox listo -> reiniciando -> sandbox nuevo
+```
+
+- No existe pantalla de login ni formulario de registro.
+- El sandbox se muestra como etiqueta corta, por ejemplo `S-A4F9`.
+- Reiniciar sandbox pide confirmacion y conserva foco al cerrar el dialog.
+- Al reiniciar, la UI vuelve a datos base y actividad vacia.
+- La maqueta no muestra una lista de alumnos ni administracion de cuentas.
 
 ## 10. Accesibilidad
 
@@ -497,5 +532,6 @@ En cada viewport verificar:
 4. Migrar primero tokens y primitives; despues shell; finalmente features.
 5. Sustituir `MockRceUiApi` por cliente OpenAPI sin cambiar componentes.
 6. Verificar cada pantalla con capturas Playwright desktop/mobile.
+7. Mantener `SessionProvider` como fuente unica de sandbox al pasar de mock a API.
 
 La integracion solo comienza cuando el gate principal permita crear `apps/web`.

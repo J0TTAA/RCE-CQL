@@ -2,15 +2,15 @@
 
 ## RCE educativo con CQL, HAPI FHIR y CDS Hooks
 
-| Campo | Valor |
-|---|---|
-| Tipo de documento | Software Design Description |
-| Estado | En desarrollo |
-| Version | 0.4.0 |
-| Fecha | 2026-07-26 |
-| Referencia estructural | IEEE 1016-2009 |
-| Backend | NestJS + TypeScript |
-| Interoperabilidad | FHIR R4, CQL/ELM, CDS Hooks |
+| Campo                  | Valor                       |
+| ---------------------- | --------------------------- |
+| Tipo de documento      | Software Design Description |
+| Estado                 | En desarrollo               |
+| Version                | 0.5.0                       |
+| Fecha                  | 2026-07-26                  |
+| Referencia estructural | IEEE 1016-2009              |
+| Backend                | NestJS + TypeScript         |
+| Interoperabilidad      | FHIR R4, CQL/ELM, CDS Hooks |
 
 ## 1. Proposito del SDD
 
@@ -31,6 +31,7 @@ El SDD cubre:
 - Empaquetado de CQL/ELM como artefactos FHIR.
 - Pruebas de reglas contra pacientes sinteticos.
 - API CDS Hooks y generacion de cards.
+- Modo aula anonimo con sandbox por navegador.
 - Escrituras clinicas confirmadas, auditoria y operacion local.
 
 No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engine.
@@ -48,69 +49,73 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 
 ## 4. Stakeholders y preocupaciones
 
-| Stakeholder | Concerns cubiertos por el diseno |
-|---|---|
-| Alumno | Editor integrado, errores comprensibles, pruebas reproducibles y cards visibles. |
-| Docente | Versionado, publicacion, activacion, escenarios y control de acciones. |
-| Desarrollador | Limites modulares, contratos, tipos, pruebas y reemplazo de dependencias. |
-| Administrador | Configuracion, health checks, logs, seguridad y despliegue. |
-| Evaluador | Trazabilidad entre requisitos, diseno, tareas y pruebas. |
+| Stakeholder   | Concerns cubiertos por el diseno                                                 |
+| ------------- | -------------------------------------------------------------------------------- |
+| Alumno        | Editor integrado, errores comprensibles, pruebas reproducibles y cards visibles. |
+| Docente       | Versionado, publicacion, activacion, escenarios y control de acciones.           |
+| Desarrollador | Limites modulares, contratos, tipos, pruebas y reemplazo de dependencias.        |
+| Administrador | Configuracion, health checks, logs, seguridad y despliegue.                      |
+| Evaluador     | Trazabilidad entre requisitos, diseno, tareas y pruebas.                         |
 
 ## 5. Viewpoints y vistas
 
-| Viewpoint | Pregunta que responde | Secciones |
-|---|---|---|
-| Contexto | Quienes usan el sistema y con que sistemas se integra | 7 |
-| Contenedores | Que procesos se despliegan y como se comunican | 8 y 15 |
-| Descomposicion | Como se divide frontend y backend | 9 |
-| Interfaces | Que contratos se exponen o consumen | 10 |
-| Informacion | Como se representan reglas, versiones y pacientes | 11 |
-| Dinamica | Como se validan, publican y ejecutan reglas | 12 |
-| Seguridad | Como se protegen datos y operaciones | 13 |
-| Operacion | Como se observa y mantiene el sistema | 14 a 17 |
+| Viewpoint      | Pregunta que responde                                 | Secciones |
+| -------------- | ----------------------------------------------------- | --------- |
+| Contexto       | Quienes usan el sistema y con que sistemas se integra | 7         |
+| Contenedores   | Que procesos se despliegan y como se comunican        | 8 y 15    |
+| Descomposicion | Como se divide frontend y backend                     | 9         |
+| Interfaces     | Que contratos se exponen o consumen                   | 10        |
+| Informacion    | Como se representan reglas, versiones y pacientes     | 11        |
+| Dinamica       | Como se validan, publican y ejecutan reglas           | 12        |
+| Seguridad      | Como se protegen datos y operaciones                  | 13        |
+| Operacion      | Como se observa y mantiene el sistema                 | 14 a 17   |
 
 ## 6. Drivers y decisiones
 
 ### 6.1 Drivers principales
 
-| Driver | Requisitos |
-|---|---|
-| Editor CQL dentro del RCE | REQ-F-002, REQ-NF-018 |
-| No construir parser ni engine | CON-004, CON-005 |
-| HAPI como repositorio y ejecutor | CON-002, REQ-F-020, REQ-D-* |
-| Versionado inmutable | REQ-F-012 a REQ-F-016 |
-| Respuesta inmediata a cambios | REQ-F-030, REQ-F-031 |
-| Integracion CDS estandar | REQ-F-032 a REQ-F-042 |
-| Prototipo pequeno y mantenible | REQ-NF-022, REQ-NF-024 |
+| Driver                                           | Requisitos                                              |
+| ------------------------------------------------ | ------------------------------------------------------- |
+| Editor CQL dentro del RCE                        | REQ-F-002, REQ-NF-018                                   |
+| No construir parser ni engine                    | CON-004, CON-005                                        |
+| HAPI como repositorio y ejecutor                 | CON-002, REQ-F-020, REQ-D-*                             |
+| Versionado inmutable                             | REQ-F-012 a REQ-F-016                                   |
+| Respuesta inmediata a cambios                    | REQ-F-030, REQ-F-031                                    |
+| Integracion CDS estandar                         | REQ-F-032 a REQ-F-042                                   |
+| Una URL para clase con aislamiento por navegador | REQ-F-051 a REQ-F-055, REQ-D-010, REQ-D-011, REQ-NF-027 |
+| Prototipo pequeno y mantenible                   | REQ-NF-022, REQ-NF-024                                  |
 
 ### 6.2 Registro de decisiones
 
-| ID | Decision | Razon | Consecuencia |
-|---|---|---|---|
-| ADR-001 | NestJS modular para el backend | El trabajo principal es orquestacion HTTP y TypeScript reduce friccion con el frontend. | El CQL Engine no se embebe en Nest. |
-| ADR-002 | Monolito modular | El alcance no justifica microservicios propios adicionales. | Los limites internos deben respetarse mediante providers exportados. |
-| ADR-003 | HAPI como repositorio logico unico | Evita duplicar pacientes y artefactos en otra base de datos. | Nest nunca consulta las tablas PostgreSQL de HAPI. |
-| ADR-004 | Traductor CQL externo | Reutiliza tooling mantenido por CQFramework. | Validar requiere disponibilidad de otro contenedor. |
-| ADR-005 | Clinical Reasoning de HAPI | Mantiene la evaluacion junto a los datos FHIR y evita integrar el repositorio separado `cqframework/cql-engine`, archivado y absorbido por `clinical_quality_language`. | El HAPI elegido debe soportar `$apply`; la decision queda protegida por `RuleExecutorPort`. |
-| ADR-006 | Library + PlanDefinition por regla/version | Es la representacion FHIR adecuada para logica y regla ECA. | Publicar requiere transaccion y canonical URLs coherentes. |
-| ADR-007 | CDS Hooks en NestJS | Desacopla la API publica de capacidades opcionales de HAPI. | Nest mapea resultados de `$apply` a cards. |
-| ADR-008 | Evento interno para cambios genericos | No existe un hook estandar para cualquier actualizacion FHIR. | `ClinicalDataChanged` no se publica como CDS Hook. |
-| ADR-009 | Confirmacion de sugerencias | CQL debe recomendar, no escribir silenciosamente. | Frontend y backend implementan un flujo de aceptacion. |
-| ADR-010 | Sin base de datos propia en MVP | Reduce operacion y mantiene informacion funcional en FHIR. | Idempotencia y auditoria se representan con recursos FHIR. |
-| ADR-011 | Un Compose principal en la raiz | Un solo comando debe conectar API, HAPI, traductor y PostgreSQL sin duplicar configuraciones del spike. | Los servicios propios se construyen desde el workspace y los motores externos usan imagenes fijadas. |
-| ADR-012 | Fundacion paralela al spike M0 | La ausencia local de Docker no impide implementar y probar configuracion, puertos y contratos no clinicos de Nest. | M0 sigue bloqueando WBS 3-6 y ninguna prueba simulada cierra compatibilidad clinica. |
-| ADR-013 | HAPI local por perfil y HAPI institucional por URL | Desarrollo necesita datos sinteticos aislados, mientras el despliegue debe reutilizar el servidor institucional existente. | `local-hapi` nunca se habilita en el servidor y Nest mantiene el mismo `FhirGatewayPort` en ambos modos. |
-| ADR-014 | Synthea versionado como job local reproducible | Aporta historias FHIR R4 realistas sin usar datos identificables ni crear un generador clinico propio. | La demografia base es estadounidense; los casos pedagogicos exactos siguen requiriendo fixtures controlados. |
-| ADR-015 | Prototipo frontend externo y componentes portables a Vite | Permite iterar la experiencia en v0 sin abrir `apps/web` antes del gate M0 ni acoplar el resultado a Next.js. | El prototipo se revisa contra `docs/frontend`; la integracion ocurre por componentes y adapters, no copiando una pagina monolitica. |
+| ID      | Decision                                                  | Razon                                                                                                                                                                   | Consecuencia                                                                                                                        |
+| ------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| ADR-001 | NestJS modular para el backend                            | El trabajo principal es orquestacion HTTP y TypeScript reduce friccion con el frontend.                                                                                 | El CQL Engine no se embebe en Nest.                                                                                                 |
+| ADR-002 | Monolito modular                                          | El alcance no justifica microservicios propios adicionales.                                                                                                             | Los limites internos deben respetarse mediante providers exportados.                                                                |
+| ADR-003 | HAPI como repositorio logico unico                        | Evita duplicar pacientes y artefactos en otra base de datos.                                                                                                            | Nest nunca consulta las tablas PostgreSQL de HAPI.                                                                                  |
+| ADR-004 | Traductor CQL externo                                     | Reutiliza tooling mantenido por CQFramework.                                                                                                                            | Validar requiere disponibilidad de otro contenedor.                                                                                 |
+| ADR-005 | Clinical Reasoning de HAPI                                | Mantiene la evaluacion junto a los datos FHIR y evita integrar el repositorio separado `cqframework/cql-engine`, archivado y absorbido por `clinical_quality_language`. | El HAPI elegido debe soportar `$apply`; la decision queda protegida por `RuleExecutorPort`.                                         |
+| ADR-006 | Library + PlanDefinition por regla/version                | Es la representacion FHIR adecuada para logica y regla ECA.                                                                                                             | Publicar requiere transaccion y canonical URLs coherentes.                                                                          |
+| ADR-007 | CDS Hooks en NestJS                                       | Desacopla la API publica de capacidades opcionales de HAPI.                                                                                                             | Nest mapea resultados de `$apply` a cards.                                                                                          |
+| ADR-008 | Evento interno para cambios genericos                     | No existe un hook estandar para cualquier actualizacion FHIR.                                                                                                           | `ClinicalDataChanged` no se publica como CDS Hook.                                                                                  |
+| ADR-009 | Confirmacion de sugerencias                               | CQL debe recomendar, no escribir silenciosamente.                                                                                                                       | Frontend y backend implementan un flujo de aceptacion.                                                                              |
+| ADR-010 | Sin base de datos propia en MVP                           | Reduce operacion y mantiene informacion funcional en FHIR.                                                                                                              | Idempotencia y auditoria se representan con recursos FHIR.                                                                          |
+| ADR-011 | Un Compose principal en la raiz                           | Un solo comando debe conectar API, HAPI, traductor y PostgreSQL sin duplicar configuraciones del spike.                                                                 | Los servicios propios se construyen desde el workspace y los motores externos usan imagenes fijadas.                                |
+| ADR-012 | Fundacion paralela al spike M0                            | La ausencia local de Docker no impide implementar y probar configuracion, puertos y contratos no clinicos de Nest.                                                      | M0 sigue bloqueando WBS 3-6 y ninguna prueba simulada cierra compatibilidad clinica.                                                |
+| ADR-013 | HAPI local por perfil y HAPI institucional por URL        | Desarrollo necesita datos sinteticos aislados, mientras el despliegue debe reutilizar el servidor institucional existente.                                              | `local-hapi` nunca se habilita en el servidor y Nest mantiene el mismo `FhirGatewayPort` en ambos modos.                            |
+| ADR-014 | Synthea versionado como job local reproducible            | Aporta historias FHIR R4 realistas sin usar datos identificables ni crear un generador clinico propio.                                                                  | La demografia base es estadounidense; los casos pedagogicos exactos siguen requiriendo fixtures controlados.                        |
+| ADR-015 | Prototipo frontend externo y componentes portables a Vite | Permite iterar la experiencia en v0 sin abrir `apps/web` antes del gate M0 ni acoplar el resultado a Next.js.                                                           | El prototipo se revisa contra `docs/frontend`; la integracion ocurre por componentes y adapters, no copiando una pagina monolitica. |
+| ADR-016 | Modo aula anonimo con sandbox por navegador               | El docente debe poder compartir una sola URL sin crear cuentas, pero 10 alumnos no pueden pisarse reglas ni pacientes.                                                  | Nest emite una cookie firmada, resuelve `SessionContext` por solicitud y filtra/etiqueta todo dato mutable por `sandboxId`.         |
 
 ## 7. Vista de contexto
 
 ```mermaid
 flowchart LR
-    Student["Alumno"] --> Front["RCE web"]
+    StudentA["Alumno A"] --> Front["RCE web\nmisma URL"]
+    StudentB["Alumno B"] --> Front
     Teacher["Docente"] --> Front
     Admin["Administrador"] --> Api["NestJS API"]
     Front --> Api
+    Api --> Session["Sesion anonima\nsandbox por navegador"]
     Api --> Translator["CQL Translation Service"]
     Api --> Hapi["HAPI FHIR R4"]
     Hapi --> Db[("PostgreSQL interno")]
@@ -123,6 +128,7 @@ Reglas de contexto:
 - Nest conoce las URLs de HAPI y del traductor por configuracion.
 - PostgreSQL es privado y pertenece a HAPI.
 - Un HAPI externo puede reemplazar los contenedores locales sin cambiar la API del RCE.
+- En modo aula anonimo, todos comparten la misma URL y Nest separa el trabajo mediante `sandboxId`.
 
 ## 8. Vista de contenedores
 
@@ -139,14 +145,14 @@ flowchart TB
     end
 ```
 
-| Contenedor | Responsabilidad | Persistencia propia |
-|---|---|---|
-| `rce-frontend` | Interaccion educativa | No |
-| `rce-backend` | Casos de uso y contratos | No en MVP |
-| `cql-translation-service` | CQL a ELM | No |
-| `hapi-fhir` | API FHIR y Clinical Reasoning | Mediante PostgreSQL |
-| `hapi-postgres` | Persistencia interna HAPI | Volumen Docker |
-| `synthea-seed` | Generacion y carga inicial de FHIR R4 sintetico | No; termina despues de cargar HAPI |
+| Contenedor                | Responsabilidad                                 | Persistencia propia                |
+| ------------------------- | ----------------------------------------------- | ---------------------------------- |
+| `rce-frontend`            | Interaccion educativa                           | No                                 |
+| `rce-backend`             | Casos de uso y contratos                        | No en MVP                          |
+| `cql-translation-service` | CQL a ELM                                       | No                                 |
+| `hapi-fhir`               | API FHIR y Clinical Reasoning                   | Mediante PostgreSQL                |
+| `hapi-postgres`           | Persistencia interna HAPI                       | Volumen Docker                     |
+| `synthea-seed`            | Generacion y carga inicial de FHIR R4 sintetico | No; termina despues de cargar HAPI |
 
 Implementacion local actual:
 
@@ -167,14 +173,14 @@ mantienen en [frontend/README.md](./frontend/README.md).
 
 Rutas:
 
-| Ruta | Vista |
-|---|---|
-| `/patients` | Busqueda de pacientes sinteticos. |
-| `/patients/:id` | Ficha clinica y cards activas. |
-| `/rules` | Catalogo de reglas y versiones. |
-| `/rules/new` | Nuevo borrador. |
-| `/rules/:id` | Editor, metadata, diagnosticos y ELM. |
-| `/rules/:id/test` | Prueba contra paciente. |
+| Ruta              | Vista                                 |
+| ----------------- | ------------------------------------- |
+| `/patients`       | Busqueda de pacientes sinteticos.     |
+| `/patients/:id`   | Ficha clinica y cards activas.        |
+| `/rules`          | Catalogo de reglas y versiones.       |
+| `/rules/new`      | Nuevo borrador.                       |
+| `/rules/:id`      | Editor, metadata, diagnosticos y ELM. |
+| `/rules/:id/test` | Prueba contra paciente.               |
 
 Componentes principales:
 
@@ -201,12 +207,29 @@ Controller -> Application Use Case -> Domain/Port -> Adapter
 
 Un modulo no importara archivos internos de otro modulo. La comunicacion se realizara mediante providers exportados o eventos de aplicacion tipados.
 
-### 9.3 AuthModule
+### 9.3 ClassroomSessionModule y AuthModule opcional
+
+`ClassroomSessionModule` es el camino por defecto para clases sin login:
+
+- Lee la cookie `rce_session`.
+- Si no existe o no es valida, crea `anonymousSessionId`, `classroomId`,
+  `sandboxId`, `role`, `issuedAt` y `expiresAt`.
+- Firma la cookie con `ANONYMOUS_SESSION_SECRET`.
+- Expone `SessionContext` para controllers, casos de uso, logs y adapters.
+- Permite reiniciar solo el sandbox del navegador actual.
+- No crea cuentas visibles, formularios de login ni perfiles de usuario.
+
+`AuthModule` queda como capa opcional para despliegues institucionales:
 
 - Autentica JWT cuando `AUTH_ENABLED=true`.
 - Resuelve roles `student` y `teacher`.
-- Expone guards declarativos para los controllers.
-- En desarrollo puede usar una identidad local configurada.
+- Expone guards declarativos para operaciones compartidas.
+- Puede coexistir con `ClassroomSessionModule`: el JWT identifica al actor y el
+  sandbox sigue aislando el trabajo de aula.
+
+Regla de seguridad: sin autenticacion real, cualquier publicacion o activacion
+hecha por un alumno queda limitada a su sandbox. Las operaciones compartidas de
+docente requieren rol docente efectivo o configuracion institucional.
 
 ### 9.4 RulesModule
 
@@ -214,6 +237,8 @@ Responsabilidades:
 
 - Crear y actualizar borradores.
 - Validar invariantes de nombre, version y lifecycle.
+- Aplicar `SessionContext` para listar, crear y evaluar solo reglas del sandbox
+  activo, salvo consultas compartidas de docente.
 - Listar reglas y versiones.
 - Coordinar validacion, publicacion, activacion y retiro.
 - Impedir cambios sobre versiones publicadas.
@@ -226,6 +251,7 @@ type RuleHook = 'patient-view' | 'order-select' | 'order-sign';
 
 interface ClinicalRule {
   id: string;
+  sandboxId?: string;
   canonicalUrl: string;
   name: string;
   title: string;
@@ -258,6 +284,16 @@ interface ClinicalRule {
 - `Provenance` para publicacion.
 - `Task` para idempotencia cuando corresponda.
 
+En modo aula, las canonical URLs privadas incluyen un segmento estable de
+sandbox para evitar colisiones entre reglas con el mismo nombre:
+
+```text
+{CANONICAL_BASE_URL}/sandbox/{sandboxId}/Library/{ruleName}
+{CANONICAL_BASE_URL}/sandbox/{sandboxId}/PlanDefinition/{ruleName}
+```
+
+Las reglas compartidas de docente usan el canonical sin segmento de sandbox.
+
 `FhirModule` proporciona:
 
 - Read, search y conditional operations.
@@ -271,6 +307,7 @@ interface ClinicalRule {
 
 - Lista y busca pacientes.
 - Construye una ficha agregada consultando Patient y recursos relacionados.
+- Resuelve pacientes base de solo lectura y overlays privados del sandbox.
 - Valida una allowlist de tipos editables.
 - Persiste recursos completos o Bundles transaction.
 - Emite `ClinicalDataChanged` despues de una escritura confirmada.
@@ -288,6 +325,17 @@ MedicationRequest
 Procedure
 ```
 
+Estrategia de pacientes:
+
+- La poblacion Synthea inicial queda como datos base compartidos y de solo
+  lectura.
+- La API expone un `patientKey` estable para la UI.
+- Al editar por primera vez, Nest crea en HAPI una copia privada del Patient y
+  de los recursos necesarios para el sandbox mediante Bundle transaction.
+- Las lecturas posteriores priorizan la copia del sandbox y completan faltantes
+  desde datos base.
+- Una edicion nunca actualiza el recurso base ni la copia de otro sandbox.
+
 ### 9.8 ClinicalReasoningModule
 
 - Implementa `RuleExecutorPort` contra HAPI.
@@ -300,6 +348,8 @@ Procedure
 
 - Expone Discovery, Service y Feedback.
 - Registra un servicio estable por hook.
+- Usa `SessionContext` o un identificador de sandbox permitido para resolver el
+  conjunto de reglas y paciente efectivo.
 - Evalua reglas habilitadas a traves de ClinicalReasoningModule.
 - Convierte acciones aplicables en cards.
 - Ordena cards por indicador.
@@ -325,28 +375,36 @@ Procedure
 
 Reglas:
 
-| Metodo | Ruta | Caso de uso |
-|---|---|---|
-| `GET` | `/api/rules` | Listar y filtrar. |
-| `POST` | `/api/rules` | Crear borrador. |
-| `GET` | `/api/rules/:id` | Obtener regla/version. |
-| `PUT` | `/api/rules/:id/draft` | Editar borrador con ETag. |
-| `POST` | `/api/rules/:id/validate` | Traducir y validar. |
-| `GET` | `/api/rules/:id/elm` | Consultar ELM vigente. |
-| `POST` | `/api/rules/:id/test` | Probar contra paciente. |
-| `POST` | `/api/rules/:id/publish` | Publicar version. |
-| `PATCH` | `/api/rules/:id/enabled` | Activar/desactivar. |
-| `POST` | `/api/rules/:id/retire` | Retirar version. |
+| Metodo  | Ruta                      | Caso de uso               |
+| ------- | ------------------------- | ------------------------- |
+| `GET`   | `/api/rules`              | Listar y filtrar.         |
+| `POST`  | `/api/rules`              | Crear borrador.           |
+| `GET`   | `/api/rules/:id`          | Obtener regla/version.    |
+| `PUT`   | `/api/rules/:id/draft`    | Editar borrador con ETag. |
+| `POST`  | `/api/rules/:id/validate` | Traducir y validar.       |
+| `GET`   | `/api/rules/:id/elm`      | Consultar ELM vigente.    |
+| `POST`  | `/api/rules/:id/test`     | Probar contra paciente.   |
+| `POST`  | `/api/rules/:id/publish`  | Publicar version.         |
+| `PATCH` | `/api/rules/:id/enabled`  | Activar/desactivar.       |
+| `POST`  | `/api/rules/:id/retire`   | Retirar version.          |
+
+Sesion de aula:
+
+| Metodo | Ruta                        | Caso de uso                                         |
+| ------ | --------------------------- | --------------------------------------------------- |
+| `GET`  | `/api/session`              | Obtener o crear sesion anonima.                     |
+| `POST` | `/api/session/reset`        | Crear sandbox nuevo para el navegador actual.       |
+| `GET`  | `/api/session/capabilities` | Consultar rol efectivo, permisos y limites de aula. |
 
 Pacientes:
 
-| Metodo | Ruta | Caso de uso |
-|---|---|---|
-| `GET` | `/api/patients` | Buscar pacientes. |
-| `GET` | `/api/patients/:id/chart` | Obtener ficha agregada. |
-| `POST` | `/api/patients/:id/evaluate` | Reevaluar reglas activas. |
-| `PUT` | `/api/fhir/:resourceType/:id` | Actualizar tipo autorizado. |
-| `POST` | `/api/fhir/transaction` | Cambio clinico atomico. |
+| Metodo | Ruta                               | Caso de uso                    |
+| ------ | ---------------------------------- | ------------------------------ |
+| `GET`  | `/api/patients`                    | Buscar pacientes.              |
+| `GET`  | `/api/patients/:id/chart`          | Obtener ficha agregada.        |
+| `POST` | `/api/patients/:id/evaluate`       | Reevaluar reglas activas.      |
+| `PUT`  | `/api/fhir/:resourceType/:id`      | Actualizar tipo autorizado.    |
+| `POST` | `/api/fhir/transaction`            | Cambio clinico atomico.        |
 | `POST` | `/api/cds-suggestions/:uuid/apply` | Aplicar sugerencia confirmada. |
 
 ### 10.2 Puertos internos
@@ -369,6 +427,15 @@ interface RuleExecutorPort {
 
 interface AuditPort {
   record(input: AuditRecord): Promise<void>;
+}
+
+interface SessionContext {
+  anonymousSessionId: string;
+  classroomId: string;
+  sandboxId: string;
+  role: 'student' | 'teacher';
+  isAuthenticated: boolean;
+  expiresAt: string;
 }
 ```
 
@@ -404,11 +471,11 @@ POST /cds-services/{serviceId}/feedback
 
 Servicios discovery:
 
-| Service ID | Hook | Prefetch inicial |
-|---|---|---|
-| `rce-patient-view` | `patient-view` | `Patient/{{context.patientId}}` |
+| Service ID         | Hook           | Prefetch inicial                   |
+| ------------------ | -------------- | ---------------------------------- |
+| `rce-patient-view` | `patient-view` | `Patient/{{context.patientId}}`    |
 | `rce-order-select` | `order-select` | Patient y draftOrders del contexto |
-| `rce-order-sign` | `order-sign` | Patient y draftOrders del contexto |
+| `rce-order-sign`   | `order-sign`   | Patient y draftOrders del contexto |
 
 Reglas de datos:
 
@@ -437,16 +504,16 @@ Reglas de datos:
 
 Mapeo HTTP:
 
-| HTTP | Situacion |
-|---|---|
-| `400` | DTO mal formado. |
-| `401/403` | Autenticacion o autorizacion. |
-| `404` | Recurso no encontrado. |
-| `409` | ETag, version o idempotencia en conflicto. |
-| `422` | CQL, regla o FHIR semanticamente invalido. |
-| `424` | Dependencia CQL o terminologica ausente. |
-| `502` | Respuesta upstream invalida. |
-| `504` | Timeout upstream. |
+| HTTP      | Situacion                                  |
+| --------- | ------------------------------------------ |
+| `400`     | DTO mal formado.                           |
+| `401/403` | Autenticacion o autorizacion.              |
+| `404`     | Recurso no encontrado.                     |
+| `409`     | ETag, version o idempotencia en conflicto. |
+| `422`     | CQL, regla o FHIR semanticamente invalido. |
+| `424`     | Dependencia CQL o terminologica ausente.   |
+| `502`     | Respuesta upstream invalida.               |
+| `504`     | Timeout upstream.                          |
 
 ## 11. Vista de informacion
 
@@ -454,6 +521,10 @@ Mapeo HTTP:
 
 ```mermaid
 erDiagram
+    CLASSROOM ||--o{ SANDBOX : contains
+    SANDBOX ||--o{ LIBRARY : owns
+    SANDBOX ||--o{ PLAN_DEFINITION : owns
+    SANDBOX ||--o{ SANDBOX_PATIENT : owns
     LIBRARY ||--|| PLAN_DEFINITION : "canonical + version"
     PLAN_DEFINITION ||--o{ GUIDANCE_RESPONSE : evaluates
     PLAN_DEFINITION ||--o{ PROVENANCE : published_by
@@ -538,7 +609,53 @@ stateDiagram-v2
 - ValueSet y CodeSystem se resuelven localmente o mediante terminology server configurado.
 - Las demostraciones verifican previamente los ValueSets criticos con `$expand`.
 
+### 11.8 Sandbox y scoping FHIR
+
+Todo recurso mutable privado del aula incluye metadata de alcance:
+
+```text
+classroomId: identificador corto de la clase o demo.
+sandboxId: identificador aleatorio opaco, no derivado del alumno.
+scope: base | sandbox | shared.
+sourcePatientId: referencia al paciente base cuando existe copia privada.
+```
+
+Representacion FHIR inicial:
+
+- `meta.tag` para `rce-scope`, `rce-classroom` y `rce-sandbox`.
+- `identifier` para relaciones estables cuando se requiera busqueda exacta.
+- `Provenance` para operaciones de publicacion y cambios clinicos relevantes.
+- `Task` para idempotencia asociada a `sandboxId`.
+
+Los adapters FHIR siempre reciben `SessionContext`; no aceptan `sandboxId`
+arbitrario desde DTOs del navegador. Las busquedas de reglas, pacientes privados
+y auditoria agregan filtros por metadata de alcance.
+
 ## 12. Vista dinamica
+
+### 12.0 Inicio de sesion anonima
+
+```mermaid
+sequenceDiagram
+    actor User as Alumno
+    participant UI as RCE web
+    participant API as NestJS
+    participant HAPI as HAPI FHIR
+
+    User->>UI: Abre URL compartida
+    UI->>API: GET /api/session
+    API->>API: Verifica cookie rce_session
+    alt Cookie ausente o invalida
+        API->>API: Genera anonymousSessionId y sandboxId
+        API->>HAPI: Upsert Basic/AuditEvent de sandbox
+        API-->>UI: Set-Cookie + SessionContext
+    else Cookie valida
+        API-->>UI: SessionContext existente
+    end
+```
+
+La UI no muestra login. Solo puede mostrar un identificador corto de sandbox para
+ayudar en soporte docente.
 
 ### 12.1 Guardar y validar borrador
 
@@ -551,8 +668,9 @@ sequenceDiagram
     participant CQL as Translator
 
     User->>UI: Edita CQL
-    UI->>API: PUT draft con ETag
-    API->>HAPI: Transaction Library + PlanDefinition draft
+    UI->>API: PUT draft con ETag y cookie
+    API->>API: Resuelve SessionContext
+    API->>HAPI: Transaction Library + PlanDefinition draft del sandbox
     HAPI-->>API: Nuevos ETags
     User->>UI: Validar
     UI->>API: POST validate
@@ -606,8 +724,10 @@ sequenceDiagram
     participant HAPI as HAPI FHIR
 
     User->>UI: Modifica dato
-    UI->>API: PUT recurso con ETag
-    API->>HAPI: $validate / update
+    UI->>API: PUT recurso con ETag y cookie
+    API->>API: Resuelve paciente efectivo del sandbox
+    API->>HAPI: Copy-on-write si aun es dato base
+    API->>HAPI: $validate / update privado
     HAPI-->>API: Recurso + ETag
     API->>API: ClinicalDataChanged
     API->>HAPI: $apply reglas aplicables
@@ -623,21 +743,32 @@ La reevaluacion inicial es sincrona. FHIR Subscriptions se reserva para escritur
 2. Se usa prefetch disponible.
 3. Se completa informacion faltante desde HAPI autorizado.
 4. Se obtienen PlanDefinitions published/enabled del hook.
-5. ClinicalReasoningModule evalua cada regla.
-6. CdsHooksModule transforma recomendaciones a cards.
-7. Se ordenan cards por indicator.
-8. Se responde `200`, incluso cuando el arreglo esta vacio.
+5. Se filtran reglas compartidas y reglas privadas del sandbox activo.
+6. ClinicalReasoningModule evalua cada regla.
+7. CdsHooksModule transforma recomendaciones a cards.
+8. Se ordenan cards por indicator.
+9. Se responde `200`, incluso cuando el arreglo esta vacio.
 
 ### 12.6 Aplicar sugerencia
 
 1. Frontend muestra descripcion y solicita confirmacion.
-2. Nest verifica usuario, card UUID e Idempotency-Key.
+2. Nest verifica `SessionContext`, card UUID e Idempotency-Key.
 3. Se valida allowlist, paciente y version completa del recurso.
 4. Se crea Bundle transaction con acciones, Task y AuditEvent.
 5. HAPI aplica la transaccion.
 6. Nest reevalua reglas y devuelve recursos/cards actualizados.
 
 No se habilitan `systemActions` automaticas en el prototipo.
+
+### 12.7 Reiniciar sandbox
+
+1. El usuario solicita reiniciar mi sandbox.
+2. Nest invalida la cookie actual y crea un `sandboxId` nuevo.
+3. Los recursos anteriores se conservan para auditoria hasta expirar por
+   retencion, pero dejan de aparecer en la UI del navegador.
+4. La UI recarga pacientes base, reglas fixture y actividad vacia.
+
+No se eliminan datos de otros sandboxes.
 
 ## 13. Vista de seguridad
 
@@ -650,17 +781,21 @@ No se habilitan `systemActions` automaticas en el prototipo.
 
 ### 13.2 Autorizacion
 
-| Operacion | Student | Teacher |
-|---|---:|---:|
-| Crear/editar borrador | Si | Si |
-| Validar/ver ELM/probar | Si | Si |
-| Publicar | No | Si |
-| Enable/disable/retire | No | Si |
-| Aplicar sugerencia | Configurable | Si |
+| Operacion                        |      Student | Teacher |
+| -------------------------------- | -----------: | ------: |
+| Crear/editar borrador            |           Si |      Si |
+| Validar/ver ELM/probar           |           Si |      Si |
+| Publicar compartido              |           No |      Si |
+| Publicar/activar en sandbox      | Configurable |      Si |
+| Enable/disable/retire compartido |           No |      Si |
+| Aplicar sugerencia               | Configurable |      Si |
 
 ### 13.3 Controles
 
 - ValidationPipe global con whitelist y transformacion controlada.
+- Cookie anonima firmada, HttpOnly, SameSite y Secure con HTTPS.
+- `sandboxId` nunca se acepta desde el body como autoridad; se toma de la cookie
+  validada o de un token institucional.
 - Helmet, CORS explicito y rate limits.
 - Fuente CQL maxima inicial de 256 KiB.
 - Timeouts y concurrencia limitada para operaciones costosas.
@@ -668,6 +803,8 @@ No se habilitan `systemActions` automaticas en el prototipo.
 - Tokens/secrets solo por configuracion externa.
 - Logs sin CQL completo, ELM completo ni recursos clinicos completos.
 - Pacientes sinteticos obligatorios en la entrega educativa.
+- El modo aula anonimo queda prohibido para pacientes reales si no existe una
+  capa institucional externa de autenticacion y autorizacion.
 
 ## 14. Vista de operacion y observabilidad
 
@@ -686,6 +823,8 @@ patientId seudonimizado
 durationMs
 upstream
 outcome
+classroomId
+sandboxId seudonimizado
 ```
 
 `X-Correlation-ID` se genera o propaga hacia dependencias cuando estas lo permitan.
@@ -697,6 +836,8 @@ outcome
 - Reglas activas por hook.
 - Cards por indicator.
 - Conflictos ETag e idempotencia.
+- Sandboxes activos, expirados y reiniciados.
+- Errores de aislamiento por sandbox.
 - Readiness de HAPI y traductor.
 
 ### 14.3 Health
@@ -725,6 +866,8 @@ synthea-seed (job opcional)
 - HAPI se configura con Clinical Reasoning habilitado.
 - Synthea carga por la API FHIR, registra una marca idempotente y no accede a PostgreSQL.
 - El job de seed no forma parte del perfil de HAPI institucional.
+- Para clase, el reverse proxy publica una sola URL hacia frontend/backend; HAPI,
+  PostgreSQL y traductor siguen privados.
 
 ### 15.2 Perfil con HAPI externo
 
@@ -732,6 +875,9 @@ synthea-seed (job opcional)
 - `FHIR_BASE_URL` y autenticacion apuntan al servidor externo.
 - Startup capability check decide si probar/ejecutar esta disponible.
 - La traduccion CQL sigue disponible aunque Clinical Reasoning externo no exista.
+- En modo aula contra HAPI institucional, los pacientes reales no se editan
+  directamente: se usan pacientes sinteticos locales o copias anonimizadas por
+  sandbox.
 
 ### 15.3 Variables
 
@@ -750,6 +896,13 @@ CQL_EVALUATION_TIMEOUT_MS
 AUTH_ENABLED
 JWT_ISSUER
 JWT_AUDIENCE
+ANONYMOUS_CLASSROOM_ENABLED
+ANONYMOUS_SESSION_SECRET
+ANONYMOUS_SESSION_COOKIE_NAME
+ANONYMOUS_SESSION_TTL_HOURS
+CLASSROOM_DEFAULT_ID
+CLASSROOM_MAX_SESSIONS
+SANDBOX_RETENTION_HOURS
 LOG_LEVEL
 ```
 
@@ -757,15 +910,15 @@ Ningun secreto se versionara en el repositorio.
 
 ## 16. Realizacion de atributos de calidad
 
-| Atributo | Tacticas de diseno |
-|---|---|
-| Interoperabilidad | FHIR R4, Library, PlanDefinition, CQL/ELM y CDS Hooks. |
-| Mantenibilidad | Modulos, puertos y adapters; dominio sin dependencias de infraestructura. |
-| Rendimiento | Concurrencia limitada, prefetch, timeouts y futura cache de reglas activas. |
-| Confiabilidad | Transactions, ETags, idempotencia y aislamiento por regla. |
-| Seguridad | Backend facade, allowlists, RBAC, limites y secretos externos. |
-| Usabilidad | Monaco markers, ELM read-only, estados visibles y cards accesibles. |
-| Portabilidad | Docker Compose y configuracion por environment. |
+| Atributo          | Tacticas de diseno                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| Interoperabilidad | FHIR R4, Library, PlanDefinition, CQL/ELM y CDS Hooks.                                              |
+| Mantenibilidad    | Modulos, puertos y adapters; dominio sin dependencias de infraestructura.                           |
+| Rendimiento       | Concurrencia limitada, prefetch, timeouts y futura cache de reglas activas.                         |
+| Confiabilidad     | Transactions, ETags, idempotencia, aislamiento por regla y sandbox.                                 |
+| Seguridad         | Backend facade, allowlists, RBAC opcional, sesiones anonimas firmadas, limites y secretos externos. |
+| Usabilidad        | Monaco markers, ELM read-only, estados visibles y cards accesibles.                                 |
+| Portabilidad      | Docker Compose y configuracion por environment.                                                     |
 
 No se agregara cache de artefactos en la primera implementacion hasta medir el flujo real. Esto evita invalidacion prematura durante autoria.
 
@@ -797,42 +950,43 @@ No se agregara cache de artefactos en la primera implementacion hasta medir el f
 
 ### 17.4 End-to-end
 
-Los escenarios AC-001 a AC-010 se automatizaran o documentaran como pruebas repetibles. AC-004 y AC-005 son la prueba central del objetivo docente.
+Los escenarios AC-001 a AC-011 se automatizaran o documentaran como pruebas repetibles. AC-004, AC-005 y AC-011 son la prueba central del objetivo docente.
 
 ## 18. Riesgos de diseno
 
-| Riesgo | Respuesta de diseno |
-|---|---|
-| ELM incompatible con HAPI | Gate de compatibilidad antes de feature work. |
-| Draft no ejecutable por HAPI | Adapter con paquete temporal controlado. |
-| Terminologia incompleta | Fixtures locales y preflight `$expand`. |
-| Hook lento por muchas reglas | Timeout, limite de concurrencia y metricas. |
-| Doble publicacion | Canonical/version, ETag, transaction e idempotency Task. |
-| HAPI externo sin CR | Capability check y RuleExecutorPort reemplazable. |
-| Monaco insuficiente | Translation diagnostics primero; CQL Language Server opcional. |
-| Accion sobre paciente equivocado | Patient binding, allowlist, confirmacion y transaction. |
+| Riesgo                           | Respuesta de diseno                                                                     |
+| -------------------------------- | --------------------------------------------------------------------------------------- |
+| ELM incompatible con HAPI        | Gate de compatibilidad antes de feature work.                                           |
+| Draft no ejecutable por HAPI     | Adapter con paquete temporal controlado.                                                |
+| Terminologia incompleta          | Fixtures locales y preflight `$expand`.                                                 |
+| Hook lento por muchas reglas     | Timeout, limite de concurrencia y metricas.                                             |
+| Doble publicacion                | Canonical/version, ETag, transaction e idempotency Task.                                |
+| HAPI externo sin CR              | Capability check y RuleExecutorPort reemplazable.                                       |
+| Monaco insuficiente              | Translation diagnostics primero; CQL Language Server opcional.                          |
+| Accion sobre paciente equivocado | Patient binding, allowlist, confirmacion y transaction.                                 |
+| Mezcla accidental entre alumnos  | `SessionContext` obligatorio, filtros por `sandboxId`, pruebas E2E con dos navegadores. |
 
 ## 19. Decisiones abiertas
 
-- Proveedor de identidad para despliegue multiusuario.
 - Terminologias exactas de los escenarios finales.
 - Politica de retencion de GuidanceResponse y AuditEvent.
 - HAPI local o externo para la presentacion final.
+- Politica exacta para operaciones compartidas de docente sin afectar la simpleza de aula.
 
 Estas decisiones no bloquean la prueba de arquitectura ni los contratos principales.
 
 ## 20. Trazabilidad de diseno
 
-| Elemento | Requisitos realizados |
-|---|---|
-| RulesModule | REQ-F-001 a REQ-F-017, REQ-D-003 a REQ-D-005 |
-| CqlAuthoringModule | REQ-F-005 a REQ-F-009, REQ-D-008 |
-| KnowledgeArtifactsModule | REQ-F-010 a REQ-F-016, REQ-D-001 a REQ-D-005 |
-| ClinicalReasoningModule | REQ-F-018 a REQ-F-024 |
-| PatientsModule | REQ-F-025 a REQ-F-031, REQ-D-006, REQ-D-007 |
-| CdsHooksModule | REQ-F-032 a REQ-F-042, REQ-I-004 |
-| Auth/Audit/Health | REQ-F-043 a REQ-F-050 |
-| Adapters/Deployment | REQ-I-001 a REQ-I-006, REQ-NF-001 a REQ-NF-026 |
+| Elemento                           | Requisitos realizados                                     |
+| ---------------------------------- | --------------------------------------------------------- |
+| RulesModule                        | REQ-F-001 a REQ-F-017, REQ-D-003 a REQ-D-005              |
+| CqlAuthoringModule                 | REQ-F-005 a REQ-F-009, REQ-D-008                          |
+| KnowledgeArtifactsModule           | REQ-F-010 a REQ-F-016, REQ-D-001 a REQ-D-005              |
+| ClinicalReasoningModule            | REQ-F-018 a REQ-F-024                                     |
+| PatientsModule                     | REQ-F-025 a REQ-F-031, REQ-D-006, REQ-D-007, REQ-D-011    |
+| CdsHooksModule                     | REQ-F-032 a REQ-F-042, REQ-I-004                          |
+| ClassroomSession/Auth/Audit/Health | REQ-F-043 a REQ-F-055, REQ-I-007                          |
+| Adapters/Deployment                | REQ-I-001 a REQ-I-007, REQ-D-010, REQ-NF-001 a REQ-NF-029 |
 
 ## 21. Referencias
 

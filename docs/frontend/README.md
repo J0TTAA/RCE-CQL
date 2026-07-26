@@ -6,6 +6,10 @@ Este paquete define la maqueta de alta fidelidad del RCE y el contrato para su
 futura implementacion en `apps/web`. No crea codigo frontend mientras el gate
 M0 del proyecto principal permanezca abierto.
 
+La maqueta debe representar el modo aula anonimo elegido para el proyecto: todos
+entran por la misma URL, no existe login visible y cada navegador trabaja en su
+propio sandbox.
+
 ## Documentos
 
 1. [REQUIREMENTS.md](./REQUIREMENTS.md): comportamiento y criterios visuales.

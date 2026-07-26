@@ -17,7 +17,9 @@ Copiar desde la siguiente linea hasta `FIN DEL PROMPT`:
 Construye una maqueta frontend interactiva y de alta fidelidad para "RCE CQL",
 un Registro Clinico Electronico educativo donde alumnos escriben reglas CQL,
 las validan, las prueban contra pacientes sinteticos y observan recomendaciones
-CDS Hooks cuando cambian datos clinicos.
+CDS Hooks cuando cambian datos clinicos. La aplicacion se usa en modo aula:
+todos abren la misma URL, no hay login visible y cada navegador trabaja dentro
+de su propio sandbox anonimo.
 
 OBJETIVO
 Quiero la aplicacion real como primera pantalla, no una landing page ni una
@@ -36,6 +38,9 @@ LIMITES TECNICOS OBLIGATORIOS
 - Expone una interfaz MockRceUiApi; los componentes nunca leen arrays mock
   directamente ni llaman a HAPI o al traductor CQL.
 - No implementes backend, autenticacion real, base de datos ni llamadas de red.
+- No crees pantalla de login, registro, lista de alumnos ni gestion de usuarios.
+- Simula una sesion anonima con classroomId, sandboxId, rol y expiracion mediante
+  MockRceUiApi. El sandbox debe venir de un SessionProvider, no de componentes.
 - No parses, traduzcas ni ejecutes CQL en JavaScript/TypeScript.
 - Los resultados validos, invalidos y por paciente deben venir de fixtures mock
   predefinidos, no de condiciones clinicas codificadas en la UI.
@@ -45,6 +50,7 @@ LIMITES TECNICOS OBLIGATORIOS
 ARQUITECTURA DE ARCHIVOS
 Organiza la aplicacion por features:
 - src/app para App, router y providers.
+- src/app/session-provider.tsx para sesion anonima y sandbox activo.
 - src/components/ui y src/components/layout.
 - src/features/patients con api, components, pages y types.
 - src/features/rules con api, components, pages y types.
@@ -71,7 +77,10 @@ SHELL
 - Navegacion: Pacientes, Reglas CQL, Actividad CDS.
 - Al pie muestra estados API, HAPI y Traductor con icono y texto.
 - Topbar de 56px con breadcrumb, badge de entorno sintetico, selector segmentado
-  de rol Alumno/Docente y menu de usuario.
+  de rol Alumno/Docente, etiqueta de sandbox corto y menu de sesion.
+- El menu de sesion muestra classroomId, sandboxLabel, expiracion y accion
+  "Reiniciar sandbox" con confirmacion. No lo presentes como administracion de
+  usuarios.
 - Incluye skip link y landmarks semanticos.
 - En mobile la sidebar debe ser un drawer.
 
@@ -87,6 +96,7 @@ PANTALLA PACIENTES
 FICHA CLINICA
 - Header no flotante con nombre sintetico, SYN-xxxx, edad, nacimiento, sexo y
   badge de datos sinteticos.
+- Cuando existan cambios mock privados, muestra badge compacto "Mi sandbox".
 - Tabs: Resumen, Condiciones, Observaciones, Medicamentos, Encuentros.
 - Resumen con datos clinicos compactos y linea temporal, sin cards anidadas.
 - Desktop: contenido principal y rail CDS sticky de 300-360px.
@@ -100,7 +110,7 @@ PANTALLA REGLAS
 - Tabla, no grid de cards.
 - Filtros por texto, lifecycle, hook y activacion.
 - Columnas: regla/nombre CQL, version, lifecycle, hook, activacion, modificada,
-  acciones.
+  alcance y acciones.
 - Diferencia draft, validated, published, disabled y retired usando icono, texto
   y color, nunca solo color.
 - Boton primario unico "Nueva regla".
@@ -150,6 +160,15 @@ MOCKS E INTERACCIONES
   saving y success.
 - Incluye un control solo de demo para alternar escenarios de API normal,
   traductor caido y HAPI caido; ubicalo dentro del menu de entorno, no como banner.
+- Al iniciar, MockRceUiApi.getSession retorna una sesion anonima deterministicamente
+  generada, por ejemplo classroomId "demo-aula", sandboxId opaco y sandboxLabel
+  "S-A4F9".
+- MockRceUiApi.resetSandbox cambia sandboxLabel, limpia reglas/pacientes editados
+  del sandbox anterior en la maqueta y vuelve a datos base. Debe pedir
+  confirmacion.
+- Todas las acciones de reglas, pacientes, cards y actividad usan el sandbox
+  activo desde SessionProvider. No agregues campos visibles para escribir
+  sandboxId manualmente.
 - Una regla fixture valida retorna ELM y resultados predefinidos.
 - Una regla fixture invalida retorna diagnosticos predefinidos.
 - Dos pacientes deben dar resultados mock diferentes al probar la misma regla.

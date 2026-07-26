@@ -1,5 +1,4 @@
 export type Role = 'student' | 'teacher';
-export type ApiScenario = 'normal' | 'translator-down' | 'hapi-down';
 export type DependencyState = 'up' | 'degraded' | 'down';
 export type CdsSeverity = 'info' | 'warning' | 'critical';
 export type Lifecycle = 'draft' | 'validated' | 'published' | 'disabled' | 'retired';

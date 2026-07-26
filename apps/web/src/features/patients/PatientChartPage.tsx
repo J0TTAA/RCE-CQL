@@ -1,10 +1,10 @@
 import { CheckCircle2, ClipboardEdit, RotateCw } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
 import { formatDate } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
-import type { CdsCard, ClinicalObservation, PatientDetail } from '../../types';
+import type { CdsCard, PatientDetail } from '../../types';
 import {
   AsyncState,
   Badge,
@@ -12,7 +12,6 @@ import {
   Drawer,
   Field,
   Panel,
-  SelectInput,
   SeverityBadge,
   TextInput,
 } from '../../components/ui/primitives';
@@ -124,7 +123,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                 </AsyncState>
               </aside>
             </div>
-            <ObservationDrawer
+            <PatientDataDrawer
               patient={patient.data}
               open={drawerOpen}
               onClose={() => setDrawerOpen(false)}
@@ -305,7 +304,7 @@ function ApplySuggestionDialog({ card, onClose }: { card: CdsCard | null; onClos
   );
 }
 
-function ObservationDrawer({
+function PatientDataDrawer({
   patient,
   open,
   onClose,
@@ -317,41 +316,21 @@ function ObservationDrawer({
   onUpdated: () => void;
 }) {
   const { api } = useRce();
-  const firstObservation = patient.observations[0];
-  const [selectedId, setSelectedId] = useState(firstObservation?.id ?? '');
-  const selected = useMemo(
-    () => patient.observations.find((item) => item.id === selectedId) ?? firstObservation,
-    [firstObservation, patient.observations, selectedId],
-  );
-  const [value, setValue] = useState(selected?.value ?? '');
-  const [unit, setUnit] = useState(selected?.unit ?? '');
-  const [interpretation, setInterpretation] = useState(selected?.interpretation ?? 'normal');
+  const [birthDate, setBirthDate] = useState(patient.birthDate);
   const [stage, setStage] = useState<'idle' | 'validating' | 'saving' | 'reevaluating' | 'updated'>(
     'idle',
   );
 
-  const onSelectObservation = (id: string) => {
-    const next = patient.observations.find((item) => item.id === id);
-    setSelectedId(id);
-    setValue(next?.value ?? '');
-    setUnit(next?.unit ?? '');
-    setInterpretation(next?.interpretation ?? 'normal');
-  };
+  useEffect(() => {
+    setBirthDate(patient.birthDate);
+    setStage('idle');
+  }, [patient.birthDate, open]);
 
   const save = async () => {
-    if (!selected) {
-      return;
-    }
     setStage('validating');
     await new Promise((resolve) => window.setTimeout(resolve, 280));
     setStage('saving');
-    await api.updateObservation({
-      patientId: patient.id,
-      observationId: selected.id,
-      value,
-      unit,
-      interpretation,
-    });
+    await api.updatePatient({ patientId: patient.id, birthDate });
     setStage('reevaluating');
     await new Promise((resolve) => window.setTimeout(resolve, 360));
     setStage('updated');
@@ -361,7 +340,7 @@ function ObservationDrawer({
   return (
     <Drawer
       open={open}
-      title="Editar observación"
+      title="Editar datos del paciente"
       onClose={onClose}
       footer={
         <>
@@ -377,42 +356,22 @@ function ObservationDrawer({
       }
     >
       <div className="stack">
-        <Field label="Observación">
-          <SelectInput
-            value={selectedId}
-            onChange={(event) => onSelectObservation(event.target.value)}
-          >
-            {patient.observations.map((observation) => (
-              <option key={observation.id} value={observation.id}>
-                {observation.display}
-              </option>
-            ))}
-          </SelectInput>
+        <Field label="Fecha de nacimiento">
+          <TextInput
+            type="date"
+            value={birthDate}
+            onChange={(event) => setBirthDate(event.target.value)}
+          />
         </Field>
-        <Field label="Valor">
-          <TextInput value={value} onChange={(event) => setValue(event.target.value)} />
-        </Field>
-        <Field label="Unidad">
-          <TextInput value={unit} onChange={(event) => setUnit(event.target.value)} />
-        </Field>
-        <Field label="Interpretación">
-          <SelectInput
-            value={interpretation}
-            onChange={(event) => setInterpretation(event.target.value)}
-          >
-            <option value="normal">normal</option>
-            <option value="alto">alto</option>
-            <option value="bajo">bajo</option>
-            <option value="crítico">crítico</option>
-          </SelectInput>
-        </Field>
-        <WriteStage stage={stage} observation={selected} />
+        <div className="state-box compact-state">
+          El cambio queda guardado como overlay del sandbox y se usa al reevaluar CQL.
+        </div>
+        <WriteStage stage={stage} detail={`Patient/${patient.id}`} />
       </div>
     </Drawer>
   );
 }
-
-function WriteStage({ stage, observation }: { stage: string; observation?: ClinicalObservation }) {
+function WriteStage({ stage, detail }: { stage: string; detail?: string }) {
   const steps = [
     ['validating', 'Validando'],
     ['saving', 'Guardando'],
@@ -431,7 +390,7 @@ function WriteStage({ stage, observation }: { stage: string; observation?: Clini
           {label}
         </span>
       ))}
-      {observation ? <small>{observation.code}</small> : null}
+      {detail ? <small>{detail}</small> : null}
     </div>
   );
 }

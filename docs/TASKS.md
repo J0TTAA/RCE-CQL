@@ -90,19 +90,19 @@ Objetivo: demostrar la cadena tecnica antes de construir features.
 | -------- | ------------------------------------------------------------------------------ | ------------ | ------------------------------- | ------ | ------ |
 | TASK-0.1 | Seleccionar y registrar versiones candidatas de HAPI, traductor y tooling CQL. | Ninguna      | REQ-NF-002                      | S      | DONE   |
 | TASK-0.2 | Crear Compose minimo con HAPI, PostgreSQL y CQL Translation Service.           | 0.1          | REQ-NF-024, REQ-NF-025          | M      | DONE   |
-| TASK-0.3 | Habilitar Clinical Reasoning y comprobar `/metadata`.                          | 0.2          | REQ-F-049, REQ-NF-003           | S      | DONE   |
+| TASK-0.3 | Comprobar `/metadata` de HAPI y recursos FHIR requeridos.                      | 0.2          | REQ-F-049, REQ-NF-003           | S      | DONE   |
 | TASK-0.4 | Instalar FHIRHelpers R4 y un paciente sintetico minimo.                        | 0.2          | REQ-F-008, REQ-D-007, REQ-D-008 | M      | TODO   |
 | TASK-0.5 | Traducir un fixture CQL a ELM mediante HTTP.                                   | 0.2, 0.4     | REQ-F-005, REQ-NF-003           | S      | REVIEW |
-| TASK-0.6 | Construir manualmente Library y PlanDefinition compatibles.                    | 0.5          | REQ-D-001 a REQ-D-005           | M      | TODO   |
-| TASK-0.7 | Ejecutar `$apply` contra el paciente y documentar respuesta real.              | 0.3, 0.6     | REQ-F-020, REQ-NF-003           | M      | TODO   |
-| TASK-0.8 | Verificar `$apply` sobre draft o documentar fallback temporal.                 | 0.7          | REQ-F-019                       | S      | TODO   |
+| TASK-0.6 | Construir y leer Library compatible con CQL, ELM y metadata.                   | 0.5          | REQ-D-001 a REQ-D-005           | M      | REVIEW |
+| TASK-0.7 | Ejecutar ELM contra `Patient/$everything` y documentar respuesta real.         | 0.3, 0.6     | REQ-F-020, REQ-NF-003           | M      | REVIEW |
+| TASK-0.8 | Verificar prueba de draft validado sin publicacion compartida.                 | 0.7          | REQ-F-019                       | S      | REVIEW |
 | TASK-0.9 | Publicar matriz de compatibilidad y decision go/no-go.                         | 0.1 a 0.8    | REQ-NF-002, REQ-NF-003          | S      | TODO   |
 
 Gate `M0`: no comienza WBS 3-6 hasta completar TASK-0.9.
 
-Los servicios base fueron levantados en Fedora y el readiness comprobo HAPI,
-Clinical Reasoning y el traductor. El gate M0 sigue abierto hasta demostrar
-FHIRHelpers, Library/PlanDefinition y `$apply`.
+Los servicios base fueron levantados en Fedora y el readiness comprobo HAPI y
+el traductor. El gate M0 sigue abierto hasta registrar evidencia reproducible
+de Synthea y de evaluacion CQL contra pacientes.
 
 ## 6. WBS 1 - Fundacion del repositorio
 
@@ -160,9 +160,9 @@ Objetivo: representar borradores, versiones y lifecycle sobre FHIR.
 | TASK-3.2  | Implementar maquina de estados draft/validated/published/retired.    | 3.1           | REQ-F-012 a REQ-F-016, REQ-D-005            | M      | TODO   |
 | TASK-3.3  | Definir canonical URL, semver y estrategia de logical ids.           | 3.1, 1.3      | REQ-D-003, REQ-D-004                        | S      | TODO   |
 | TASK-3.4  | Implementar mapper ClinicalRule a Library draft.                     | 3.1, 2.1      | REQ-D-001, REQ-D-003                        | M      | TODO   |
-| TASK-3.5  | Implementar mapper ClinicalRule a PlanDefinition draft.              | 3.1, 2.1      | REQ-D-002, REQ-D-003, REQ-D-005             | M      | TODO   |
+| TASK-3.5  | Mapear metadata ejecutable de regla a extensiones Library.           | 3.1, 2.1      | REQ-D-002, REQ-D-003, REQ-D-005             | M      | REVIEW |
 | TASK-3.6  | Crear StructureDefinitions de extensiones RCE.                       | 3.4, 3.5      | REQ-D-005, REQ-F-036                        | M      | TODO   |
-| TASK-3.7  | Implementar repositorio FHIR de reglas y busquedas.                  | 3.4, 3.5, 2.2 | REQ-F-003, REQ-F-017                        | L      | TODO   |
+| TASK-3.7  | Implementar repositorio FHIR de reglas y busquedas.                  | 3.4, 3.5, 2.2 | REQ-F-003, REQ-F-017                        | L      | REVIEW |
 | TASK-3.8  | Implementar crear, obtener y editar borrador.                        | 3.2, 3.7, 2.4 | REQ-F-001 a REQ-F-004                       | M      | TODO   |
 | TASK-3.9  | Eliminar ELM/validated al modificar fuente ejecutable.               | 3.2, 3.8      | REQ-F-011                                   | S      | TODO   |
 | TASK-3.10 | Implementar enable, disable, retire y version unica activa.          | 3.2, 3.7      | REQ-F-014 a REQ-F-016                       | L      | TODO   |
@@ -185,27 +185,27 @@ Objetivo: completar CQL -> ELM -> artefactos FHIR versionados.
 | TASK-4.8 | Implementar proteccion de version publicada inmutable.             | 3.7, 4.7       | REQ-F-012, REQ-F-013                         | M      | TODO   |
 | TASK-4.9 | Crear integration tests de validacion y publicacion.               | 4.1 a 4.8      | AC-001, AC-002, AC-003                       | L      | TODO   |
 
-Gate `M2`: regla creada en API, validada, publicada y visible como Library/PlanDefinition en HAPI.
+Gate `M2`: regla creada en API, validada, publicada y visible como Library en HAPI.
 
 ## 10. WBS 5 - Evaluacion y CDS Hooks
 
 Objetivo: ejecutar reglas y exponer soporte de decisiones estandar.
 
-| ID        | Tarea/entregable                                                         | Dependencias  | Requisitos                                            | Tamano | Estado |
-| --------- | ------------------------------------------------------------------------ | ------------- | ----------------------------------------------------- | ------ | ------ |
-| TASK-5.1  | Implementar HapiClinicalReasoningAdapter para `$apply`.                  | 2.2, 0.7      | REQ-F-020                                             | L      | TODO   |
-| TASK-5.2  | Normalizar CarePlan/Bundle/OperationOutcome a RuleEvaluationResult.      | 5.1           | REQ-F-021, REQ-F-022                                  | M      | TODO   |
-| TASK-5.3  | Implementar prueba de borrador validated y fallback confirmado en WBS 0. | 5.1, 4.4, 0.8 | REQ-F-018, REQ-F-019                                  | M      | TODO   |
-| TASK-5.4  | Implementar seleccion y evaluacion de reglas activas por hook.           | 3.10, 5.2     | REQ-F-023, REQ-F-024                                  | L      | TODO   |
-| TASK-5.5  | Implementar mapper RuleEvaluationResult a CDS Card.                      | 5.2, 3.5      | REQ-F-021, REQ-F-034 a REQ-F-037                      | M      | TODO   |
-| TASK-5.6  | Implementar CDS Services Discovery.                                      | 5.4           | REQ-F-032, REQ-I-004                                  | M      | TODO   |
-| TASK-5.7  | Implementar `rce-patient-view`.                                          | 5.4 a 5.6     | REQ-F-033, REQ-F-034, REQ-F-035, REQ-F-036, REQ-F-037 | L      | TODO   |
-| TASK-5.8  | Implementar `rce-order-select` y `rce-order-sign`.                       | 5.7           | REQ-F-033 a REQ-F-037                                 | L      | TODO   |
-| TASK-5.9  | Implementar prefetch y allowlist de fhirServer.                          | 5.7, 2.5      | REQ-NF-011, REQ-I-004                                 | M      | TODO   |
-| TASK-5.10 | Implementar aislamiento, concurrencia limitada y orden de cards.         | 5.4, 5.5      | REQ-F-024, REQ-F-037, REQ-NF-006                      | M      | TODO   |
-| TASK-5.11 | Implementar feedback CDS y AuditEvent.                                   | 5.6, 3.11     | REQ-F-041, REQ-F-044                                  | M      | TODO   |
-| TASK-5.12 | Crear contract/e2e tests CDS Hooks.                                      | 5.6 a 5.11    | AC-004, AC-006, AC-007                                | L      | TODO   |
-| TASK-5.13 | Filtrar evaluacion CDS por sandbox y reglas compartidas.                 | 5.4, 3.12     | REQ-F-052, REQ-F-053, REQ-NF-027                      | M      | TODO   |
+| ID        | Tarea/entregable                                                       | Dependencias  | Requisitos                                            | Tamano | Estado |
+| --------- | ---------------------------------------------------------------------- | ------------- | ----------------------------------------------------- | ------ | ------ |
+| TASK-5.1  | Implementar RuleExecutionModule con `cql-execution` y `cql-exec-fhir`. | 2.2, 0.7      | REQ-F-020                                             | L      | REVIEW |
+| TASK-5.2  | Normalizar resultado booleano/errores a RuleEvaluationResult.          | 5.1           | REQ-F-021, REQ-F-022                                  | M      | REVIEW |
+| TASK-5.3  | Implementar prueba de borrador validated con bundle FHIR de paciente.  | 5.1, 4.4, 0.8 | REQ-F-018, REQ-F-019                                  | M      | REVIEW |
+| TASK-5.4  | Implementar seleccion y evaluacion de reglas activas por hook.         | 3.10, 5.2     | REQ-F-023, REQ-F-024                                  | L      | TODO   |
+| TASK-5.5  | Implementar mapper RuleEvaluationResult a CDS Card.                    | 5.2, 3.5      | REQ-F-021, REQ-F-034 a REQ-F-037                      | M      | TODO   |
+| TASK-5.6  | Implementar CDS Services Discovery.                                    | 5.4           | REQ-F-032, REQ-I-004                                  | M      | TODO   |
+| TASK-5.7  | Implementar `rce-patient-view`.                                        | 5.4 a 5.6     | REQ-F-033, REQ-F-034, REQ-F-035, REQ-F-036, REQ-F-037 | L      | TODO   |
+| TASK-5.8  | Implementar `rce-order-select` y `rce-order-sign`.                     | 5.7           | REQ-F-033 a REQ-F-037                                 | L      | TODO   |
+| TASK-5.9  | Implementar prefetch y allowlist de fhirServer.                        | 5.7, 2.5      | REQ-NF-011, REQ-I-004                                 | M      | TODO   |
+| TASK-5.10 | Implementar aislamiento, concurrencia limitada y orden de cards.       | 5.4, 5.5      | REQ-F-024, REQ-F-037, REQ-NF-006                      | M      | TODO   |
+| TASK-5.11 | Implementar feedback CDS y AuditEvent.                                 | 5.6, 3.11     | REQ-F-041, REQ-F-044                                  | M      | TODO   |
+| TASK-5.12 | Crear contract/e2e tests CDS Hooks.                                    | 5.6 a 5.11    | AC-004, AC-006, AC-007                                | L      | TODO   |
+| TASK-5.13 | Filtrar evaluacion CDS por sandbox y reglas compartidas.               | 5.4, 3.12     | REQ-F-052, REQ-F-053, REQ-NF-027                      | M      | TODO   |
 
 Gate `M3`: `patient-view` produce cards dinamicas desde CQL ejecutado en HAPI.
 
@@ -270,14 +270,14 @@ Gate `M5`: todos los criterios AC-001 a AC-011 pasan y la demo se levanta desde 
 
 ## 14. Hitos
 
-| Hito                      | Evidencia                                        | Tareas requeridas   |
-| ------------------------- | ------------------------------------------------ | ------------------- |
-| M0 - Arquitectura probada | CQL -> ELM -> Library/PlanDefinition -> `$apply` | TASK-0.1 a TASK-0.9 |
-| M1 - Integraciones listas | Nest consulta HAPI y traduce CQL                 | WBS 1 y 2           |
-| M2 - Autoria lista        | CRUD, validacion, ELM y publicacion              | WBS 3 y 4           |
-| M3 - CDS listo            | `patient-view` produce cards                     | WBS 5               |
-| M4 - Experiencia docente  | Cambio clinico modifica cards en UI              | WBS 6               |
-| M5 - Entrega reproducible | Criterios, seguridad, rendimiento y runbook      | WBS 7 y 8           |
+| Hito                      | Evidencia                                                     | Tareas requeridas   |
+| ------------------------- | ------------------------------------------------------------- | ------------------- |
+| M0 - Arquitectura probada | CQL -> ELM -> Library -> Patient/$everything -> cql-execution | TASK-0.1 a TASK-0.9 |
+| M1 - Integraciones listas | Nest consulta HAPI y traduce CQL                              | WBS 1 y 2           |
+| M2 - Autoria lista        | CRUD, validacion, ELM y publicacion                           | WBS 3 y 4           |
+| M3 - CDS listo            | `patient-view` produce cards                                  | WBS 5               |
+| M4 - Experiencia docente  | Cambio clinico modifica cards en UI                           | WBS 6               |
+| M5 - Entrega reproducible | Criterios, seguridad, rendimiento y runbook                   | WBS 7 y 8           |
 
 ## 15. Ruta critica inicial
 
@@ -292,14 +292,14 @@ La incompatibilidad detectada en WBS 0 debe resolverse antes de estimar el resto
 
 ## 16. Spikes y decisiones asociadas
 
-| Spike     | Pregunta                                              | Resultado esperado                                 |
-| --------- | ----------------------------------------------------- | -------------------------------------------------- |
-| TASK-0.7  | El ELM del traductor fijado se ejecuta en HAPI fijado | Matriz compatible o cambio de version.             |
-| TASK-0.8  | HAPI ejecuta PlanDefinition draft                     | Camino directo o fallback documentado.             |
-| TASK-5.2  | Que forma exacta devuelve `$apply`                    | Normalizador respaldado por fixtures.              |
-| TASK-5.10 | Cuanta concurrencia tolera el entorno local           | Limite inicial medido.                             |
-| TASK-8.10 | El aislamiento por sandbox resiste uso concurrente    | Dos navegadores y 10 sesiones sin mezcla de datos. |
-| TASK-8.5  | Se cumplen objetivos p95                              | Resultados y ajustes de alcance.                   |
+| Spike     | Pregunta                                           | Resultado esperado                                 |
+| --------- | -------------------------------------------------- | -------------------------------------------------- |
+| TASK-0.7  | El ELM del traductor fijado se ejecuta en Nest     | Matriz compatible o cambio de version.             |
+| TASK-0.8  | Un draft validado se prueba sin publicarlo         | Camino directo documentado.                        |
+| TASK-5.2  | Que forma exacta devuelve `cql-execution`          | Normalizador respaldado por fixtures.              |
+| TASK-5.10 | Cuanta concurrencia tolera el entorno local        | Limite inicial medido.                             |
+| TASK-8.10 | El aislamiento por sandbox resiste uso concurrente | Dos navegadores y 10 sesiones sin mezcla de datos. |
+| TASK-8.5  | Se cumplen objetivos p95                           | Resultados y ajustes de alcance.                   |
 
 ## 17. Seguimiento
 

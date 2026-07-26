@@ -5,6 +5,7 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 
 const port = Number.parseInt(process.env.PORT ?? '5173', 10);
 const host = process.env.HOST ?? '0.0.0.0';
+const apiOrigin = process.env.API_ORIGIN ?? 'http://api:3000';
 const root = resolve(import.meta.dirname, 'dist');
 
 const contentTypes = new Map([
@@ -40,6 +41,11 @@ async function serveFile(response, filePath) {
 }
 
 const server = createServer(async (request, response) => {
+  if (request.url?.startsWith('/api/')) {
+    await proxyApi(request, response);
+    return;
+  }
+
   const target = safePath(request.url ?? '/');
   if (!target) {
     response.writeHead(400).end('Bad request');
@@ -56,6 +62,28 @@ const server = createServer(async (request, response) => {
     }
   }
 });
+
+async function proxyApi(request, response) {
+  const upstream = new URL(request.url ?? '/', apiOrigin);
+  try {
+    const proxyResponse = await fetch(upstream, {
+      method: request.method,
+      headers: request.headers,
+      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request,
+      duplex: 'half',
+    });
+    response.writeHead(proxyResponse.status, Object.fromEntries(proxyResponse.headers.entries()));
+    if (proxyResponse.body) {
+      for await (const chunk of proxyResponse.body) {
+        response.write(chunk);
+      }
+    }
+    response.end();
+  } catch {
+    response.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify({ code: 'API_PROXY_FAILED', message: 'API unavailable' }));
+  }
+}
 
 server.listen(port, host, () => {
   console.log(`RCE CQL web listening on http://${host}:${port}`);

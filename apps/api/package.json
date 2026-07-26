@@ -21,6 +21,8 @@
     "@nestjs/swagger": "11.4.6",
     "class-transformer": "0.5.1",
     "class-validator": "0.15.1",
+    "cql-exec-fhir": "2.1.6",
+    "cql-execution": "3.3.2",
     "helmet": "8.3.0",
     "joi": "18.2.3",
     "reflect-metadata": "0.2.2",

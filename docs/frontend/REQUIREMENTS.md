@@ -4,7 +4,7 @@
 
 | Campo     | Valor                                    |
 | --------- | ---------------------------------------- |
-| Estado    | Propuesto para maqueta                   |
+| Estado    | Implementacion integrada                 |
 | Version   | 0.2.0                                    |
 | Fecha     | 2026-07-26                               |
 | Deriva de | `docs/REQUIREMENTS.md`                   |
@@ -14,9 +14,10 @@
 
 Definir una interfaz educativa de alta fidelidad que permita explorar pacientes
 sinteticos, editar y probar reglas CQL y observar recomendaciones CDS sin salir
-del RCE. La maqueta debe servir como referencia visual y como fuente de
-componentes para la futura SPA React/Vite. La experiencia de clase debe abrirse
-desde una sola URL sin login visible y mostrar un sandbox anonimo por navegador.
+del RCE. La SPA React/Vite debe consumir NestJS por `/api/v1/ui`, sin datos
+clinicos hardcodeados en componentes ni acceso directo del navegador a HAPI o
+al traductor CQL. La experiencia de clase debe abrirse desde una sola URL sin
+login visible y mostrar un sandbox anonimo por navegador.
 
 ## 2. Alcance
 
@@ -28,16 +29,15 @@ Incluye:
 - Visualizacion de ELM y diagnosticos.
 - Cards CDS y confirmacion de sugerencias.
 - Sesion anonima de aula y sandbox visible para soporte docente.
-- Mocks interactivos aislados del render.
+- Cliente HTTP aislado del render mediante `RceUiApi`.
 - Estados responsive, accesibles, vacios, cargando y de error.
 
 No incluye:
 
-- Backend, base de datos, autenticacion real, pantallas de login ni despliegue.
+- Autenticacion real ni pantallas de login.
 - Parser, traductor o evaluador CQL implementado en frontend.
 - Acceso directo desde el navegador a HAPI o CQL Translation Service.
 - Datos de pacientes reales.
-- Evidencia de que `$apply`, CDS Hooks o una escritura FHIR funcionan.
 
 ## 3. Principios de experiencia
 
@@ -74,8 +74,8 @@ No incluye:
 | FE-REQ-011 | La ficha DEBE mostrar cabecera clinica y tabs Resumen, Condiciones, Observaciones, Medicamentos y Encuentros.              | MUST      | Demostracion |
 | FE-REQ-012 | La ficha DEBE incluir una linea temporal compacta de eventos clinicos.                                                     | SHOULD    | Inspeccion   |
 | FE-REQ-013 | El usuario DEBE poder abrir un formulario de edicion en drawer lateral.                                                    | MUST      | Demostracion |
-| FE-REQ-014 | Guardar un cambio mock DEBE mostrar validar, guardar y reevaluar como estados distintos.                                   | MUST      | Demostracion |
-| FE-REQ-015 | La reevaluacion mock DEBE actualizar las cards visibles sin recargar la pagina.                                            | MUST      | Demostracion |
+| FE-REQ-014 | Guardar un cambio de paciente DEBE mostrar validar, guardar y reevaluar como estados distintos.                            | MUST      | Demostracion |
+| FE-REQ-015 | La reevaluacion del backend DEBE actualizar las cards visibles sin recargar la pagina.                                     | MUST      | Demostracion |
 | FE-REQ-016 | La UI NO DEBE contener logica clinica TypeScript para decidir si una regla aplica.                                         | MUST      | Revision     |
 
 ### 4.3 Reglas y editor CQL
@@ -98,14 +98,14 @@ No incluye:
 
 ### 4.4 Cards CDS
 
-| ID         | Requisito                                                                                            | Prioridad | Verificacion  |
-| ---------- | ---------------------------------------------------------------------------------------------------- | --------- | ------------- |
-| FE-REQ-030 | Las cards DEBEN distinguir info, warning y critical sin depender solo del color.                     | MUST      | Accesibilidad |
-| FE-REQ-031 | Cada card DEBE mostrar resumen, detalle, fuente y regla/version.                                     | MUST      | Inspeccion    |
-| FE-REQ-032 | Una sugerencia DEBE mostrar los recursos que crearia, actualizaria o eliminaria.                     | MUST      | Demostracion  |
-| FE-REQ-033 | Aplicar una sugerencia DEBE abrir confirmacion explicita.                                            | MUST      | Demostracion  |
-| FE-REQ-034 | El estado sin recomendaciones DEBE ser sobrio y no parecer un error.                                 | MUST      | Inspeccion    |
-| FE-REQ-035 | La actividad CDS DEBE listar evaluaciones mock por fecha, paciente, hook, resultado y correlationId. | SHOULD    | Demostracion  |
+| ID         | Requisito                                                                                                   | Prioridad | Verificacion  |
+| ---------- | ----------------------------------------------------------------------------------------------------------- | --------- | ------------- |
+| FE-REQ-030 | Las cards DEBEN distinguir info, warning y critical sin depender solo del color.                            | MUST      | Accesibilidad |
+| FE-REQ-031 | Cada card DEBE mostrar resumen, detalle, fuente y regla/version.                                            | MUST      | Inspeccion    |
+| FE-REQ-032 | Una sugerencia DEBE mostrar los recursos que crearia, actualizaria o eliminaria.                            | MUST      | Demostracion  |
+| FE-REQ-033 | Aplicar una sugerencia DEBE abrir confirmacion explicita.                                                   | MUST      | Demostracion  |
+| FE-REQ-034 | El estado sin recomendaciones DEBE ser sobrio y no parecer un error.                                        | MUST      | Inspeccion    |
+| FE-REQ-035 | La actividad CDS DEBE listar evaluaciones del backend por fecha, paciente, hook, resultado y correlationId. | SHOULD    | Demostracion  |
 
 ## 5. Requisitos visuales y de interaccion
 
@@ -129,14 +129,14 @@ No incluye:
 | ---------- | ------------------------------------------------------------------------------------------------------------------- | --------- | ------------ |
 | FE-REQ-047 | Los componentes de aplicacion DEBEN ser React + TypeScript portables a Vite.                                        | MUST      | Revision     |
 | FE-REQ-048 | La maqueta NO DEBE depender de Server Components, Server Actions, API routes ni navegacion especifica de Next.js.   | MUST      | Revision     |
-| FE-REQ-049 | Los datos mock DEBEN residir fuera de componentes visuales y exponerse mediante interfaces asincronas.              | MUST      | Revision     |
+| FE-REQ-049 | Las llamadas HTTP DEBEN residir fuera de componentes visuales y exponerse mediante interfaces asincronas.           | MUST      | Revision     |
 | FE-REQ-050 | Ningun componente DEBE llamar directamente a HAPI o CQL Translation Service.                                        | MUST      | Revision     |
 | FE-REQ-051 | Los componentes compartidos DEBEN derivar estilos de tokens CSS, no de colores repetidos ad hoc.                    | MUST      | Revision CSS |
 | FE-REQ-052 | El prototipo DEBE usar identificadores y pacientes explicitamente ficticios.                                        | MUST      | Inspeccion   |
 | FE-REQ-053 | La maqueta DEBE entrar en modo aula sin pantalla de login, registro ni seleccion obligatoria de usuario.            | MUST      | Demostracion |
-| FE-REQ-054 | MockRceUiApi DEBE entregar una SessionContext anonima con classroomId, sandboxId, rol y expiracion.                 | MUST      | Revision     |
+| FE-REQ-054 | RceUiApi DEBE entregar una SessionContext anonima con classroomId, sandboxId, rol y expiracion.                     | MUST      | Revision     |
 | FE-REQ-055 | La UI DEBE mostrar un identificador corto de sandbox y accion Reiniciar sandbox dentro del menu de sesion.          | MUST      | Demostracion |
-| FE-REQ-056 | Las operaciones mock de reglas, pacientes, cards y actividad DEBEN recibir el sandbox activo desde el provider.     | MUST      | Revision     |
+| FE-REQ-056 | Las operaciones de reglas, pacientes, cards y actividad DEBEN recibir el sandbox activo desde el provider.          | MUST      | Revision     |
 | FE-REQ-057 | La maqueta DEBE indicar que cambios y reglas pertenecen a Mi sandbox sin crear una pantalla de gestion de usuarios. | SHOULD    | Inspeccion   |
 
 ## 7. Criterios de aceptacion frontend
@@ -148,13 +148,13 @@ No incluye:
 | FE-AC-003 | Editar una observacion    | Se muestran validacion, guardado, reevaluacion y cambio de cards.       |
 | FE-AC-004 | Validar fixture invalido  | Aparecen diagnosticos y al activarlos Monaco enfoca la ubicacion.       |
 | FE-AC-005 | Validar fixture valido    | Se habilitan Ver ELM y Probar; el ELM aparece solo lectura.             |
-| FE-AC-006 | Probar con dos pacientes  | Un resultado mock aplica y otro no, sin evaluar CQL en frontend.        |
+| FE-AC-006 | Probar con dos pacientes  | Un resultado aplica y otro no, sin evaluar CQL en frontend.             |
 | FE-AC-007 | Cambiar a Alumno          | Publicar y activar quedan bloqueados con explicacion accesible.         |
 | FE-AC-008 | Cambiar a Docente         | Publicar abre confirmacion y muestra version/canonical afectados.       |
 | FE-AC-009 | Revisar una card critical | Se reconoce por icono, etiqueta y jerarquia, no solo color.             |
 | FE-AC-010 | Usar teclado              | Navegacion, editor, tabs, dialogs y formularios conservan foco visible. |
 | FE-AC-011 | Capturar desktop y mobile | No hay overflow horizontal de pagina, solapes ni texto cortado.         |
-| FE-AC-012 | Revisar codigo exportado  | Mocks, UI y contratos estan separados y no hay APIs Next.js.            |
+| FE-AC-012 | Revisar codigo exportado  | Cliente HTTP, UI y contratos estan separados y no hay APIs Next.js.     |
 | FE-AC-013 | Abrir la maqueta          | Entra directo, muestra sandbox anonimo y permite reiniciarlo sin login. |
 
 ## 8. Trazabilidad al sistema

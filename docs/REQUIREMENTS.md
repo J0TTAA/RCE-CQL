@@ -124,7 +124,7 @@ El flujo educativo esperado es:
 | REQ-F-007 | El sistema DEBE permitir visualizar el ultimo ELM vigente de un borrador validado.                                               | MUST      | E2E              |
 | REQ-F-008 | El sistema DEBE resolver `include` CQL por nombre y version desde artefactos autorizados.                                        | MUST      | Integracion      |
 | REQ-F-009 | El sistema DEBE comprobar que la expresion configurada exista en ELM y produzca un Boolean antes de publicar.                    | MUST      | Unit/Integracion |
-| REQ-F-010 | El sistema DEBE publicar una regla como Library y PlanDefinition relacionados.                                                   | MUST      | Integracion      |
+| REQ-F-010 | El sistema DEBE publicar una regla como Library FHIR con CQL, ELM y metadata de ejecucion.                                       | MUST      | Integracion      |
 | REQ-F-011 | La publicacion DEBE incluir CQL y ELM correspondientes a la misma fuente.                                                        | MUST      | Integracion      |
 | REQ-F-012 | Una version publicada DEBE ser inmutable.                                                                                        | MUST      | E2E              |
 | REQ-F-013 | Editar una regla publicada DEBE producir una version nueva.                                                                      | MUST      | E2E              |
@@ -208,8 +208,8 @@ El flujo educativo esperado es:
 | ID        | Requisito                                                                                                                                    | Prioridad | Verificacion           |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------------------- |
 | REQ-D-001 | El CQL y el ELM DEBEN persistirse como contenidos de un recurso Library.                                                                     | MUST      | Integracion            |
-| REQ-D-002 | La condicion, el disparador y la recomendacion DEBEN persistirse como PlanDefinition.                                                        | MUST      | Integracion            |
-| REQ-D-003 | Library y PlanDefinition DEBEN compartir identidad canonical y version coherentes.                                                           | MUST      | Unit/Integracion       |
+| REQ-D-002 | La condicion, el disparador y la recomendacion DEBEN persistirse como metadata FHIR versionada.                                              | MUST      | Integracion            |
+| REQ-D-003 | CQL, ELM y metadata DEBEN compartir identidad canonical y version coherentes.                                                                | MUST      | Unit/Integracion       |
 | REQ-D-004 | El sistema DEBE distinguir logical id de HAPI, canonical URL y version de negocio.                                                           | MUST      | Revision/Integracion   |
 | REQ-D-005 | El estado de ejecucion habilitado/deshabilitado DEBE ser independiente del ciclo editorial.                                                  | MUST      | Unit/E2E               |
 | REQ-D-006 | Los datos de paciente DEBEN usar recursos FHIR R4.                                                                                           | MUST      | Integracion            |
@@ -223,11 +223,11 @@ El flujo educativo esperado es:
 
 ### 12.1 Interoperabilidad y compatibilidad
 
-| ID         | Requisito                                                                                                   | Prioridad | Verificacion           |
-| ---------- | ----------------------------------------------------------------------------------------------------------- | --------- | ---------------------- |
-| REQ-NF-001 | El sistema DEBE operar con recursos FHIR R4.                                                                | MUST      | Contrato               |
-| REQ-NF-002 | Las versiones de HAPI, traductor y tooling CQL DEBEN fijarse y registrarse en una matriz de compatibilidad. | MUST      | Inspeccion/Integracion |
-| REQ-NF-003 | La cadena CQL a ELM a `$apply` DEBE verificarse antes de iniciar el desarrollo funcional completo.          | MUST      | Prueba de arquitectura |
+| ID         | Requisito                                                                                                        | Prioridad | Verificacion           |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- | --------- | ---------------------- |
+| REQ-NF-001 | El sistema DEBE operar con recursos FHIR R4.                                                                     | MUST      | Contrato               |
+| REQ-NF-002 | Las versiones de HAPI, traductor y tooling CQL DEBEN fijarse y registrarse en una matriz de compatibilidad.      | MUST      | Inspeccion/Integracion |
+| REQ-NF-003 | La cadena CQL a ELM a evaluacion contra FHIR DEBE verificarse antes de iniciar el desarrollo funcional completo. | MUST      | Prueba de arquitectura |
 
 ### 12.2 Rendimiento
 
@@ -293,7 +293,7 @@ Los valores siguientes son objetivos para un equipo local de demostracion:
 | ------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
 | AC-001 | Escribir CQL invalido y validar                    | Se muestran errores con ubicacion y el editor navega a ellos.                              | REQ-F-005, REQ-F-006, REQ-NF-018                        |
 | AC-002 | Escribir CQL valido y validar                      | Se genera y visualiza ELM.                                                                 | REQ-F-005, REQ-F-007                                    |
-| AC-003 | Publicar una regla validada                        | HAPI contiene Library y PlanDefinition coherentes e inmutables.                            | REQ-F-010 a REQ-F-013                                   |
+| AC-003 | Publicar una regla validada                        | HAPI contiene una Library coherente con CQL, ELM y metadata versionada.                    | REQ-F-010 a REQ-F-013                                   |
 | AC-004 | Probar una regla con dos pacientes                 | Un paciente genera card y el otro no.                                                      | REQ-F-018 a REQ-F-023                                   |
 | AC-005 | Cambiar un dato clinico                            | La card aparece, cambia o desaparece sin recargar toda la aplicacion.                      | REQ-F-027 a REQ-F-031                                   |
 | AC-006 | Deshabilitar una regla                             | La regla deja de participar en hooks.                                                      | REQ-F-014, REQ-F-015, REQ-F-023                         |

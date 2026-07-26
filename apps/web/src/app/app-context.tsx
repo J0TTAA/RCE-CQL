@@ -7,16 +7,14 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { mockRceApi } from '../mocks/mock-rce-api';
-import type { ApiScenario, Role, ServicesStatus, SessionContext } from '../types';
+import { createHttpRceApi, type RceUiApi } from '../lib/rce-api';
+import type { Role, ServicesStatus, SessionContext } from '../types';
 
 interface RceContextValue {
-  api: typeof mockRceApi;
+  api: RceUiApi;
   session: SessionContext | null;
   role: Role;
   setRole: (role: Role) => Promise<void>;
-  scenario: ApiScenario;
-  setScenario: (scenario: ApiScenario) => void;
   services: ServicesStatus;
   refreshServices: () => Promise<void>;
   resetSandbox: () => Promise<void>;
@@ -25,55 +23,44 @@ interface RceContextValue {
 const RceContext = createContext<RceContextValue | null>(null);
 
 const defaultServices: ServicesStatus = { api: 'up', hapi: 'up', translator: 'up' };
+const api = createHttpRceApi();
 
 export function RceProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SessionContext | null>(null);
-  const [scenario, setScenarioState] = useState<ApiScenario>(mockRceApi.getScenario());
   const [services, setServices] = useState<ServicesStatus>(defaultServices);
 
   const refreshServices = useCallback(async () => {
-    const next = await mockRceApi.getServicesStatus();
+    const next = await api.getServicesStatus();
     setServices(next);
   }, []);
 
   useEffect(() => {
-    mockRceApi.getSession().then(setSession);
+    api.getSession().then(setSession);
     refreshServices();
   }, [refreshServices]);
 
   const setRole = useCallback(async (role: Role) => {
-    const next = await mockRceApi.setRole(role);
+    const next = await api.setRole(role);
     setSession(next);
   }, []);
 
-  const setScenario = useCallback(
-    (next: ApiScenario) => {
-      mockRceApi.setScenario(next);
-      setScenarioState(next);
-      refreshServices();
-    },
-    [refreshServices],
-  );
-
   const resetSandbox = useCallback(async () => {
-    const next = await mockRceApi.resetSandbox();
+    const next = await api.resetSandbox();
     setSession(next);
     await refreshServices();
   }, [refreshServices]);
 
   const value = useMemo<RceContextValue>(
     () => ({
-      api: mockRceApi,
+      api,
       session,
       role: session?.role ?? 'student',
       setRole,
-      scenario,
-      setScenario,
       services,
       refreshServices,
       resetSandbox,
     }),
-    [refreshServices, resetSandbox, scenario, services, session, setRole, setScenario],
+    [refreshServices, resetSandbox, services, session, setRole],
   );
 
   return <RceContext.Provider value={value}>{children}</RceContext.Provider>;

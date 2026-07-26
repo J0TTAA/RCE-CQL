@@ -2,7 +2,7 @@
   "name": "@rce-cql/web",
   "version": "0.1.0",
   "private": true,
-  "description": "Frontend mock del RCE educativo CQL",
+  "description": "Frontend del RCE educativo CQL",
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit && vite build",

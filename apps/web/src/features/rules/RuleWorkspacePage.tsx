@@ -49,7 +49,7 @@ export function RuleWorkspacePage({
   const [diagnostics, setDiagnostics] = useState<Diagnostic[]>([]);
   const [elm, setElm] = useState<string | null>(null);
   const [tab, setTab] = useState<InspectorTab>(initialTab ?? 'metadata');
-  const [selectedPatient, setSelectedPatient] = useState('pat-adult-risk');
+  const [selectedPatient, setSelectedPatient] = useState('');
   const [testResult, setTestResult] = useState<RuleTestResult | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
@@ -66,6 +66,12 @@ export function RuleWorkspacePage({
       setDirty(false);
     }
   }, [ruleState.data]);
+
+  useEffect(() => {
+    if (!selectedPatient && patients.data?.[0]) {
+      setSelectedPatient(patients.data[0].id);
+    }
+  }, [patients.data, selectedPatient]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -110,10 +116,13 @@ export function RuleWorkspacePage({
       return;
     }
     setBusy('saving');
-    const saved = await api.saveRule(rule.id, cql, metadata);
-    setRule(saved);
-    setDirty(false);
-    setBusy(null);
+    try {
+      const saved = await api.saveRule(rule.id, cql, metadata);
+      setRule(saved);
+      setDirty(false);
+    } finally {
+      setBusy(null);
+    }
   };
 
   const validate = async () => {
@@ -121,13 +130,27 @@ export function RuleWorkspacePage({
       return;
     }
     setBusy('validating');
-    const result = await api.validateRule(rule.id, cql);
-    setDiagnostics(result.diagnostics);
-    setElm(result.elm ?? null);
-    setBusy(null);
-    if (result.valid) {
-      setRule({ ...rule, lifecycle: 'validated' });
-      setTab('elm');
+    try {
+      const result = await api.validateRule(rule.id, cql);
+      setDiagnostics(result.diagnostics);
+      setElm(result.elm ?? null);
+      if (result.valid) {
+        setRule({ ...rule, lifecycle: 'validated' });
+        setDirty(false);
+        setTab('elm');
+      }
+    } catch (error) {
+      setDiagnostics([
+        {
+          id: `diag-${Date.now()}`,
+          severity: 'error',
+          message: error instanceof Error ? error.message : 'No se pudo traducir CQL a ELM.',
+          line: 1,
+          column: 1,
+        },
+      ]);
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -136,10 +159,13 @@ export function RuleWorkspacePage({
       return;
     }
     setBusy('testing');
-    const result = await api.testRule(rule.id, selectedPatient);
-    setTestResult(result);
-    setBusy(null);
-    setTab('test');
+    try {
+      const result = await api.testRule(rule.id, selectedPatient);
+      setTestResult(result);
+      setTab('test');
+    } finally {
+      setBusy(null);
+    }
   };
 
   const publish = async () => {
@@ -147,10 +173,13 @@ export function RuleWorkspacePage({
       return;
     }
     setBusy('publishing');
-    const next = await api.publishRule(rule.id);
-    setRule(next);
-    setBusy(null);
-    setPublishOpen(false);
+    try {
+      const next = await api.publishRule(rule.id);
+      setRule(next);
+      setPublishOpen(false);
+    } finally {
+      setBusy(null);
+    }
   };
 
   const revealDiagnostic = (diagnostic: Diagnostic) => {
@@ -198,7 +227,7 @@ export function RuleWorkspacePage({
                   <Check size={15} aria-hidden />
                   Validar
                 </Button>
-                <Button onClick={runTest} disabled={Boolean(busy)}>
+                <Button onClick={runTest} disabled={Boolean(busy) || !selectedPatient}>
                   <FlaskConical size={15} aria-hidden />
                   Probar
                 </Button>
@@ -327,8 +356,8 @@ export function RuleWorkspacePage({
                   <dd>{metadata.name}</dd>
                 </div>
                 <div>
-                  <dt>PlanDefinition</dt>
-                  <dd>{metadata.name}</dd>
+                  <dt>ELM</dt>
+                  <dd>Guardado en Library</dd>
                 </div>
                 <div>
                   <dt>Versión</dt>

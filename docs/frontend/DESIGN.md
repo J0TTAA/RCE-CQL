@@ -4,7 +4,7 @@
 
 | Campo                   | Valor                        |
 | ----------------------- | ---------------------------- |
-| Estado                  | Propuesto para maqueta       |
+| Estado                  | Implementacion integrada     |
 | Version                 | 0.2.0                        |
 | Fecha                   | 2026-07-26                   |
 | Implementacion objetivo | React + Vite + TypeScript    |
@@ -22,13 +22,13 @@ login visible y muestra un sandbox anonimo por navegador.
 
 | ID         | Decision                                       | Razon                                                                                              | Consecuencia                                                                     |
 | ---------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| FE-ADR-001 | Generar la maqueta fuera de `apps/web`         | El gate M0 no permite abrir aun la implementacion funcional.                                       | v0 entrega una referencia revisable, no codigo integrado automaticamente.        |
+| FE-ADR-001 | Integrar la maqueta aprobada en `apps/web`     | El RCE debe ejecutarse desde Docker junto con Nest, HAPI y el traductor.                           | v0 queda como referencia; el codigo fuente vive en Vite.                         |
 | FE-ADR-002 | Componentes React cliente y portables a Vite   | v0 puede previsualizar con otro wrapper, pero el destino del repositorio es Vite.                  | No usar `next/*`, Server Components, Server Actions ni API routes.               |
 | FE-ADR-003 | CSS variables y primitives propias             | La SPA real puede mantener el sistema visual sin sumar Tailwind a la primera integracion.          | Los estilos viven en `tokens.css` y `globals.css` con componentes reutilizables. |
 | FE-ADR-004 | Lucide para iconografia                        | Mantiene controles reconocibles y evita SVG manual.                                                | Todo icon button no obvio requiere tooltip y nombre accesible.                   |
 | FE-ADR-005 | Monaco mediante `@monaco-editor/react`         | El editor CQL es la experiencia central.                                                           | La UI solo muestra diagnosticos devueltos; no parsea CQL.                        |
 | FE-ADR-006 | Arquitectura por features                      | Pacientes, reglas y CDS evolucionan a ritmos distintos.                                            | Componentes compartidos no importan modulos internos de features.                |
-| FE-ADR-007 | Mock API asincrona y determinista              | Permite demostrar estados sin falsificar integracion real.                                         | Los resultados dependen de fixtures, nunca de logica clinica en componentes.     |
+| FE-ADR-007 | Cliente HTTP contra NestJS                     | Evita datos hardcodeados en el navegador y mantiene HAPI/CQL detras del backend.                   | Los componentes dependen de `RceUiApi`; la implementacion real usa `/api/v1/ui`. |
 | FE-ADR-008 | Desktop denso con adaptacion mobile            | La clase se demostrara principalmente en notebook, pero debe poder revisarse en tablet y telefono. | Paneles multiples se convierten en tabs/drawers en viewport estrecho.            |
 | FE-ADR-009 | Tema claro unico en MVP                        | Reduce superficie visual y facilita revisar contrastes.                                            | Dark mode queda fuera de la primera maqueta.                                     |
 | FE-ADR-010 | Sesion anonima visible, no gestion de usuarios | Todos entran por una URL y el backend separa el trabajo por sandbox.                               | Topbar/menu muestran sandbox corto y reinicio; no hay pantalla de login.         |
@@ -63,8 +63,8 @@ Rutas objetivo:
 | `/rules/:id/test` | Prueba                | Selector paciente + resultado |
 | `/activity`       | Actividad CDS         | Tabla cronologica + detalle   |
 
-La ruta inicial de la maqueta sera `/rules/rule-adult-risk` para que Monaco y el
-flujo central sean visibles en el primer viewport.
+La ruta inicial es `/patients`. El alumno puede abrir pacientes reales de HAPI
+o crear una regla desde `/rules/new`.
 
 ## 4. Shell de aplicacion
 
@@ -161,7 +161,7 @@ Drawer de edicion:
 
 ### 5.3 Catalogo de reglas
 
-Tabla con filtros persistentes en la URL mock:
+Tabla con filtros persistentes en la URL:
 
 | Columna    | Contenido                                     |
 | ---------- | --------------------------------------------- |
@@ -320,9 +320,6 @@ src/
 |       |-- components/
 |       |-- pages/
 |       `-- types.ts
-|-- mocks/
-|   |-- fixtures/
-|   `-- mock-rce-api.ts
 |-- lib/
 |   |-- rce-api.ts
 |   `-- formatters.ts
@@ -354,7 +351,7 @@ src/
 | `RuleMetadataForm`  | Metadata fuera del codigo.                  |
 | `DiagnosticsPanel`  | Lista y navegacion a markers.               |
 | `ElmViewer`         | Monaco JSON read-only.                      |
-| `RuleTestPanel`     | Paciente, ejecucion mock y resultado.       |
+| `RuleTestPanel`     | Paciente, ejecucion CQL y resultado.        |
 | `PublishRuleDialog` | Confirmacion de version y canonical.        |
 
 ### 7.4 Componentes de pacientes/CDS
@@ -374,7 +371,7 @@ src/
 No crear `DashboardCard`, `StatCard` o wrappers genericos que conviertan toda
 seccion en una card.
 
-## 8. Contratos de UI mock
+## 8. Contratos de UI HTTP
 
 ```typescript
 type UserRole = 'student' | 'teacher';
@@ -420,7 +417,7 @@ interface RuleTestResult {
 }
 ```
 
-Puerto mock:
+Puerto consumido por el frontend:
 
 ```typescript
 interface RceUiApi {
@@ -438,11 +435,11 @@ interface RceUiApi {
 }
 ```
 
-El mock retorna Promises con latencia corta determinista. No inspecciona el CQL
-ni calcula condiciones clinicas. Los fixtures validos/invalidos y los resultados
-por paciente estan predefinidos. Todas las operaciones reciben el sandbox desde
-`SessionProvider`; ningun componente visual puede inventar o enviar un sandbox
-arbitrario como fuente de autoridad.
+La implementacion productiva de `RceUiApi` llama a NestJS por `/api/v1/ui`.
+NestJS consulta HAPI, traduce CQL a ELM, ejecuta ELM con un engine existente y
+guarda reglas, overlays de paciente y actividad CDS como recursos FHIR. Todas
+las operaciones reciben el sandbox desde `SessionProvider`; ningun componente
+visual puede inventar datos clinicos ni consultar HAPI directamente.
 
 ## 9. Estado e interacciones
 
@@ -467,8 +464,8 @@ editing -> validating -> saving -> reevaluating -> updated
                                  `-> error (datos editados conservados)
 ```
 
-La respuesta mock contiene el nuevo recurso y un diff de cards. La UI solo
-representa esa respuesta.
+La respuesta de Nest contiene el nuevo estado de paciente, cards y actividad. La
+UI solo representa esa respuesta.
 
 ### 9.3 Dependencias
 
@@ -527,13 +524,13 @@ En cada viewport verificar:
 ## 12. Estrategia de handoff desde v0
 
 1. Aprobar primero composicion y flujos en un proyecto v0 independiente.
-2. Migrar a `apps/web` solo como SPA mock portable a Vite.
+2. Migrar a `apps/web` como SPA portable a Vite.
 3. Inventariar dependencias y eliminar cualquier API de Next.js.
 4. Migrar primero tokens y primitives; despues shell; finalmente features.
-5. Sustituir `MockRceUiApi` por cliente OpenAPI sin cambiar componentes cuando
-   el backend cierre sus gates.
+5. Mantener `RceUiApi` como contrato estable para poder generar cliente OpenAPI
+   despues sin cambiar componentes.
 6. Verificar cada pantalla con capturas Playwright desktop/mobile.
-7. Mantener `SessionProvider` como fuente unica de sandbox al pasar de mock a API.
+7. Mantener `SessionProvider` como fuente unica de sandbox para todas las llamadas HTTP.
 
-La integracion real con Nest/HAPI sigue bloqueada por M0; la maqueta mock no
-cuenta como evidencia CQL/FHIR.
+La integracion real con Nest/HAPI/CQL debe verificarse con Docker, HAPI poblado
+por Synthea y capturas de los flujos principales.

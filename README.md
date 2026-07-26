@@ -4,12 +4,12 @@ Repositorio para construir un Registro Clinico Electronico educativo donde alumn
 
 ## Estado
 
-El proyecto combina el hito `M0` de prueba clinica con la fundacion del backend
-NestJS. El backend ya orquesta HAPI y CQL Translation Service; la cadena clinica
-completa todavia debe demostrarse con servicios reales:
+El proyecto combina el hito `M0` de prueba clinica con una primera integracion
+usable del RCE. El backend orquesta HAPI, CQL Translation Service y ejecucion ELM
+con `cql-execution`:
 
 ```text
-CQL -> ELM -> Library/PlanDefinition -> HAPI Clinical Reasoning -> resultado
+CQL -> ELM -> Library en HAPI -> bundle Patient/$everything -> cql-execution -> card
 ```
 
 Versiones candidatas y estado de verificacion: [COMPATIBILITY_MATRIX.md](./docs/COMPATIBILITY_MATRIX.md).
@@ -25,6 +25,7 @@ Versiones candidatas y estado de verificacion: [COMPATIBILITY_MATRIX.md](./docs/
 7. [DEVELOPMENT.md](./docs/DEVELOPMENT.md): servicios, comandos y endpoints locales.
 8. [SYNTHETIC_DATA.md](./docs/SYNTHETIC_DATA.md): generacion y carga reproducible de pacientes.
 9. [Frontend README](./docs/frontend/README.md): SDD visual y prompt para la maqueta v0.
+10. [AGE_RULE_DEMO.md](./docs/AGE_RULE_DEMO.md): prueba end-to-end de regla CQL por edad.
 
 ## Trabajo actual
 
@@ -57,16 +58,21 @@ docker compose --env-file .env.example up -d postgres hapi cql-translator
 powershell -ExecutionPolicy Bypass -File .\scripts\m0-smoke.ps1
 ```
 
-El servicio `cql-translator` solo transforma y valida CQL a ELM. El motor de
-evaluacion clinica esta incluido en HAPI mediante Clinical Reasoning. NestJS no
-reimplementa ninguno de los dos: coordina llamadas, aplica permisos y expone la
-API del RCE.
+El servicio `cql-translator` transforma y valida CQL a ELM. NestJS ejecuta ELM
+con `cql-execution` + `cql-exec-fhir` sobre bundles obtenidos desde HAPI; no
+interpreta reglas clinicas con logica ad hoc.
 
 Poblar el HAPI local con 30 pacientes Synthea:
 
 ```bash
 docker compose --profile local-hapi --profile seed-data build synthea-seed
 docker compose --profile local-hapi --profile seed-data run --rm synthea-seed
+```
+
+Probar el flujo completo con una regla CQL por edad:
+
+```text
+docs/AGE_RULE_DEMO.md
 ```
 
 Para desplegar contra un HAPI institucional existente, usar

@@ -27,7 +27,7 @@ El SDD cubre:
 - SPA educativa con Monaco Editor.
 - Backend NestJS como monolito modular.
 - Integracion HTTP con CQL Translation Service.
-- Persistencia y Clinical Reasoning en HAPI FHIR R4.
+- Persistencia FHIR R4 en HAPI y ejecucion CQL educativa en Nest.
 - Empaquetado de CQL/ELM como artefactos FHIR.
 - Pruebas de reglas contra pacientes sinteticos.
 - API CDS Hooks y generacion de cards.
@@ -87,24 +87,24 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 
 ### 6.2 Registro de decisiones
 
-| ID      | Decision                                           | Razon                                                                                                                                                                   | Consecuencia                                                                                                                |
-| ------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| ADR-001 | NestJS modular para el backend                     | El trabajo principal es orquestacion HTTP y TypeScript reduce friccion con el frontend.                                                                                 | El CQL Engine no se embebe en Nest.                                                                                         |
-| ADR-002 | Monolito modular                                   | El alcance no justifica microservicios propios adicionales.                                                                                                             | Los limites internos deben respetarse mediante providers exportados.                                                        |
-| ADR-003 | HAPI como repositorio logico unico                 | Evita duplicar pacientes y artefactos en otra base de datos.                                                                                                            | Nest nunca consulta las tablas PostgreSQL de HAPI.                                                                          |
-| ADR-004 | Traductor CQL externo                              | Reutiliza tooling mantenido por CQFramework.                                                                                                                            | Validar requiere disponibilidad de otro contenedor.                                                                         |
-| ADR-005 | Clinical Reasoning de HAPI                         | Mantiene la evaluacion junto a los datos FHIR y evita integrar el repositorio separado `cqframework/cql-engine`, archivado y absorbido por `clinical_quality_language`. | El HAPI elegido debe soportar `$apply`; la decision queda protegida por `RuleExecutorPort`.                                 |
-| ADR-006 | Library + PlanDefinition por regla/version         | Es la representacion FHIR adecuada para logica y regla ECA.                                                                                                             | Publicar requiere transaccion y canonical URLs coherentes.                                                                  |
-| ADR-007 | CDS Hooks en NestJS                                | Desacopla la API publica de capacidades opcionales de HAPI.                                                                                                             | Nest mapea resultados de `$apply` a cards.                                                                                  |
-| ADR-008 | Evento interno para cambios genericos              | No existe un hook estandar para cualquier actualizacion FHIR.                                                                                                           | `ClinicalDataChanged` no se publica como CDS Hook.                                                                          |
-| ADR-009 | Confirmacion de sugerencias                        | CQL debe recomendar, no escribir silenciosamente.                                                                                                                       | Frontend y backend implementan un flujo de aceptacion.                                                                      |
-| ADR-010 | Sin base de datos propia en MVP                    | Reduce operacion y mantiene informacion funcional en FHIR.                                                                                                              | Idempotencia y auditoria se representan con recursos FHIR.                                                                  |
-| ADR-011 | Un Compose principal en la raiz                    | Un solo comando debe conectar API, HAPI, traductor y PostgreSQL sin duplicar configuraciones del spike.                                                                 | Los servicios propios se construyen desde el workspace y los motores externos usan imagenes fijadas.                        |
-| ADR-012 | Fundacion paralela al spike M0                     | La ausencia local de Docker no impide implementar y probar configuracion, puertos y contratos no clinicos de Nest.                                                      | M0 sigue bloqueando WBS 3-6 y ninguna prueba simulada cierra compatibilidad clinica.                                        |
-| ADR-013 | HAPI local por perfil y HAPI institucional por URL | Desarrollo necesita datos sinteticos aislados, mientras el despliegue debe reutilizar el servidor institucional existente.                                              | `local-hapi` nunca se habilita en el servidor y Nest mantiene el mismo `FhirGatewayPort` en ambos modos.                    |
-| ADR-014 | Synthea versionado como job local reproducible     | Aporta historias FHIR R4 realistas sin usar datos identificables ni crear un generador clinico propio.                                                                  | La demografia base es estadounidense; los casos pedagogicos exactos siguen requiriendo fixtures controlados.                |
-| ADR-015 | Frontend mock portable a Vite                      | Permite convertir la maqueta v0 en una SPA local sin esperar el cierre clinico de M0, siempre que use mocks y no se presente como evidencia CQL/FHIR.                   | `apps/web` puede implementarse con MockRceUiApi; la integracion real con Nest/HAPI se mantiene detras de adapters y gates.  |
-| ADR-016 | Modo aula anonimo con sandbox por navegador        | El docente debe poder compartir una sola URL sin crear cuentas, pero 10 alumnos no pueden pisarse reglas ni pacientes.                                                  | Nest emite una cookie firmada, resuelve `SessionContext` por solicitud y filtra/etiqueta todo dato mutable por `sandboxId`. |
+| ID      | Decision                                           | Razon                                                                                                                      | Consecuencia                                                                                                                |
+| ------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| ADR-001 | NestJS modular para el backend                     | El trabajo principal es orquestacion HTTP y TypeScript reduce friccion con el frontend.                                    | El CQL Engine no se embebe en Nest.                                                                                         |
+| ADR-002 | Monolito modular                                   | El alcance no justifica microservicios propios adicionales.                                                                | Los limites internos deben respetarse mediante providers exportados.                                                        |
+| ADR-003 | HAPI como repositorio logico unico                 | Evita duplicar pacientes y artefactos en otra base de datos.                                                               | Nest nunca consulta las tablas PostgreSQL de HAPI.                                                                          |
+| ADR-004 | Traductor CQL externo                              | Reutiliza tooling mantenido por CQFramework.                                                                               | Validar requiere disponibilidad de otro contenedor.                                                                         |
+| ADR-005 | Ejecucion ELM en Nest con engine existente         | `cql-execution` + `cql-exec-fhir` permite evaluar CQL real contra bundles FHIR sin crear un parser propio.                 | HAPI almacena datos y artefactos; Nest ejecuta la evaluacion educativa inicial.                                             |
+| ADR-006 | Library FHIR por regla/version                     | Es la representacion FHIR adecuada para guardar CQL y ELM versionados en HAPI.                                             | PlanDefinition queda como evolucion posterior; el MVP evalua desde Nest.                                                    |
+| ADR-007 | CDS Hooks en NestJS                                | Desacopla la API publica de capacidades opcionales de HAPI.                                                                | Nest mapea resultados booleanos CQL a cards educativas.                                                                     |
+| ADR-008 | Evento interno para cambios genericos              | No existe un hook estandar para cualquier actualizacion FHIR.                                                              | `ClinicalDataChanged` no se publica como CDS Hook.                                                                          |
+| ADR-009 | Confirmacion de sugerencias                        | CQL debe recomendar, no escribir silenciosamente.                                                                          | Frontend y backend implementan un flujo de aceptacion.                                                                      |
+| ADR-010 | Sin base de datos propia en MVP                    | Reduce operacion y mantiene informacion funcional en FHIR.                                                                 | Idempotencia y auditoria se representan con recursos FHIR.                                                                  |
+| ADR-011 | Un Compose principal en la raiz                    | Un solo comando debe conectar API, HAPI, traductor y PostgreSQL sin duplicar configuraciones del spike.                    | Los servicios propios se construyen desde el workspace y los motores externos usan imagenes fijadas.                        |
+| ADR-012 | Fundacion paralela al spike M0                     | La ausencia local de Docker no impide implementar y probar configuracion, puertos y contratos no clinicos de Nest.         | M0 sigue bloqueando WBS 3-6 y ninguna prueba simulada cierra compatibilidad clinica.                                        |
+| ADR-013 | HAPI local por perfil y HAPI institucional por URL | Desarrollo necesita datos sinteticos aislados, mientras el despliegue debe reutilizar el servidor institucional existente. | `local-hapi` nunca se habilita en el servidor y Nest mantiene el mismo `FhirGatewayPort` en ambos modos.                    |
+| ADR-014 | Synthea versionado como job local reproducible     | Aporta historias FHIR R4 realistas sin usar datos identificables ni crear un generador clinico propio.                     | La demografia base es estadounidense; los casos pedagogicos exactos siguen requiriendo fixtures controlados.                |
+| ADR-015 | Frontend Vite integrado por API Nest               | Permite desplegar una sola URL educativa sin exponer HAPI ni el traductor al navegador.                                    | `apps/web` consume `/api/v1/ui/*`; pacientes, reglas, overlays y actividad viven en HAPI mediante NestJS.                   |
+| ADR-016 | Modo aula anonimo con sandbox por navegador        | El docente debe poder compartir una sola URL sin crear cuentas, pero 10 alumnos no pueden pisarse reglas ni pacientes.     | Nest emite una cookie firmada, resuelve `SessionContext` por solicitud y filtra/etiqueta todo dato mutable por `sandboxId`. |
 
 ## 7. Vista de contexto
 
@@ -150,14 +150,14 @@ flowchart TB
 | `rce-frontend`            | Interaccion educativa                           | No                                 |
 | `rce-backend`             | Casos de uso y contratos                        | No en MVP                          |
 | `cql-translation-service` | CQL a ELM                                       | No                                 |
-| `hapi-fhir`               | API FHIR y Clinical Reasoning                   | Mediante PostgreSQL                |
+| `hapi-fhir`               | API FHIR R4 y repositorio de recursos           | Mediante PostgreSQL                |
 | `hapi-postgres`           | Persistencia interna HAPI                       | Volumen Docker                     |
 | `synthea-seed`            | Generacion y carga inicial de FHIR R4 sintetico | No; termina despues de cargar HAPI |
 
 Implementacion local actual:
 
 - `api` se construye desde `apps/api/Dockerfile`; es codigo mantenido en este repositorio.
-- `hapi` usa `hapiproject/hapi:v8.10.0-3` e incluye el motor Clinical Reasoning.
+- `hapi` usa `hapiproject/hapi:v8.10.0-3` como repositorio FHIR local.
 - `cql-translator` usa `cqframework/cql-translation-service:v2.9.0` y solo traduce CQL a ELM.
 - `postgres` es almacenamiento privado de HAPI; Nest no accede a sus tablas.
 - `synthea-seed` usa Synthea 4.0.0 con checksum, semillas y fecha de referencia fijas; solo existe bajo el perfil `seed-data`.
@@ -279,9 +279,9 @@ interface ClinicalRule {
 
 `KnowledgeArtifactsModule` transforma el modelo de regla en:
 
-- `Library` con CQL y ELM.
-- `PlanDefinition` con trigger, condicion y card.
-- `Provenance` para publicacion.
+- `Library` con CQL, ELM y metadata de ejecucion.
+- Extensiones FHIR para hook, expresion, card, lifecycle y activacion.
+- `Provenance` para publicacion cuando se implemente auditoria extendida.
 - `Task` para idempotencia cuando corresponda.
 
 En modo aula, las canonical URLs privadas incluyen un segmento estable de
@@ -289,7 +289,6 @@ sandbox para evitar colisiones entre reglas con el mismo nombre:
 
 ```text
 {CANONICAL_BASE_URL}/sandbox/{sandboxId}/Library/{ruleName}
-{CANONICAL_BASE_URL}/sandbox/{sandboxId}/PlanDefinition/{ruleName}
 ```
 
 Las reglas compartidas de docente usan el canonical sin segmento de sandbox.
@@ -330,18 +329,19 @@ Estrategia de pacientes:
 - La poblacion Synthea inicial queda como datos base compartidos y de solo
   lectura.
 - La API expone un `patientKey` estable para la UI.
-- Al editar por primera vez, Nest crea en HAPI una copia privada del Patient y
-  de los recursos necesarios para el sandbox mediante Bundle transaction.
-- Las lecturas posteriores priorizan la copia del sandbox y completan faltantes
-  desde datos base.
+- Al editar por primera vez, Nest crea en HAPI un overlay `Basic` privado del
+  sandbox con los campos modificados.
+- Las lecturas posteriores aplican el overlay sobre el bundle base obtenido desde
+  `Patient/$everything`.
 - Una edicion nunca actualiza el recurso base ni la copia de otro sandbox.
 
-### 9.8 ClinicalReasoningModule
+### 9.8 RuleExecutionModule
 
-- Implementa `RuleExecutorPort` contra HAPI.
-- Invoca `PlanDefinition/{id}/$apply` con subject Patient.
+- Implementa evaluacion CQL con `cql-execution` y `cql-exec-fhir`.
+- Usa ELM generado por CQL Translation Service y guardado en `Library`.
+- Carga datos por `Patient/$everything` desde HAPI y aplica overlays de sandbox.
 - Acepta artefactos `validated` para prueba y `published/enabled` para ejecucion normal.
-- Normaliza CarePlan, Bundle y OperationOutcome a `RuleEvaluationResult`.
+- Normaliza resultados booleanos a `RuleEvaluationResult` y cards CDS educativas.
 - Aisla fallos por regla al ejecutar un conjunto.
 
 ### 9.9 CdsHooksModule
@@ -350,7 +350,7 @@ Estrategia de pacientes:
 - Registra un servicio estable por hook.
 - Usa `SessionContext` o un identificador de sandbox permitido para resolver el
   conjunto de reglas y paciente efectivo.
-- Evalua reglas habilitadas a traves de ClinicalReasoningModule.
+- Evalua reglas habilitadas a traves de RuleExecutionModule.
 - Convierte acciones aplicables en cards.
 - Ordena cards por indicador.
 - Valida y aplica sugerencias confirmadas.
@@ -455,7 +455,7 @@ interface RuleEvaluationResult {
 }
 ```
 
-El adapter HAPI es responsable de inferir `applies` a partir de las acciones producidas por PlanDefinition y de conservar OperationOutcome en errores tecnicos.
+RuleExecutionModule es responsable de inferir `applies` a partir del resultado booleano de la expresion CQL ejecutada sobre el bundle FHIR del paciente. El adapter HAPI conserva `OperationOutcome` en errores tecnicos de lectura o escritura FHIR.
 
 ### 10.4 Contrato CDS Hooks
 
@@ -545,19 +545,17 @@ erDiagram
 - `content` `application/elm+json`: ELM JSON Base64.
 - `relatedArtifact`: dependencies/includes.
 
-### 11.3 PlanDefinition
+### 11.3 Metadata de ejecucion
 
-- `status`: alineado con Library.
-- `type`: `eca-rule`.
-- `library`: canonical de Library con version.
-- `action.trigger`: hook o named event aplicable.
-- `action.condition.expression.language`: `text/cql-identifier`.
-- `action.condition.expression.expression`: `conditionExpression`.
-- `action.title` y `action.description`: contenido de card.
+La primera implementacion guarda la metadata ejecutable como extensiones sobre
+`Library`. Esto mantiene CQL y ELM en HAPI sin depender de Clinical Reasoning
+para la demo.
 
 Extensiones bajo `CANONICAL_BASE_URL`:
 
 - `StructureDefinition/execution-enabled`: Boolean.
+- `StructureDefinition/rule-hook`: hook aplicable.
+- `StructureDefinition/rule-expression`: expresion booleana CQL.
 - `StructureDefinition/cds-card-indicator`: info/warning/critical.
 - `StructureDefinition/cds-service-id`: string estable.
 
@@ -567,7 +565,6 @@ Las StructureDefinition se instalaran en HAPI antes de habilitar validacion estr
 
 ```text
 Canonical Library:        {CANONICAL_BASE_URL}/Library/alerta-hipertension
-Canonical PlanDefinition: {CANONICAL_BASE_URL}/PlanDefinition/alerta-hipertension
 Business version:         1.0.0
 Logical id:               UUID especifico del repositorio HAPI
 ```
@@ -670,7 +667,7 @@ sequenceDiagram
     User->>UI: Edita CQL
     UI->>API: PUT draft con ETag y cookie
     API->>API: Resuelve SessionContext
-    API->>HAPI: Transaction Library + PlanDefinition draft del sandbox
+    API->>HAPI: Upsert Library draft del sandbox
     HAPI-->>API: Nuevos ETags
     User->>UI: Validar
     UI->>API: POST validate
@@ -688,7 +685,7 @@ Si cambia el CQL, el ELM previo se elimina antes de considerar el borrador valid
 1. RulesModule confirma lifecycle `validated`.
 2. KnowledgeArtifactsModule verifica nombre, version, canonical y hash CQL/ELM.
 3. FhirModule busca duplicados canonical + version.
-4. Se crea Bundle transaction con Library active, PlanDefinition active, Provenance y Task idempotente.
+4. Se actualiza Library con estado `active`, lifecycle `published`, ELM y activacion.
 5. HAPI ejecuta atomicamente.
 6. Si se habilita la nueva version, la anterior se deshabilita en la misma operacion logica.
 7. La respuesta devuelve logical ids, version y ETags.
@@ -700,17 +697,21 @@ sequenceDiagram
     actor User as Alumno
     participant UI as RCE
     participant API as NestJS
-    participant HAPI as Clinical Reasoning
+    participant HAPI as HAPI FHIR
+    participant Engine as cql-execution
 
     User->>UI: Selecciona paciente
     UI->>API: POST /rules/{id}/test
-    API->>HAPI: PlanDefinition/{id}/$apply?subject=Patient/{id}
-    HAPI-->>API: CarePlan, Bundle u OperationOutcome
+    API->>HAPI: Patient/{id}/$everything
+    HAPI-->>API: Bundle FHIR
+    API->>Engine: ELM + Bundle + expression
+    Engine-->>API: Resultado booleano
     API->>API: Normalizar applies y cards
     API-->>UI: RuleEvaluationResult
 ```
 
-Un borrador `validated` se prueba usando su Library/PlanDefinition draft ya almacenado. La prueba de arquitectura confirmara que el HAPI fijado permite `$apply` sobre draft. Si no, el adapter usara un paquete temporal controlado sin publicar la regla.
+Un borrador `validated` se prueba usando su `Library` almacenada con CQL y ELM.
+El engine ejecuta la expresion configurada contra el bundle FHIR del paciente.
 
 Para un hook, las reglas se evaluan con concurrencia limitada. Cada error se registra por ruleId y las respuestas validas restantes se conservan.
 
@@ -725,13 +726,12 @@ sequenceDiagram
 
     User->>UI: Modifica dato
     UI->>API: PUT recurso con ETag y cookie
-    API->>API: Resuelve paciente efectivo del sandbox
-    API->>HAPI: Copy-on-write si aun es dato base
-    API->>HAPI: $validate / update privado
-    HAPI-->>API: Recurso + ETag
-    API->>API: ClinicalDataChanged
-    API->>HAPI: $apply reglas aplicables
-    HAPI-->>API: Resultados
+    API->>API: Valida dato permitido y sandbox
+    API->>HAPI: Upsert Basic overlay del paciente
+    HAPI-->>API: Overlay guardado
+    API->>HAPI: Patient/{id}/$everything
+    HAPI-->>API: Bundle FHIR
+    API->>API: Aplica overlay y ejecuta reglas activas
     API-->>UI: Recurso actualizado + cards
 ```
 
@@ -742,9 +742,9 @@ La reevaluacion inicial es sincrona. FHIR Subscriptions se reserva para escritur
 1. Se valida `hook`, `hookInstance`, contexto y service id.
 2. Se usa prefetch disponible.
 3. Se completa informacion faltante desde HAPI autorizado.
-4. Se obtienen PlanDefinitions published/enabled del hook.
+4. Se obtienen Libraries published/enabled del hook.
 5. Se filtran reglas compartidas y reglas privadas del sandbox activo.
-6. ClinicalReasoningModule evalua cada regla.
+6. RuleExecutionModule evalua cada regla.
 7. CdsHooksModule transforma recomendaciones a cards.
 8. Se ordenan cards por indicator.
 9. Se responde `200`, incluso cuando el arreglo esta vacio.
@@ -843,7 +843,7 @@ sandboxId seudonimizado
 ### 14.3 Health
 
 - Liveness solo comprueba el proceso.
-- Readiness consulta HAPI `/metadata`, comprueba el traductor y reporta Clinical Reasoning.
+- Readiness consulta HAPI `/metadata`, comprueba recursos clinicos y valida el traductor.
 - HAPI no disponible: backend not ready.
 - Traductor no disponible: autoria degradada; lectura de pacientes puede continuar.
 
@@ -863,7 +863,7 @@ synthea-seed (job opcional)
 - Solo frontend y backend publican puertos normales.
 - HAPI puede publicar puerto de depuracion solo en development.
 - PostgreSQL permanece privado y usa volumen persistente.
-- HAPI se configura con Clinical Reasoning habilitado.
+- HAPI se configura como repositorio FHIR R4 con `Library` disponible.
 - Synthea carga por la API FHIR, registra una marca idempotente y no accede a PostgreSQL.
 - El job de seed no forma parte del perfil de HAPI institucional.
 - Para clase, el reverse proxy publica una sola URL hacia frontend/backend; HAPI,
@@ -874,7 +874,7 @@ synthea-seed (job opcional)
 - Se omiten HAPI y PostgreSQL locales.
 - `FHIR_BASE_URL` y autenticacion apuntan al servidor externo.
 - Startup capability check decide si probar/ejecutar esta disponible.
-- La traduccion CQL sigue disponible aunque Clinical Reasoning externo no exista.
+- La traduccion CQL sigue disponible aunque la evaluacion de reglas este degradada.
 - En modo aula contra HAPI institucional, los pacientes reales no se editan
   directamente: se usan pacientes sinteticos locales o copias anonimizadas por
   sandbox.
@@ -912,7 +912,7 @@ Ningun secreto se versionara en el repositorio.
 
 | Atributo          | Tacticas de diseno                                                                                  |
 | ----------------- | --------------------------------------------------------------------------------------------------- |
-| Interoperabilidad | FHIR R4, Library, PlanDefinition, CQL/ELM y CDS Hooks.                                              |
+| Interoperabilidad | FHIR R4, Library, CQL/ELM y CDS Hooks.                                                              |
 | Mantenibilidad    | Modulos, puertos y adapters; dominio sin dependencias de infraestructura.                           |
 | Rendimiento       | Concurrencia limitada, prefetch, timeouts y futura cache de reglas activas.                         |
 | Confiabilidad     | Transactions, ETags, idempotencia, aislamiento por regla y sandbox.                                 |
@@ -928,15 +928,15 @@ No se agregara cache de artefactos en la primera implementacion hasta medir el f
 
 - Invariantes de ClinicalRule.
 - Lifecycle y enable/disable.
-- Mapeos Library/PlanDefinition/Card.
+- Mapeos Library/Card.
 - Diagnosticos y error model.
 - Guards y allowlists.
 
 ### 17.2 Contract tests
 
 - `/cql/translator` con fixtures versionados.
-- FHIR Library, PlanDefinition y Bundle transaction.
-- `PlanDefinition/$apply`.
+- FHIR Library y operaciones de lectura/escritura HAPI.
+- Evaluacion ELM con `cql-execution` y `cql-exec-fhir`.
 - CDS Discovery, Service y Feedback.
 
 ### 17.3 Integration tests
@@ -945,7 +945,7 @@ No se agregara cache de artefactos en la primera implementacion hasta medir el f
 - FHIRHelpers/includes.
 - Publicacion atomica.
 - ETags/idempotencia.
-- Draft `$apply` o fallback temporal.
+- Ejecucion de draft validado con bundle FHIR de paciente.
 - Terminologia presente/ausente.
 
 ### 17.4 End-to-end
@@ -982,7 +982,7 @@ Estas decisiones no bloquean la prueba de arquitectura ni los contratos principa
 | RulesModule                        | REQ-F-001 a REQ-F-017, REQ-D-003 a REQ-D-005              |
 | CqlAuthoringModule                 | REQ-F-005 a REQ-F-009, REQ-D-008                          |
 | KnowledgeArtifactsModule           | REQ-F-010 a REQ-F-016, REQ-D-001 a REQ-D-005              |
-| ClinicalReasoningModule            | REQ-F-018 a REQ-F-024                                     |
+| RuleExecutionModule                | REQ-F-018 a REQ-F-024                                     |
 | PatientsModule                     | REQ-F-025 a REQ-F-031, REQ-D-006, REQ-D-007, REQ-D-011    |
 | CdsHooksModule                     | REQ-F-032 a REQ-F-042, REQ-I-004                          |
 | ClassroomSession/Auth/Audit/Health | REQ-F-043 a REQ-F-055, REQ-I-007                          |
@@ -997,7 +997,5 @@ Estas decisiones no bloquean la prueba de arquitectura ni los contratos principa
 - [Clinical Quality Language tooling](https://github.com/cqframework/clinical_quality_language)
 - [CQL Language Server](https://github.com/cqframework/cql-language-server)
 - [HAPI Clinical Reasoning](https://hapifhir.io/hapi-fhir/docs/clinical_reasoning/overview.html)
-- [HAPI PlanDefinition](https://hapifhir.io/hapi-fhir/docs/clinical_reasoning/plan_definitions.html)
 - [FHIR R4 Library](https://hl7.org/fhir/R4/library.html)
-- [FHIR R4 PlanDefinition](https://hl7.org/fhir/R4/plandefinition.html)
 - [CDS Hooks](https://cds-hooks.org/specification/current/)

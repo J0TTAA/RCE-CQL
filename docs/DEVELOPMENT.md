@@ -2,19 +2,19 @@
 
 ## Que se construye y que se trae
 
-| Pieza | Origen | Funcion |
-|---|---|---|
-| NestJS API | `apps/api` de este repositorio | Orquesta casos de uso, seguridad, CQL, FHIR y CDS Hooks. |
-| HAPI FHIR | Imagen `hapiproject/hapi:v8.10.0-3` | Base logica FHIR y motor Clinical Reasoning. |
-| CQL Translation Service | Imagen `cqframework/cql-translation-service:v2.9.0` | Valida y traduce CQL a ELM JSON. |
-| PostgreSQL | Imagen `postgres:18.4` | Persistencia privada de HAPI. |
-| Synthea | Imagen construida desde `infra/synthea` | Genera y carga pacientes FHIR R4 exclusivamente en HAPI local. |
-| Frontend | Se agregara en `apps/web` | Monaco, pacientes, reglas y cards educativas. |
+| Pieza                   | Origen                                              | Funcion                                                           |
+| ----------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
+| NestJS API              | `apps/api` de este repositorio                      | Orquesta casos de uso, sandbox, CQL, FHIR y CDS Hooks educativos. |
+| HAPI FHIR               | Imagen `hapiproject/hapi:v8.10.0-3`                 | Repositorio FHIR R4 de pacientes, Library, overlays y actividad.  |
+| CQL Translation Service | Imagen `cqframework/cql-translation-service:v2.9.0` | Valida y traduce CQL a ELM JSON.                                  |
+| PostgreSQL              | Imagen `postgres:18.4`                              | Persistencia privada de HAPI.                                     |
+| Synthea                 | Imagen construida desde `infra/synthea`             | Genera y carga pacientes FHIR R4 exclusivamente en HAPI local.    |
+| Frontend                | `apps/web` de este repositorio                      | Monaco, pacientes, reglas y cards educativas.                     |
 
-El CQL Engine no se crea dentro de Nest ni se copia a este repositorio. La
-evaluacion se ejecuta en Clinical Reasoning de HAPI. El traductor es otro
-proceso porque traducir CQL a ELM y evaluar ELM contra pacientes son tareas
-distintas.
+Nest no interpreta CQL con logica propia. La traduccion CQL -> ELM se hace con
+CQL Translation Service y la evaluacion ELM contra bundles FHIR se hace con
+`cql-execution` + `cql-exec-fhir`. HAPI queda como BDD FHIR para pacientes,
+`Library`, overlays de sandbox y actividad CDS.
 
 Synthea tampoco es un servicio permanente. Es un job opcional que termina
 despues de generar y cargar la poblacion por la API FHIR.
@@ -31,12 +31,12 @@ docker compose up -d --build
 ```
 
 La variable `COMPOSE_PROFILES=local-translator` hace que solo se levanten la
-API y el traductor. Los servicios `hapi` y `postgres` pertenecen al perfil
+API, frontend y traductor. Los servicios `hapi` y `postgres` pertenecen al perfil
 `local-hapi` y quedan deshabilitados.
 
 ```text
-RCE Nest en Docker -> HAPI institucional -> PostgreSQL institucional
-                  -> Traductor CQL en Docker
+RCE Web -> RCE Nest en Docker -> HAPI institucional -> PostgreSQL institucional
+                             -> Traductor CQL en Docker
 ```
 
 `HAPI_AUTH_BEARER_TOKEN` permite un bearer token estatico sin guardarlo en el
@@ -60,12 +60,12 @@ docker compose ps
 
 Servicios publicados solo en localhost:
 
-| Servicio | URL |
-|---|---|
-| API | `http://localhost:3000/api/v1` |
-| Swagger | `http://localhost:3000/docs` |
-| HAPI FHIR | `http://localhost:8080/fhir` |
-| Traductor CQL | `http://localhost:8081` |
+| Servicio      | URL                            |
+| ------------- | ------------------------------ |
+| API           | `http://localhost:3000/api/v1` |
+| Swagger       | `http://localhost:3000/docs`   |
+| HAPI FHIR     | `http://localhost:8080/fhir`   |
+| Traductor CQL | `http://localhost:8081`        |
 
 Comprobar la plataforma:
 
@@ -74,9 +74,9 @@ Invoke-RestMethod http://localhost:3000/api/v1/health/live
 Invoke-RestMethod http://localhost:3000/api/v1/health/ready
 ```
 
-`live` solo comprueba el proceso Nest. `ready` comprueba FHIR R4, Library,
-PlanDefinition y una traduccion CQL real. Por eso `ready` devuelve HTTP 503 si
-HAPI o el traductor no estan listos.
+`live` solo comprueba el proceso Nest. `ready` comprueba FHIR R4, Library y una
+traduccion CQL real. Por eso `ready` devuelve HTTP 503 si HAPI o el traductor no
+estan listos.
 
 Detener conservando pacientes y reglas:
 
@@ -130,12 +130,12 @@ npm run build
 
 ## Endpoints iniciales
 
-| Metodo | Ruta | Uso |
-|---|---|---|
-| GET | `/api/v1/health/live` | Liveness de Nest. |
-| GET | `/api/v1/health/ready` | Readiness de HAPI y traductor. |
-| POST | `/api/v1/cql/translate` | CQL a ELM mediante el servicio real. |
-| GET | `/docs/openapi.json` | Contrato OpenAPI. |
+| Metodo | Ruta                    | Uso                                  |
+| ------ | ----------------------- | ------------------------------------ |
+| GET    | `/api/v1/health/live`   | Liveness de Nest.                    |
+| GET    | `/api/v1/health/ready`  | Readiness de HAPI y traductor.       |
+| POST   | `/api/v1/cql/translate` | CQL a ELM mediante el servicio real. |
+| GET    | `/docs/openapi.json`    | Contrato OpenAPI.                    |
 
 No existe fallback simulado de traduccion. Si el traductor falla, la API
 responde con error estable y `correlationId`.

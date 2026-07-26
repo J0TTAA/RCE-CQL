@@ -19,8 +19,8 @@ import { PatientsPage } from '../../features/patients/PatientsPage';
 import { RuleWorkspacePage } from '../../features/rules/RuleWorkspacePage';
 import { RulesPage } from '../../features/rules/RulesPage';
 import { roleLabel } from '../../lib/formatters';
-import type { ApiScenario, Role } from '../../types';
-import { Button, IconButton, SelectInput, ServiceStatus } from '../ui/primitives';
+import type { Role } from '../../types';
+import { Button, IconButton, ServiceStatus } from '../ui/primitives';
 
 const nav = [
   { to: '/patients', label: 'Pacientes', icon: Users },
@@ -126,7 +126,7 @@ function Sidebar({
 }
 
 function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
-  const { scenario, setScenario, role, setRole, session, resetSandbox } = useRce();
+  const { role, setRole, session, resetSandbox } = useRce();
   const [resetting, setResetting] = useState(false);
 
   const confirmReset = async () => {
@@ -148,18 +148,6 @@ function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
         <input type="search" aria-label="Buscar" placeholder="Buscar pacientes o reglas" />
       </div>
       <div className="topbar-actions">
-        <label className="scenario-select">
-          <span>Entorno</span>
-          <SelectInput
-            value={scenario}
-            onChange={(event) => setScenario(event.target.value as ApiScenario)}
-            aria-label="Escenario del entorno"
-          >
-            <option value="normal">Operativo</option>
-            <option value="translator-down">Traductor caído</option>
-            <option value="hapi-down">HAPI caído</option>
-          </SelectInput>
-        </label>
         <div className="segmented" role="group" aria-label="Rol de la sesión">
           {(['student', 'teacher'] as Role[]).map((candidate) => (
             <button

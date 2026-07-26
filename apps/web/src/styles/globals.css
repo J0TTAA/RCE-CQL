@@ -244,18 +244,6 @@ code {
   gap: 10px;
 }
 
-.scenario-select {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.scenario-select span {
-  color: var(--color-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
 .segmented {
   display: inline-flex;
   align-items: center;
@@ -722,6 +710,13 @@ dd {
   max-width: 380px;
   flex-wrap: wrap;
   gap: 5px;
+}
+
+.activation-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
 .row-action {
@@ -1290,7 +1285,6 @@ dd {
     margin-left: auto;
   }
 
-  .scenario-select,
   .segmented {
     display: none;
   }

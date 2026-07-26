@@ -24,7 +24,7 @@ describe('HapiFhirHttpAdapter', () => {
     lastRequest = undefined;
   });
 
-  it('accepts a FHIR R4 server with the required artifact resources', async () => {
+  it('accepts a FHIR R4 server with the required resources', async () => {
     nextResponse = Response.json({
       resourceType: 'CapabilityStatement',
       fhirVersion: '4.0.1',
@@ -32,8 +32,9 @@ describe('HapiFhirHttpAdapter', () => {
       rest: [
         {
           resource: [
+            { type: 'Patient' },
             { type: 'Library' },
-            { type: 'PlanDefinition', operation: [{ name: 'apply' }] },
+            { type: 'Basic', operation: [{ name: 'apply' }] },
           ],
         },
       ],
@@ -45,8 +46,9 @@ describe('HapiFhirHttpAdapter', () => {
     assert.deepEqual(health.details, {
       fhirVersion: '4.0.1',
       softwareVersion: '8.10.0',
+      patientAvailable: true,
       libraryAvailable: true,
-      planDefinitionAvailable: true,
+      basicAvailable: true,
       applyAdvertised: true,
     });
     assert.equal(lastRequest?.[0], 'hapi-fhir');
@@ -65,7 +67,7 @@ describe('HapiFhirHttpAdapter', () => {
     nextResponse = Response.json({
       resourceType: 'CapabilityStatement',
       fhirVersion: '4.0.1',
-      rest: [{ resource: [{ type: 'Library' }, { type: 'PlanDefinition' }] }],
+      rest: [{ resource: [{ type: 'Patient' }, { type: 'Library' }, { type: 'Basic' }] }],
     });
 
     await adapter.checkHealth();

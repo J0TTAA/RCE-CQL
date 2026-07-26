@@ -13,11 +13,10 @@ Si hay contradiccion, requisitos define el comportamiento, diseno define la solu
 
 ## Gate actual
 
-El proyecto esta en `M0`. El frontend mock/Vite puede implementarse como maqueta
-educativa separada, siempre que no se presente como evidencia de interoperabilidad
-CQL/FHIR ni llame directamente a HAPI o al traductor. Las funcionalidades
-clinicas de backend de WBS 3-6 siguen bloqueadas hasta cerrar `TASK-0.9` con
-evidencia real.
+El proyecto ya puede integrar el frontend Vite con NestJS para consumir HAPI,
+CQL Translation Service y evaluacion CQL mediante engine existente. El frontend
+no debe contener fixtures clinicos hardcodeados ni llamar directo a HAPI o al
+traductor; toda interoperabilidad pasa por NestJS.
 
 ## Reglas tecnicas
 

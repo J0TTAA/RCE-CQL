@@ -4,7 +4,7 @@ import { useRce } from '../../app/app-context';
 import { Link, useRouter } from '../../app/router';
 import { lifecycleLabel } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
-import type { Lifecycle, RuleHook } from '../../types';
+import type { ClinicalRule, Lifecycle, RuleHook } from '../../types';
 import {
   AsyncState,
   Badge,
@@ -18,24 +18,56 @@ import {
 export function RulesPage({ createMode = false }: { createMode?: boolean }) {
   const router = useRouter();
   const { api, role } = useRce();
+  const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState('');
   const [lifecycle, setLifecycle] = useState<Lifecycle | 'all'>('all');
   const [hook, setHook] = useState<RuleHook | 'all'>('all');
   const [activation, setActivation] = useState<'all' | 'active' | 'inactive'>('all');
+  const [activationBusy, setActivationBusy] = useState<string | null>(null);
   const filters = useMemo(
     () => ({ query, lifecycle, hook, activation }),
     [activation, hook, lifecycle, query],
   );
   const rules = useAsync(() => api.listRules(filters), [filters, role]);
 
+  const toggleActivation = async (rule: ClinicalRule) => {
+    setActivationBusy(rule.id);
+    try {
+      await api.setRuleActivation(rule.id, !rule.activation);
+      rules.reload();
+    } finally {
+      setActivationBusy(null);
+    }
+  };
+
   useEffect(() => {
     if (createMode) {
-      router.navigate('/rules/rule-adult-risk', { replace: true });
+      const name = `AgeRule${Date.now().toString().slice(-6)}`;
+      setCreating(true);
+      api
+        .createRule(defaultCql(name), {
+          title: 'Nueva regla por edad',
+          name,
+          version: '0.1.0',
+          hook: 'patient-view',
+          expression: 'Aplica',
+          summary: 'Paciente cumple criterio de edad',
+          detail: 'La regla CQL evaluada indica que el paciente cumple el criterio configurado.',
+          indicator: 'info',
+        })
+        .then((rule) => router.navigate(`/rules/${rule.id}`, { replace: true }))
+        .finally(() => setCreating(false));
     }
-  }, [createMode, router]);
+  }, [api, createMode, router]);
 
   if (createMode) {
-    return null;
+    return (
+      <section className="page">
+        <div className="state-box">
+          {creating ? 'Creando regla en HAPI...' : 'Preparando regla...'}
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -45,7 +77,7 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
           <h1>Reglas CQL</h1>
           <p>Catálogo de reglas</p>
         </div>
-        <Button variant="primary" onClick={() => router.navigate('/rules/rule-adult-risk')}>
+        <Button variant="primary" onClick={() => router.navigate('/rules/new')}>
           <FilePlus2 size={16} aria-hidden />
           Nueva regla
         </Button>
@@ -125,7 +157,22 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
                   <td>
                     <code>{rule.hook}</code>
                   </td>
-                  <td>{rule.activation ? 'Activa' : 'Inactiva'}</td>
+                  <td>
+                    <div className="activation-cell">
+                      <Badge tone={rule.activation ? 'success' : 'neutral'}>
+                        {rule.activation ? 'Activa' : 'Inactiva'}
+                      </Badge>
+                      {role === 'teacher' && rule.lifecycle === 'published' ? (
+                        <Button
+                          variant="ghost"
+                          onClick={() => toggleActivation(rule)}
+                          disabled={activationBusy === rule.id}
+                        >
+                          {rule.activation ? 'Desactivar' : 'Activar'}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </td>
                   <td>
                     <Badge tone={rule.scope === 'sandbox' ? 'interactive' : 'neutral'}>
                       {rule.scope === 'sandbox' ? 'Mi sandbox' : 'Compartida'}
@@ -145,4 +192,16 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
       </AsyncState>
     </section>
   );
+}
+
+function defaultCql(name: string): string {
+  return `library ${name} version '0.1.0'
+
+using FHIR version '4.0.1'
+
+context Patient
+
+define "Aplica":
+  AgeInYears() >= 18
+`;
 }

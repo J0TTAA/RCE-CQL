@@ -26,7 +26,7 @@ export function parseRoute(path: string): Route {
   const clean = path.replace(/\/+$/, '') || '/';
   const parts = clean.split('/').filter(Boolean);
   if (clean === '/') {
-    return { name: 'rule', ruleId: 'rule-adult-risk' };
+    return { name: 'patients' };
   }
   if (clean === '/patients') {
     return { name: 'patients' };
@@ -59,8 +59,8 @@ export function useRouterState(): RouterValue {
     const onPop = () => setPath(window.location.pathname);
     window.addEventListener('popstate', onPop);
     if (window.location.pathname === '/') {
-      window.history.replaceState(null, '', '/rules/rule-adult-risk');
-      setPath('/rules/rule-adult-risk');
+      window.history.replaceState(null, '', '/patients');
+      setPath('/patients');
     }
     return () => window.removeEventListener('popstate', onPop);
   }, []);

@@ -467,9 +467,13 @@ export class UiService {
     patient: FhirResource,
     sandboxId: string,
   ): Promise<PatientSummary> {
-    const overlay = await this.getPatientOverlay(patient.id ?? '', sandboxId);
+    const patientId = String(patient.id ?? '');
+    const [overlay, clinicalSummary, cards] = await Promise.all([
+      this.getPatientOverlay(patientId, sandboxId),
+      this.patientClinicalSummary(patientId),
+      patientId ? this.getPatientCards(patientId, sandboxId) : Promise.resolve([]),
+    ]);
     const merged = overlay.birthDate ? { ...patient, birthDate: overlay.birthDate } : patient;
-    const cards = patient.id ? await this.getPatientCards(patient.id, sandboxId) : [];
     return {
       id: String(merged.id ?? ''),
       synId: patientIdentifier(merged),
@@ -477,12 +481,43 @@ export class UiService {
       age: ageFromBirthDate(stringField(merged, 'birthDate')),
       cohort: cohortForAge(ageFromBirthDate(stringField(merged, 'birthDate'))),
       sex: genderLabel(stringField(merged, 'gender')),
-      activeConditions: [],
-      lastEncounter: '',
+      activeConditions: clinicalSummary.activeConditions,
+      lastEncounter: clinicalSummary.lastEncounter,
       cdsStatus: maxSeverity(cards),
       cdsCount: cards.length,
       sandboxTouched: Boolean(overlay.birthDate),
     };
+  }
+
+  private async patientClinicalSummary(
+    patientId: string,
+  ): Promise<{ activeConditions: string[]; lastEncounter: string }> {
+    if (!patientId) {
+      return { activeConditions: [], lastEncounter: '' };
+    }
+    try {
+      const bundle = await this.fhir.patientEverything(patientId, {
+        _count: '100',
+        _type: 'Condition,Encounter',
+      });
+      const activeConditions = resourcesOfType(bundle, 'Condition')
+        .map((condition) => ({
+          display: codeDisplay(condition),
+          clinicalStatus: codeDisplay(objectField(condition, 'clinicalStatus')),
+        }))
+        .filter((condition) => condition.clinicalStatus.toLowerCase().includes('active'))
+        .map((condition) => condition.display)
+        .filter(Boolean)
+        .slice(0, 4);
+      const lastEncounter =
+        resourcesOfType(bundle, 'Encounter')
+          .map((encounter) => periodStart(encounter))
+          .filter(Boolean)
+          .sort((a, b) => b.localeCompare(a))[0] ?? '';
+      return { activeConditions, lastEncounter };
+    } catch {
+      return { activeConditions: [], lastEncounter: '' };
+    }
   }
 
   private async patientBundleWithOverlay(

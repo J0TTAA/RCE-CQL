@@ -25,12 +25,21 @@ export function severityLabel(severity: CdsSeverity | 'none'): string {
   return labels[severity];
 }
 
-export function formatDate(date: string): string {
+export function formatDate(date?: string | null): string {
+  const value = date?.trim();
+  if (!value) {
+    return 'Sin fecha';
+  }
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Sin fecha';
+  }
   return new Intl.DateTimeFormat('es-CL', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(new Date(`${date}T00:00:00`));
+  }).format(parsed);
 }
 
 export function shortId(value: string): string {

@@ -88,9 +88,13 @@ Diastolica: 95
 
 10. Guardar cambios. Debe aparecer la card `Presion arterial elevada`.
 
-## Escenario 2 - HbA1c elevada
+## Escenario 2 - Sospecha educativa de diabetes por HbA1c
 
-1. Con el mismo paciente, dejar HbA1c en valor normal:
+Esta regla es para docencia. La card representa una alerta educativa por
+resultado de laboratorio compatible con sospecha de diabetes, no un diagnostico
+clinico definitivo.
+
+1. Con el mismo paciente adulto, dejar HbA1c en valor normal:
 
 ```text
 HbA1c: 5.6
@@ -99,20 +103,20 @@ HbA1c: 5.6
 2. Crear otra regla con metadata:
 
 ```text
-Titulo: HbA1c elevada
-Nombre CQL: RceHba1cScreening
+Titulo: Sospecha de diabetes por HbA1c
+Nombre CQL: RceDiabetesRiskHba1c
 Version: 0.1.0
 Hook: patient-view
 Expresion booleana: Aplica
-Summary: HbA1c en rango elevado
-Detail: El laboratorio sintetico del sandbox cumple el umbral educativo de HbA1c.
+Summary: Sospecha de diabetes por HbA1c
+Detail: El paciente adulto tiene HbA1c mayor o igual a 6.5% en el laboratorio sintetico del sandbox.
 Indicator: critical
 ```
 
 3. CQL:
 
 ```cql
-library RceHba1cScreening version '0.1.0'
+library RceDiabetesRiskHba1c version '0.1.0'
 
 using FHIR version '4.0.1'
 
@@ -138,7 +142,7 @@ define "Aplica":
 HbA1c: 7.2
 ```
 
-6. Guardar. Debe aparecer la card `HbA1c en rango elevado`.
+6. Guardar. Debe aparecer la card `Sospecha de diabetes por HbA1c`.
 
 ## Resultado docente esperado
 
@@ -146,6 +150,6 @@ La clase puede demostrar:
 
 - una regla por edad;
 - una regla compuesta por edad y signos vitales;
-- una regla por laboratorio;
+- una regla educativa de diabetes por laboratorio HbA1c;
 - reevaluacion automatica al guardar cambios;
 - aislamiento por sandbox cuando varios alumnos usan el mismo paciente.

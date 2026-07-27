@@ -19,11 +19,20 @@ const ACTIVITY_TAG_CODE = 'cds-evaluation';
 const OVERLAY_CODE_SYSTEM = 'https://rce-cql.local/fhir/CodeSystem/sandbox-overlay';
 const OVERLAY_CODE = 'patient-overlay';
 const EXT_BASE = 'https://rce-cql.local/fhir/StructureDefinition';
+const LOINC_SYSTEM = 'http://loinc.org';
+const UCUM_SYSTEM = 'http://unitsofmeasure.org';
 
 export type Severity = 'info' | 'warning' | 'critical';
 export type Lifecycle = 'draft' | 'validated' | 'published' | 'disabled' | 'retired';
 export type RuleHook = 'patient-view' | 'order-select' | 'order-sign';
 export type RuleScope = 'sandbox' | 'shared';
+
+export interface EditableClinicalData {
+  birthDate: string;
+  systolicBloodPressure?: number;
+  diastolicBloodPressure?: number;
+  hba1c?: number;
+}
 
 export interface RuleMetadata {
   title: string;
@@ -66,6 +75,7 @@ export interface PatientSummary {
 
 export interface PatientDetail extends PatientSummary {
   birthDate: string;
+  editableClinicalData: EditableClinicalData;
   conditions: Array<{
     id: string;
     code: string;
@@ -144,6 +154,20 @@ export interface ActivityEntry {
 
 interface PatientOverlay {
   birthDate?: string;
+  observations?: ObservationOverlay;
+}
+
+interface ObservationOverlay {
+  systolicBloodPressure?: number;
+  diastolicBloodPressure?: number;
+  hba1c?: number;
+}
+
+export interface PatientClinicalUpdate {
+  birthDate?: string;
+  systolicBloodPressure?: number;
+  diastolicBloodPressure?: number;
+  hba1c?: number;
 }
 
 interface PatientClinicalSummary {
@@ -214,21 +238,24 @@ export class UiService {
     return this.patientBundleToDetail(patient, bundle, cards.cards, Boolean(overlay.birthDate));
   }
 
-  async updatePatientBirthDate(
+  async updatePatientClinicalData(
     patientId: string,
     sandboxId: string,
-    birthDate: string,
+    input: PatientClinicalUpdate,
   ): Promise<{
     patient: PatientDetail;
     cards: CdsCard[];
     activity: ActivityEntry;
   }> {
-    assertDate(birthDate);
+    if (input.birthDate !== undefined) {
+      assertDate(input.birthDate);
+    }
     const patient = await this.fhir.read('Patient', patientId);
     if (!patient) {
       throw new NotFoundException('Paciente no encontrado en HAPI.');
     }
-    await this.savePatientOverlay(patientId, sandboxId, { birthDate });
+    const currentOverlay = await this.getPatientOverlay(patientId, sandboxId);
+    await this.savePatientOverlay(patientId, sandboxId, mergePatientOverlay(currentOverlay, input));
     const evaluation = await this.evaluateActiveRules(patientId, sandboxId, 'patient-view', true);
     const detail = await this.getPatient(patientId, sandboxId);
     return { patient: detail, cards: evaluation.cards, activity: evaluation.activity };
@@ -489,7 +516,7 @@ export class UiService {
       lastEncounter: clinicalSummary.lastEncounter,
       cdsStatus: 'none',
       cdsCount: 0,
-      sandboxTouched: Boolean(overlay.birthDate),
+      sandboxTouched: hasPatientOverlay(overlay),
     };
   }
 
@@ -559,6 +586,7 @@ export class UiService {
         patient.birthDate = overlay.birthDate;
       }
     }
+    applyObservationOverlay(bundle, patientId, overlay.observations);
     return bundle;
   }
 
@@ -572,6 +600,9 @@ export class UiService {
     }
     return {
       birthDate: extensionValueString(basic, 'patient-birthDate'),
+      observations: observationOverlayFromJson(
+        extensionValueString(basic, 'patient-observations-json'),
+      ),
     };
   }
 
@@ -580,6 +611,7 @@ export class UiService {
     sandboxId: string,
     overlay: PatientOverlay,
   ): Promise<void> {
+    const observations = normalizeObservationOverlay(overlay.observations);
     await this.fhir.update('Basic', overlayId(patientId, sandboxId), {
       resourceType: 'Basic',
       id: overlayId(patientId, sandboxId),
@@ -590,6 +622,14 @@ export class UiService {
         { url: `${EXT_BASE}/sandbox-id`, valueString: sandboxId },
         ...(overlay.birthDate
           ? [{ url: `${EXT_BASE}/patient-birthDate`, valueDate: overlay.birthDate }]
+          : []),
+        ...(hasObservationOverlay(observations)
+          ? [
+              {
+                url: `${EXT_BASE}/patient-observations-json`,
+                valueString: JSON.stringify(observations),
+              },
+            ]
           : []),
       ],
     });
@@ -663,6 +703,16 @@ export class UiService {
     return {
       ...summary,
       birthDate,
+      editableClinicalData: {
+        birthDate,
+        systolicBloodPressure: observationNumberValue(bundle, 'systolic-blood-pressure', '8480-6'),
+        diastolicBloodPressure: observationNumberValue(
+          bundle,
+          'diastolic-blood-pressure',
+          '8462-4',
+        ),
+        hba1c: observationNumberValue(bundle, 'hba1c', '4548-4'),
+      },
       conditions,
       observations,
       medications,
@@ -932,6 +982,102 @@ function firstResourceOfType(bundle: FhirBundle, resourceType: string): FhirReso
   return resourcesOfType(bundle, resourceType)[0];
 }
 
+function applyObservationOverlay(
+  bundle: FhirBundle,
+  patientId: string,
+  observations: ObservationOverlay | undefined,
+): void {
+  const normalized = normalizeObservationOverlay(observations);
+  if (!hasObservationOverlay(normalized)) {
+    return;
+  }
+  const generated = [
+    normalized.systolicBloodPressure !== undefined
+      ? quantityObservation({
+          id: observationId('systolic-blood-pressure'),
+          patientId,
+          code: '8480-6',
+          display: 'Systolic Blood Pressure',
+          value: normalized.systolicBloodPressure,
+          unit: 'mmHg',
+          unitCode: 'mm[Hg]',
+          category: 'vital-signs',
+        })
+      : null,
+    normalized.diastolicBloodPressure !== undefined
+      ? quantityObservation({
+          id: observationId('diastolic-blood-pressure'),
+          patientId,
+          code: '8462-4',
+          display: 'Diastolic Blood Pressure',
+          value: normalized.diastolicBloodPressure,
+          unit: 'mmHg',
+          unitCode: 'mm[Hg]',
+          category: 'vital-signs',
+        })
+      : null,
+    normalized.hba1c !== undefined
+      ? quantityObservation({
+          id: observationId('hba1c'),
+          patientId,
+          code: '4548-4',
+          display: 'Hemoglobin A1c/Hemoglobin.total in Blood',
+          value: normalized.hba1c,
+          unit: '%',
+          unitCode: '%',
+          category: 'laboratory',
+        })
+      : null,
+  ].filter((resource): resource is FhirResource => Boolean(resource));
+  const overlayIds = new Set(generated.map((resource) => resource.id));
+  bundle.entry = [
+    ...(bundle.entry ?? []).filter((entry) => !overlayIds.has(entry.resource?.id)),
+    ...generated.map((resource) => ({ resource })),
+  ];
+}
+
+function quantityObservation(input: {
+  id: string;
+  patientId: string;
+  code: string;
+  display: string;
+  value: number;
+  unit: string;
+  unitCode: string;
+  category: 'vital-signs' | 'laboratory';
+}): FhirResource {
+  const now = new Date().toISOString();
+  return {
+    resourceType: 'Observation',
+    id: input.id,
+    meta: { tag: [{ system: SANDBOX_TAG_SYSTEM, code: 'bundle-overlay' }] },
+    status: 'final',
+    category: [
+      {
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/observation-category',
+            code: input.category,
+          },
+        ],
+      },
+    ],
+    code: {
+      coding: [{ system: LOINC_SYSTEM, code: input.code, display: input.display }],
+      text: input.display,
+    },
+    subject: { reference: `Patient/${input.patientId}` },
+    effectiveDateTime: now,
+    issued: now,
+    valueQuantity: {
+      value: input.value,
+      unit: input.unit,
+      system: UCUM_SYSTEM,
+      code: input.unitCode,
+    },
+  };
+}
+
 function objectField(resource: unknown, field: string): FhirResource {
   if (typeof resource !== 'object' || resource === null || !(field in resource)) {
     return {};
@@ -1162,6 +1308,104 @@ function maxSeverity(cards: CdsCard[]): Severity | 'none' {
     return 'info';
   }
   return 'none';
+}
+
+function mergePatientOverlay(
+  current: PatientOverlay,
+  input: PatientClinicalUpdate,
+): PatientOverlay {
+  return {
+    birthDate: input.birthDate ?? current.birthDate,
+    observations: normalizeObservationOverlay({
+      ...current.observations,
+      systolicBloodPressure:
+        input.systolicBloodPressure ?? current.observations?.systolicBloodPressure,
+      diastolicBloodPressure:
+        input.diastolicBloodPressure ?? current.observations?.diastolicBloodPressure,
+      hba1c: input.hba1c ?? current.observations?.hba1c,
+    }),
+  };
+}
+
+function hasPatientOverlay(overlay: PatientOverlay): boolean {
+  return Boolean(overlay.birthDate) || hasObservationOverlay(overlay.observations);
+}
+
+function observationOverlayFromJson(value: string): ObservationOverlay {
+  if (!value) {
+    return {};
+  }
+  try {
+    const payload = JSON.parse(value) as Record<string, unknown>;
+    return normalizeObservationOverlay({
+      systolicBloodPressure: numberField(payload, 'systolicBloodPressure'),
+      diastolicBloodPressure: numberField(payload, 'diastolicBloodPressure'),
+      hba1c: numberField(payload, 'hba1c'),
+    });
+  } catch {
+    return {};
+  }
+}
+
+function normalizeObservationOverlay(
+  observations: ObservationOverlay | undefined,
+): ObservationOverlay {
+  return {
+    ...(validNumber(observations?.systolicBloodPressure)
+      ? { systolicBloodPressure: observations.systolicBloodPressure }
+      : {}),
+    ...(validNumber(observations?.diastolicBloodPressure)
+      ? { diastolicBloodPressure: observations.diastolicBloodPressure }
+      : {}),
+    ...(validNumber(observations?.hba1c) ? { hba1c: observations.hba1c } : {}),
+  };
+}
+
+function hasObservationOverlay(observations: ObservationOverlay | undefined): boolean {
+  return Object.keys(normalizeObservationOverlay(observations)).length > 0;
+}
+
+function validNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function numberField(resource: Record<string, unknown>, field: string): number | undefined {
+  const value = resource[field];
+  return validNumber(value) ? value : undefined;
+}
+
+function observationNumberValue(
+  bundle: FhirBundle,
+  overlayKind: string,
+  loincCode: string,
+): number | undefined {
+  const observations = resourcesOfType(bundle, 'Observation');
+  const match =
+    observations.find((observation) => observation.id === observationId(overlayKind)) ??
+    observations.find((observation) => hasCoding(observation, LOINC_SYSTEM, loincCode));
+  return quantityNumber(match);
+}
+
+function hasCoding(resource: FhirResource, system: string, code: string): boolean {
+  const codingValue = objectField(resource, 'code').coding;
+  const codings = Array.isArray(codingValue) ? codingValue : [];
+  return codings.some(
+    (coding) =>
+      typeof coding === 'object' &&
+      coding !== null &&
+      (coding as { system?: string }).system === system &&
+      (coding as { code?: string }).code === code,
+  );
+}
+
+function quantityNumber(resource: FhirResource | undefined): number | undefined {
+  const quantity = resource ? objectField(resource, 'valueQuantity') : {};
+  const value = quantity.value;
+  return validNumber(value) ? value : undefined;
+}
+
+function observationId(kind: string): string {
+  return `rce-demo-${kind}`;
 }
 
 function overlayId(patientId: string, sandboxId: string): string {

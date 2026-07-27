@@ -78,7 +78,7 @@ export class UiController {
     @Body() dto: UpdatePatientDto,
   ) {
     const session = this.session(request, response);
-    return this.ui.updatePatientBirthDate(id, session.sandboxId, dto.birthDate);
+    return this.ui.updatePatientClinicalData(id, session.sandboxId, dto);
   }
 
   @Get('rules')

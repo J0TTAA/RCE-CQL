@@ -42,7 +42,10 @@ export interface ActivityFilters {
 
 export interface PatientUpdateInput {
   patientId: string;
-  birthDate: string;
+  birthDate?: string;
+  systolicBloodPressure?: number;
+  diastolicBloodPressure?: number;
+  hba1c?: number;
 }
 
 export interface PatientUpdateResult {
@@ -146,7 +149,12 @@ class HttpRceApi implements RceUiApi {
   updatePatient(input: PatientUpdateInput): Promise<PatientUpdateResult> {
     return this.request(`/ui/patients/${encodeURIComponent(input.patientId)}`, {
       method: 'PATCH',
-      body: JSON.stringify({ birthDate: input.birthDate }),
+      body: JSON.stringify({
+        birthDate: input.birthDate,
+        systolicBloodPressure: input.systolicBloodPressure,
+        diastolicBloodPressure: input.diastolicBloodPressure,
+        hba1c: input.hba1c,
+      }),
     });
   }
 

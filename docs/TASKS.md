@@ -226,13 +226,17 @@ Objetivo: permitir modificar pacientes y observar cambios en las reglas dentro d
 | TASK-6.8  | Implementar catalogo de reglas y estados visuales.              | 6.7, 3.8             | REQ-F-017, REQ-NF-020                        | M      | TODO   |
 | TASK-6.9  | Integrar Monaco, metadata, guardado y markers.                  | 6.7, 4.5             | REQ-F-002, REQ-F-004 a REQ-F-007, REQ-NF-018 | L      | TODO   |
 | TASK-6.10 | Implementar ElmViewer y RuleTestPanel.                          | 6.9, 5.3             | REQ-F-007, REQ-F-018 a REQ-F-021             | M      | TODO   |
-| TASK-6.11 | Implementar PatientChart y formularios clinicos.                | 6.2 a 6.5, 6.7, 6.14 | REQ-F-025 a REQ-F-031, REQ-D-011             | L      | TODO   |
+| TASK-6.11 | Implementar PatientChart y formularios clinicos.                | 6.2 a 6.5, 6.7, 6.14 | REQ-F-025 a REQ-F-031, REQ-D-011             | L      | REVIEW |
 | TASK-6.12 | Implementar CdsCardList y confirmacion de sugerencias.          | 5.5, 6.6, 6.7        | REQ-F-034 a REQ-F-040                        | L      | TODO   |
 | TASK-6.13 | Crear pacientes y reglas sinteticas de demostracion.            | 6.11, 4.7            | REQ-D-007, AC-004, AC-005                    | L      | TODO   |
-| TASK-6.14 | Implementar copy-on-write de pacientes base por sandbox.        | 6.2, 2.11            | REQ-D-011, REQ-F-052, REQ-F-053              | L      | TODO   |
+| TASK-6.14 | Implementar copy-on-write de pacientes base por sandbox.        | 6.2, 2.11            | REQ-D-011, REQ-F-052, REQ-F-053              | L      | REVIEW |
 | TASK-6.15 | Mostrar sesion anonima y reinicio de sandbox en la UI.          | 6.7, 7.1             | REQ-F-051, REQ-F-054, REQ-I-007              | M      | TODO   |
 
 Gate `M4`: editar un paciente desde la UI hace aparecer o desaparecer una card sin salir del RCE.
+
+Evidencia parcial de TASK-6.11 y TASK-6.14:
+`docs/evidence/M1/runs/20260727T082410Z/summary.md`. Permanecen en `REVIEW`
+hasta ejecutar AC-005/AC-011 contra Docker real.
 
 ## 12. WBS 7 - Seguridad, auditoria y operacion
 

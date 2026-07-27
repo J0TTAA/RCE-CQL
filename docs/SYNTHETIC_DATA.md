@@ -120,6 +120,9 @@ El primer comando elimina tambien reglas y otros datos locales guardados en HAPI
 - Synthea usa por defecto demografia, prestadores, seguros y direcciones de Estados Unidos, con Massachusetts como ubicacion de esta poblacion.
 - Los codigos y trayectorias son adecuados para interoperabilidad y docencia, pero no constituyen guias clinicas chilenas ni datos epidemiologicos locales.
 - Tener una edad o diagnostico en el dataset no garantiza un caso exacto para cada regla. Los escenarios pedagogicos controlados se agregaran despues como fixtures FHIR pequenos y versionados.
+- Para escenarios controlados dentro del sandbox, la ficha permite editar edad,
+  presion arterial y HbA1c. Esos valores se materializan como Observations FHIR
+  solo en el bundle efectivo de evaluacion; ver [CLINICAL_RULE_DEMO.md](./CLINICAL_RULE_DEMO.md).
 - Este cargador apunta de forma fija al servicio Docker local `hapi`; no se usa para poblar el HAPI institucional.
 
 ## Fuentes oficiales

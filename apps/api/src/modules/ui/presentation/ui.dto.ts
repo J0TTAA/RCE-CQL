@@ -1,5 +1,15 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsString, Matches, ValidateNested } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
 import type { RuleHook, Severity } from '../application/ui.service';
 
 const hooks: RuleHook[] = ['patient-view', 'order-select', 'order-sign'];
@@ -53,8 +63,30 @@ export class TestRuleDto {
 }
 
 export class UpdatePatientDto {
+  @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  birthDate!: string;
+  birthDate?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 0 })
+  @Min(40)
+  @Max(260)
+  systolicBloodPressure?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 0 })
+  @Min(30)
+  @Max(160)
+  diastolicBloodPressure?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(3)
+  @Max(18)
+  hba1c?: number;
 }
 
 export class RuleActivationDto {

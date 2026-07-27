@@ -316,21 +316,37 @@ function PatientDataDrawer({
   onUpdated: () => void;
 }) {
   const { api } = useRce();
-  const [birthDate, setBirthDate] = useState(patient.birthDate);
+  const [birthDate, setBirthDate] = useState(patient.editableClinicalData.birthDate);
+  const [systolicBloodPressure, setSystolicBloodPressure] = useState(
+    numericInput(patient.editableClinicalData.systolicBloodPressure),
+  );
+  const [diastolicBloodPressure, setDiastolicBloodPressure] = useState(
+    numericInput(patient.editableClinicalData.diastolicBloodPressure),
+  );
+  const [hba1c, setHba1c] = useState(numericInput(patient.editableClinicalData.hba1c));
   const [stage, setStage] = useState<'idle' | 'validating' | 'saving' | 'reevaluating' | 'updated'>(
     'idle',
   );
 
   useEffect(() => {
-    setBirthDate(patient.birthDate);
+    setBirthDate(patient.editableClinicalData.birthDate);
+    setSystolicBloodPressure(numericInput(patient.editableClinicalData.systolicBloodPressure));
+    setDiastolicBloodPressure(numericInput(patient.editableClinicalData.diastolicBloodPressure));
+    setHba1c(numericInput(patient.editableClinicalData.hba1c));
     setStage('idle');
-  }, [patient.birthDate, open]);
+  }, [patient.editableClinicalData, open]);
 
   const save = async () => {
     setStage('validating');
     await new Promise((resolve) => window.setTimeout(resolve, 280));
     setStage('saving');
-    await api.updatePatient({ patientId: patient.id, birthDate });
+    await api.updatePatient({
+      patientId: patient.id,
+      birthDate,
+      systolicBloodPressure: optionalNumber(systolicBloodPressure),
+      diastolicBloodPressure: optionalNumber(diastolicBloodPressure),
+      hba1c: optionalNumber(hba1c),
+    });
     setStage('reevaluating');
     await new Promise((resolve) => window.setTimeout(resolve, 360));
     setStage('updated');
@@ -363,14 +379,60 @@ function PatientDataDrawer({
             onChange={(event) => setBirthDate(event.target.value)}
           />
         </Field>
+        <Field label="Presión sistólica">
+          <TextInput
+            type="number"
+            inputMode="numeric"
+            min={40}
+            max={260}
+            step={1}
+            value={systolicBloodPressure}
+            onChange={(event) => setSystolicBloodPressure(event.target.value)}
+          />
+        </Field>
+        <Field label="Presión diastólica">
+          <TextInput
+            type="number"
+            inputMode="numeric"
+            min={30}
+            max={160}
+            step={1}
+            value={diastolicBloodPressure}
+            onChange={(event) => setDiastolicBloodPressure(event.target.value)}
+          />
+        </Field>
+        <Field label="HbA1c">
+          <TextInput
+            type="number"
+            inputMode="decimal"
+            min={3}
+            max={18}
+            step={0.1}
+            value={hba1c}
+            onChange={(event) => setHba1c(event.target.value)}
+          />
+        </Field>
         <div className="state-box compact-state">
-          El cambio queda guardado como overlay del sandbox y se usa al reevaluar CQL.
+          Los cambios quedan como overlay del sandbox y se usan al reevaluar CQL.
         </div>
         <WriteStage stage={stage} detail={`Patient/${patient.id}`} />
       </div>
     </Drawer>
   );
 }
+
+function numericInput(value: number | undefined): string {
+  return value === undefined ? '' : `${value}`;
+}
+
+function optionalNumber(value: string): number | undefined {
+  if (!value.trim()) {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 function WriteStage({ stage, detail }: { stage: string; detail?: string }) {
   const steps = [
     ['validating', 'Validando'],

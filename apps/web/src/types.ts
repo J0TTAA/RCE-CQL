@@ -80,6 +80,12 @@ export interface PatientSummary {
 
 export interface PatientDetail extends PatientSummary {
   birthDate: string;
+  editableClinicalData: {
+    birthDate: string;
+    systolicBloodPressure?: number;
+    diastolicBloodPressure?: number;
+    hba1c?: number;
+  };
   conditions: ClinicalCondition[];
   observations: ClinicalObservation[];
   medications: MedicationItem[];

@@ -1030,13 +1030,17 @@ function genderLabel(gender: string): string {
   );
 }
 
-function codeDisplay(resource: FhirResource): string {
-  if (typeof resource.text === 'string') {
-    return resource.text;
+function codeDisplay(resource: unknown): string {
+  if (typeof resource !== 'object' || resource === null) {
+    return '';
   }
-  const coding = Array.isArray(resource.coding)
-    ? firstArrayItem(resource.coding)
-    : firstArrayItem(objectField(resource, 'code').coding);
+  const fhirResource = resource as FhirResource;
+  if (typeof fhirResource.text === 'string') {
+    return fhirResource.text;
+  }
+  const coding = Array.isArray(fhirResource.coding)
+    ? firstArrayItem(fhirResource.coding)
+    : firstArrayItem(objectField(fhirResource, 'code').coding);
   return typeof coding.display === 'string'
     ? coding.display
     : typeof coding.code === 'string'
@@ -1059,7 +1063,7 @@ function observationValue(observation: FhirResource): { value: string; unit: str
   }
   const value = observation.valueString ?? observation.valueCodeableConcept;
   return {
-    value: typeof value === 'string' ? value : codeDisplay(value as FhirResource),
+    value: typeof value === 'string' ? value : codeDisplay(value) || 'Sin valor',
     unit: '',
   };
 }

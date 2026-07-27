@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsOptional, IsString, Matches, ValidateNested } from 'class-validator';
+import { IsBoolean, IsIn, IsString, Matches, ValidateNested } from 'class-validator';
 import type { RuleHook, Severity } from '../application/ui.service';
 
 const hooks: RuleHook[] = ['patient-view', 'order-select', 'order-sign'];
@@ -55,12 +55,6 @@ export class TestRuleDto {
 export class UpdatePatientDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
   birthDate!: string;
-}
-
-export class CreateSessionDto {
-  @IsOptional()
-  @IsIn(['student', 'teacher'])
-  role?: 'student' | 'teacher';
 }
 
 export class RuleActivationDto {

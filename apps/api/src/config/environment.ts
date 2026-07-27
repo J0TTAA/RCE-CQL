@@ -9,6 +9,13 @@ export interface EnvironmentVariables {
   CQL_TRANSLATOR_BASE_URL: string;
   DEPENDENCY_TIMEOUT_MS: number;
   CORS_ORIGINS: string;
+  ANONYMOUS_CLASSROOM_ENABLED: boolean;
+  ANONYMOUS_SESSION_SECRET: string;
+  ANONYMOUS_SESSION_COOKIE_NAME: string;
+  ANONYMOUS_SESSION_COOKIE_SECURE: boolean;
+  ANONYMOUS_SESSION_COOKIE_SAMESITE: 'Lax' | 'Strict' | 'None';
+  ANONYMOUS_SESSION_TTL_HOURS: number;
+  CLASSROOM_DEFAULT_ID: string;
 }
 
 const environmentSchema = Joi.object<EnvironmentVariables>({
@@ -26,6 +33,19 @@ const environmentSchema = Joi.object<EnvironmentVariables>({
     .required(),
   DEPENDENCY_TIMEOUT_MS: Joi.number().integer().min(250).max(30000).default(5000),
   CORS_ORIGINS: Joi.string().default('http://localhost:5173'),
+  ANONYMOUS_CLASSROOM_ENABLED: Joi.boolean().default(true),
+  ANONYMOUS_SESSION_SECRET: Joi.string()
+    .min(32)
+    .default('rce-cql-local-anonymous-session-secret-change-me'),
+  ANONYMOUS_SESSION_COOKIE_NAME: Joi.string()
+    .pattern(/^[A-Za-z0-9_-]+$/)
+    .default('rce_session'),
+  ANONYMOUS_SESSION_COOKIE_SECURE: Joi.boolean().default(false),
+  ANONYMOUS_SESSION_COOKIE_SAMESITE: Joi.string().valid('Lax', 'Strict', 'None').default('Lax'),
+  ANONYMOUS_SESSION_TTL_HOURS: Joi.number().integer().min(1).max(168).default(8),
+  CLASSROOM_DEFAULT_ID: Joi.string()
+    .pattern(/^[A-Za-z0-9_-]+$/)
+    .default('demo-aula'),
 }).unknown(true);
 
 export function validateEnvironment(config: Record<string, unknown>): EnvironmentVariables {

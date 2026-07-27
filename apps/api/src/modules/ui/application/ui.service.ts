@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import cql from 'cql-execution';
 import * as cqlfhir from 'cql-exec-fhir';
 import { CqlTranslatorPort } from '../../cql/application/cql-translator.port';
@@ -20,20 +20,10 @@ const OVERLAY_CODE_SYSTEM = 'https://rce-cql.local/fhir/CodeSystem/sandbox-overl
 const OVERLAY_CODE = 'patient-overlay';
 const EXT_BASE = 'https://rce-cql.local/fhir/StructureDefinition';
 
-export type Role = 'student' | 'teacher';
 export type Severity = 'info' | 'warning' | 'critical';
 export type Lifecycle = 'draft' | 'validated' | 'published' | 'disabled' | 'retired';
 export type RuleHook = 'patient-view' | 'order-select' | 'order-sign';
 export type RuleScope = 'sandbox' | 'shared';
-
-export interface UiSession {
-  anonymousSessionId: string;
-  classroomId: string;
-  sandboxId: string;
-  sandboxLabel: string;
-  role: Role;
-  expiresAt: string;
-}
 
 export interface RuleMetadata {
   title: string;
@@ -176,19 +166,6 @@ export class UiService {
     private readonly fhir: FhirGatewayPort,
     private readonly translator: CqlTranslatorPort,
   ) {}
-
-  createSession(role: Role = 'student'): UiSession {
-    const random = randomBytes(8).toString('hex');
-    const sandboxId = `sandbox-${random}`;
-    return {
-      anonymousSessionId: `anon-${random}`,
-      classroomId: 'demo-aula',
-      sandboxId,
-      sandboxLabel: `S-${random.slice(0, 4).toUpperCase()}`,
-      role,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 8).toISOString(),
-    };
-  }
 
   async listPatients(
     sandboxId: string,

@@ -72,7 +72,6 @@ export interface RceUiApi {
   listActivity(filters?: ActivityFilters): Promise<ActivityEntry[]>;
 }
 
-const SESSION_STORAGE_KEY = 'rce-cql-session';
 const API_PREFIX = '/api/v1';
 
 export function createHttpRceApi(): RceUiApi {
@@ -80,23 +79,40 @@ export function createHttpRceApi(): RceUiApi {
 }
 
 class HttpRceApi implements RceUiApi {
-  private session: SessionContext | null = this.readStoredSession();
+  private session: SessionContext | null = null;
+  private sessionPromise: Promise<SessionContext> | null = null;
 
   async getSession(): Promise<SessionContext> {
     if (this.session) {
       return this.session;
     }
-    return this.createSession('student');
+    this.sessionPromise ??= this.request<SessionContext>('/ui/session', { skipSession: true });
+    try {
+      this.session = await this.sessionPromise;
+      return this.session;
+    } finally {
+      this.sessionPromise = null;
+    }
   }
 
   async setRole(role: SessionContext['role']): Promise<SessionContext> {
-    const session = { ...(await this.getSession()), role };
-    this.storeSession(session);
+    const session = await this.request<SessionContext>('/ui/session/role', {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+      skipSession: true,
+    });
+    this.session = session;
     return session;
   }
 
   async resetSandbox(): Promise<SessionContext> {
-    return this.createSession(this.session?.role ?? 'student');
+    const session = await this.request<SessionContext>('/ui/session/reset', {
+      method: 'POST',
+      body: JSON.stringify({ role: this.session?.role ?? 'student' }),
+      skipSession: true,
+    });
+    this.session = session;
+    return session;
   }
 
   async getServicesStatus(): Promise<ServicesStatus> {
@@ -194,27 +210,19 @@ class HttpRceApi implements RceUiApi {
     return this.request(`/ui/activity${queryString(filters)}`);
   }
 
-  private async createSession(role: SessionContext['role']): Promise<SessionContext> {
-    const session = await this.request<SessionContext>('/ui/session', {
-      method: 'POST',
-      body: JSON.stringify({ role }),
-      skipSession: true,
-    });
-    this.storeSession(session);
-    return session;
-  }
-
   private async request<T>(
     path: string,
     init: RequestInit & { skipSession?: boolean } = {},
   ): Promise<T> {
-    const session = init.skipSession ? this.session : await this.getSession();
+    if (!init.skipSession) {
+      await this.getSession();
+    }
     const response = await fetch(`${API_PREFIX}${path}`, {
       ...init,
+      credentials: 'include',
       headers: {
         accept: 'application/json',
-        'content-type': 'application/json',
-        ...(session ? { 'x-rce-sandbox-id': session.sandboxId, 'x-rce-role': session.role } : {}),
+        ...(init.body ? { 'content-type': 'application/json' } : {}),
         ...(init.headers ?? {}),
       },
     });
@@ -227,20 +235,6 @@ class HttpRceApi implements RceUiApi {
       );
     }
     return payload as T;
-  }
-
-  private readStoredSession(): SessionContext | null {
-    try {
-      const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as SessionContext) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private storeSession(session: SessionContext): void {
-    this.session = session;
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
   }
 }
 

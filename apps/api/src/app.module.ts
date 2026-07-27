@@ -4,6 +4,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { validateEnvironment } from './config/environment';
 import { JsonLoggerService } from './common/logging/json-logger.service';
 import { RequestLoggingInterceptor } from './common/http/request-logging.interceptor';
+import { ClassroomSessionModule } from './modules/classroom-session/classroom-session.module';
 import { CqlModule } from './modules/cql/cql.module';
 import { HealthModule } from './modules/health/health.module';
 import { UiModule } from './modules/ui/ui.module';
@@ -15,6 +16,7 @@ import { UiModule } from './modules/ui/ui.module';
       cache: true,
       validate: validateEnvironment,
     }),
+    ClassroomSessionModule,
     CqlModule,
     HealthModule,
     UiModule,

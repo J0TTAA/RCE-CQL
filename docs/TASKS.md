@@ -119,12 +119,13 @@ Objetivo: establecer una base reproducible para frontend, backend e infraestruct
 | TASK-1.7  | Generar OpenAPI y convenciones de DTOs.                                            | 1.2, 1.4     | REQ-I-005, REQ-I-006             | S      | DONE   |
 | TASK-1.8  | Integrar backend y frontend vacios en Docker Compose.                              | 1.1 a 1.7    | REQ-NF-024, REQ-NF-025           | M      | REVIEW |
 | TASK-1.9  | Integrar generador Synthea reproducible y carga idempotente en HAPI local.         | 0.2          | REQ-D-007, REQ-D-009             | M      | REVIEW |
-| TASK-1.10 | Definir configuracion de modo aula anonimo y variables de sesion.                  | 1.3          | REQ-F-051, REQ-I-007, REQ-NF-028 | S      | TODO   |
+| TASK-1.10 | Definir configuracion de modo aula anonimo y variables de sesion.                  | 1.3          | REQ-F-051, REQ-I-007, REQ-NF-028 | S      | REVIEW |
 
 Evidencia de TASK-1.2 a TASK-1.7:
 `docs/evidence/M1/runs/20260726T094853Z/summary.md`. TASK-1.1 y TASK-1.8 esperan
 la SPA y el paquete de contratos. TASK-1.9 espera ejecutar y contar la poblacion
-real en el HAPI local.
+real en el HAPI local. Evidencia de TASK-1.10:
+`docs/evidence/M1/runs/20260727T071109Z/summary.md`.
 
 ## 7. WBS 2 - Adaptadores externos
 
@@ -239,7 +240,7 @@ Objetivo: completar controles transversales, sesiones anonimas y visibilidad ope
 
 | ID       | Tarea/entregable                                                              | Dependencias   | Requisitos                                         | Tamano | Estado |
 | -------- | ----------------------------------------------------------------------------- | -------------- | -------------------------------------------------- | ------ | ------ |
-| TASK-7.1 | Implementar ClassroomSessionModule, cookie firmada y modo de identidad local. | 1.10           | REQ-F-051, REQ-I-007, REQ-NF-028                   | M      | TODO   |
+| TASK-7.1 | Implementar ClassroomSessionModule, cookie firmada y modo de identidad local. | 1.10           | REQ-F-051, REQ-I-007, REQ-NF-028                   | M      | REVIEW |
 | TASK-7.2 | Implementar guards student/teacher y sandbox scope en endpoints.              | 7.1, 4.5, 6.3  | REQ-F-045, REQ-F-046, REQ-F-052, REQ-F-053, AC-009 | M      | TODO   |
 | TASK-7.3 | Configurar Helmet, CORS, body limit y rate limit.                             | 1.3, 1.4       | REQ-NF-009                                         | M      | TODO   |
 | TASK-7.4 | Implementar allowlists de hosts, recursos y dependencies.                     | 2.5, 4.1, 6.3  | REQ-NF-011                                         | M      | TODO   |
@@ -248,6 +249,10 @@ Objetivo: completar controles transversales, sesiones anonimas y visibilidad ope
 | TASK-7.7 | Completar redaccion de logs y revision de secretos.                           | 1.5, 7.3       | REQ-NF-010, REQ-NF-012                             | M      | TODO   |
 | TASK-7.8 | Verificar teclado, foco y cards sin dependencia exclusiva del color.          | 6.8 a 6.12     | REQ-NF-019 a REQ-NF-021                            | M      | TODO   |
 | TASK-7.9 | Implementar expiracion, reinicio y retencion de sandboxes.                    | 7.1, 2.11      | REQ-F-054, REQ-NF-029                              | M      | TODO   |
+
+Evidencia parcial de TASK-7.1:
+`docs/evidence/M1/runs/20260727T071109Z/summary.md`. Permanece en `REVIEW`
+hasta validar AC-011 con navegadores/sesiones concurrentes.
 
 ## 13. WBS 8 - Verificacion y entrega
 

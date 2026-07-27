@@ -28,7 +28,7 @@ async function bootstrap(): Promise<void> {
       .get('CORS_ORIGINS', { infer: true })
       .split(',')
       .map((origin) => origin.trim()),
-    credentials: false,
+    credentials: true,
   });
   app.setGlobalPrefix(config.get('API_PREFIX', { infer: true }));
   app.useGlobalPipes(

@@ -72,7 +72,16 @@ async function proxyApi(request, response) {
       body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request,
       duplex: 'half',
     });
-    response.writeHead(proxyResponse.status, Object.fromEntries(proxyResponse.headers.entries()));
+    const headers = Object.fromEntries(proxyResponse.headers.entries());
+    const setCookies =
+      typeof proxyResponse.headers.getSetCookie === 'function'
+        ? proxyResponse.headers.getSetCookie()
+        : [];
+    delete headers['set-cookie'];
+    response.writeHead(proxyResponse.status, {
+      ...headers,
+      ...(setCookies.length > 0 ? { 'set-cookie': setCookies } : {}),
+    });
     if (proxyResponse.body) {
       for await (const chunk of proxyResponse.body) {
         response.write(chunk);

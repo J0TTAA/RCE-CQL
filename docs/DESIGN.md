@@ -219,6 +219,10 @@ Un modulo no importara archivos internos de otro modulo. La comunicacion se real
 - Expone `SessionContext` para controllers, casos de uso, logs y adapters.
 - Permite reiniciar solo el sandbox del navegador actual.
 - No crea cuentas visibles, formularios de login ni perfiles de usuario.
+- La implementacion inicial es stateless: no requiere una base propia ni crea un
+  marcador de sesion en HAPI para abrir la UI. HAPI recibe el `sandboxId` solo en
+  recursos mutables como Library privada, overlay de paciente, actividad CDS,
+  Provenance o Task.
 
 `AuthModule` queda como capa opcional para despliegues institucionales:
 
@@ -643,11 +647,10 @@ sequenceDiagram
     participant HAPI as HAPI FHIR
 
     User->>UI: Abre URL compartida
-    UI->>API: GET /api/session
+    UI->>API: GET /api/v1/ui/session
     API->>API: Verifica cookie rce_session
     alt Cookie ausente o invalida
         API->>API: Genera anonymousSessionId y sandboxId
-        API->>HAPI: Upsert Basic/AuditEvent de sandbox
         API-->>UI: Set-Cookie + SessionContext
     else Cookie valida
         API-->>UI: SessionContext existente

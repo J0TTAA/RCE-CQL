@@ -156,8 +156,22 @@ interface PatientOverlay {
   birthDate?: string;
 }
 
+interface PatientClinicalSummary {
+  activeConditions: string[];
+  lastEncounter: string;
+}
+
+interface CachedValue<T> {
+  expiresAt: number;
+  value: T;
+}
+
 @Injectable()
 export class UiService {
+  private readonly listCacheTtlMs = 30_000;
+  private patientSearchCache: CachedValue<FhirBundle> | null = null;
+  private clinicalSummaryIndexCache: CachedValue<Map<string, PatientClinicalSummary>> | null = null;
+
   constructor(
     private readonly fhir: FhirGatewayPort,
     private readonly translator: CqlTranslatorPort,
@@ -182,8 +196,15 @@ export class UiService {
   ): Promise<PatientSummary[]> {
     const bundle = await this.searchPatients();
     const patients = resourcesOfType(bundle, 'Patient');
+    const clinicalSummaryIndex = await this.patientClinicalSummaryIndex();
     const summaries = await Promise.all(
-      patients.map(async (patient) => this.patientToSummary(patient, sandboxId)),
+      patients.map(async (patient) =>
+        this.patientToSummary(
+          patient,
+          sandboxId,
+          clinicalSummaryIndex.get(String(patient.id ?? '')),
+        ),
+      ),
     );
     const query = filters.query?.trim().toLowerCase();
     return summaries
@@ -453,26 +474,32 @@ export class UiService {
   }
 
   private async searchPatients(): Promise<FhirBundle> {
+    const cached = this.readCache(this.patientSearchCache);
+    if (cached) {
+      return cached;
+    }
     const tagged = await this.fhir.search('Patient', {
       _count: '50',
       _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
     });
     if ((tagged.total ?? 0) > 0 || (tagged.entry?.length ?? 0) > 0) {
+      this.patientSearchCache = this.cacheValue(tagged);
       return tagged;
     }
-    return this.fhir.search('Patient', { _count: '50' });
+    const fallback = await this.fhir.search('Patient', { _count: '50' });
+    if ((fallback.total ?? 0) > 0 || (fallback.entry?.length ?? 0) > 0) {
+      this.patientSearchCache = this.cacheValue(fallback);
+    }
+    return fallback;
   }
 
   private async patientToSummary(
     patient: FhirResource,
     sandboxId: string,
+    clinicalSummary: PatientClinicalSummary = { activeConditions: [], lastEncounter: '' },
   ): Promise<PatientSummary> {
     const patientId = String(patient.id ?? '');
-    const [overlay, clinicalSummary, cards] = await Promise.all([
-      this.getPatientOverlay(patientId, sandboxId),
-      this.patientClinicalSummary(patientId),
-      patientId ? this.getPatientCards(patientId, sandboxId) : Promise.resolve([]),
-    ]);
+    const overlay = await this.getPatientOverlay(patientId, sandboxId);
     const merged = overlay.birthDate ? { ...patient, birthDate: overlay.birthDate } : patient;
     return {
       id: String(merged.id ?? ''),
@@ -483,41 +510,64 @@ export class UiService {
       sex: genderLabel(stringField(merged, 'gender')),
       activeConditions: clinicalSummary.activeConditions,
       lastEncounter: clinicalSummary.lastEncounter,
-      cdsStatus: maxSeverity(cards),
-      cdsCount: cards.length,
+      cdsStatus: 'none',
+      cdsCount: 0,
       sandboxTouched: Boolean(overlay.birthDate),
     };
   }
 
-  private async patientClinicalSummary(
-    patientId: string,
-  ): Promise<{ activeConditions: string[]; lastEncounter: string }> {
-    if (!patientId) {
-      return { activeConditions: [], lastEncounter: '' };
+  private async patientClinicalSummaryIndex(): Promise<Map<string, PatientClinicalSummary>> {
+    const cached = this.readCache(this.clinicalSummaryIndexCache);
+    if (cached) {
+      return cached;
     }
+    const index = new Map<string, PatientClinicalSummary>();
     try {
-      const bundle = await this.fhir.patientEverything(patientId, {
-        _count: '100',
-        _type: 'Condition,Encounter',
-      });
-      const activeConditions = resourcesOfType(bundle, 'Condition')
-        .map((condition) => ({
-          display: codeDisplay(condition),
-          clinicalStatus: codeDisplay(objectField(condition, 'clinicalStatus')),
-        }))
-        .filter((condition) => condition.clinicalStatus.toLowerCase().includes('active'))
-        .map((condition) => condition.display)
-        .filter(Boolean)
-        .slice(0, 4);
-      const lastEncounter =
-        resourcesOfType(bundle, 'Encounter')
-          .map((encounter) => periodStart(encounter))
-          .filter(Boolean)
-          .sort((a, b) => b.localeCompare(a))[0] ?? '';
-      return { activeConditions, lastEncounter };
+      const [conditions, encounters] = await Promise.all([
+        this.fhir.search('Condition', {
+          _count: '1000',
+          _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
+        }),
+        this.fhir.search('Encounter', {
+          _count: '1000',
+          _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
+        }),
+      ]);
+      for (const condition of resourcesOfType(conditions, 'Condition')) {
+        const patientId = patientIdFromReference(
+          stringField(objectField(condition, 'subject'), 'reference'),
+        );
+        if (!patientId) {
+          continue;
+        }
+        const clinicalStatus = codeDisplay(objectField(condition, 'clinicalStatus'));
+        const display = codeDisplay(condition);
+        if (!clinicalStatus.toLowerCase().includes('active') || !display) {
+          continue;
+        }
+        const summary = ensureClinicalSummary(index, patientId);
+        if (!summary.activeConditions.includes(display) && summary.activeConditions.length < 4) {
+          summary.activeConditions.push(display);
+        }
+      }
+      for (const encounter of resourcesOfType(encounters, 'Encounter')) {
+        const patientId = patientIdFromReference(
+          stringField(objectField(encounter, 'subject'), 'reference'),
+        );
+        const date = periodStart(encounter);
+        if (!patientId || !date) {
+          continue;
+        }
+        const summary = ensureClinicalSummary(index, patientId);
+        if (!summary.lastEncounter || date > summary.lastEncounter) {
+          summary.lastEncounter = date;
+        }
+      }
     } catch {
-      return { activeConditions: [], lastEncounter: '' };
+      return index;
     }
+    this.clinicalSummaryIndexCache = this.cacheValue(index);
+    return index;
   }
 
   private async patientBundleWithOverlay(
@@ -882,6 +932,17 @@ export class UiService {
       return null;
     }
   }
+
+  private cacheValue<T>(value: T): CachedValue<T> {
+    return { value, expiresAt: Date.now() + this.listCacheTtlMs };
+  }
+
+  private readCache<T>(cache: CachedValue<T> | null): T | null {
+    if (!cache || cache.expiresAt <= Date.now()) {
+      return null;
+    }
+    return cache.value;
+  }
 }
 
 function resourcesOfType(bundle: FhirBundle, resourceType: string): FhirResource[] {
@@ -933,6 +994,25 @@ function patientIdentifier(patient: FhirResource): string {
   const identifiers = Array.isArray(patient.identifier) ? patient.identifier : [];
   const first = firstArrayItem(identifiers);
   return typeof first.value === 'string' ? first.value : String(patient.id ?? '');
+}
+
+function ensureClinicalSummary(
+  index: Map<string, PatientClinicalSummary>,
+  patientId: string,
+): PatientClinicalSummary {
+  const existing = index.get(patientId);
+  if (existing) {
+    return existing;
+  }
+  const next: PatientClinicalSummary = { activeConditions: [], lastEncounter: '' };
+  index.set(patientId, next);
+  return next;
+}
+
+function patientIdFromReference(reference: string): string {
+  const patientMarker = 'Patient/';
+  const index = reference.lastIndexOf(patientMarker);
+  return index >= 0 ? (reference.slice(index + patientMarker.length).split('/')[0] ?? '') : '';
 }
 
 function ageFromBirthDate(birthDate: string): number {

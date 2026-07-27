@@ -105,6 +105,7 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-014 | Synthea versionado como job local reproducible     | Aporta historias FHIR R4 realistas sin usar datos identificables ni crear un generador clinico propio.                     | La demografia base es estadounidense; los casos pedagogicos exactos siguen requiriendo fixtures controlados.                |
 | ADR-015 | Frontend Vite integrado por API Nest               | Permite desplegar una sola URL educativa sin exponer HAPI ni el traductor al navegador.                                    | `apps/web` consume `/api/v1/ui/*`; pacientes, reglas, overlays y actividad viven en HAPI mediante NestJS.                   |
 | ADR-016 | Modo aula anonimo con sandbox por navegador        | El docente debe poder compartir una sola URL sin crear cuentas, pero 10 alumnos no pueden pisarse reglas ni pacientes.     | Nest emite una cookie firmada, resuelve `SessionContext` por solicitud y filtra/etiqueta todo dato mutable por `sandboxId`. |
+| ADR-017 | Cache corto para listado de pacientes base         | Evita llamadas N+1 a `Patient/$everything` y reduce 503 en HAPI local durante clases.                                      | El listado usa TTL breve e indices de Condition/Encounter; la ficha y la evaluacion CQL siguen leyendo datos vigentes.      |
 
 ## 7. Vista de contexto
 
@@ -306,6 +307,8 @@ Las reglas compartidas de docente usan el canonical sin segmento de sandbox.
 
 - Lista y busca pacientes.
 - Construye una ficha agregada consultando Patient y recursos relacionados.
+- Optimiza el listado con cache corto de pacientes base e indices agrupados de
+  `Condition` y `Encounter`.
 - Resuelve pacientes base de solo lectura y overlays privados del sandbox.
 - Valida una allowlist de tipos editables.
 - Persiste recursos completos o Bundles transaction.
@@ -910,17 +913,20 @@ Ningun secreto se versionara en el repositorio.
 
 ## 16. Realizacion de atributos de calidad
 
-| Atributo          | Tacticas de diseno                                                                                  |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
-| Interoperabilidad | FHIR R4, Library, CQL/ELM y CDS Hooks.                                                              |
-| Mantenibilidad    | Modulos, puertos y adapters; dominio sin dependencias de infraestructura.                           |
-| Rendimiento       | Concurrencia limitada, prefetch, timeouts y futura cache de reglas activas.                         |
-| Confiabilidad     | Transactions, ETags, idempotencia, aislamiento por regla y sandbox.                                 |
-| Seguridad         | Backend facade, allowlists, RBAC opcional, sesiones anonimas firmadas, limites y secretos externos. |
-| Usabilidad        | Monaco markers, ELM read-only, estados visibles y cards accesibles.                                 |
-| Portabilidad      | Docker Compose y configuracion por environment.                                                     |
+| Atributo          | Tacticas de diseno                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------- |
+| Interoperabilidad | FHIR R4, Library, CQL/ELM y CDS Hooks.                                                               |
+| Mantenibilidad    | Modulos, puertos y adapters; dominio sin dependencias de infraestructura.                            |
+| Rendimiento       | Concurrencia limitada, prefetch, timeouts, cache breve de listados y futura cache de reglas activas. |
+| Confiabilidad     | Transactions, ETags, idempotencia, aislamiento por regla y sandbox.                                  |
+| Seguridad         | Backend facade, allowlists, RBAC opcional, sesiones anonimas firmadas, limites y secretos externos.  |
+| Usabilidad        | Monaco markers, ELM read-only, estados visibles y cards accesibles.                                  |
+| Portabilidad      | Docker Compose y configuracion por environment.                                                      |
 
-No se agregara cache de artefactos en la primera implementacion hasta medir el flujo real. Esto evita invalidacion prematura durante autoria.
+Se permite cache corto para listados de pacientes base porque no decide reglas
+clinicas. No se agregara cache de artefactos CQL ni resultados de evaluacion en
+la primera implementacion hasta medir el flujo real. Esto evita invalidacion
+prematura durante autoria.
 
 ## 17. Verificabilidad del diseno
 

@@ -464,6 +464,42 @@ function PatientDataDrawer({
     'idle',
   );
   const [saveError, setSaveError] = useState<string | null>(null);
+  const formValidation = useMemo(
+    () =>
+      validatePatientForm({
+        birthDate,
+        gender,
+        systolicBloodPressure,
+        diastolicBloodPressure,
+        hba1c,
+        fastingGlucose,
+        ldlCholesterol,
+        bodyMassIndex,
+        bodyWeight,
+        bodyHeight,
+        diabetesCondition,
+        metforminMedication,
+        encounterType,
+        clinicalResources,
+      }),
+    [
+      birthDate,
+      gender,
+      systolicBloodPressure,
+      diastolicBloodPressure,
+      hba1c,
+      fastingGlucose,
+      ldlCholesterol,
+      bodyMassIndex,
+      bodyWeight,
+      bodyHeight,
+      diabetesCondition,
+      metforminMedication,
+      encounterType,
+      clinicalResources,
+    ],
+  );
+  const canSave = (stage === 'idle' || stage === 'updated') && formValidation.errors.length === 0;
 
   useEffect(() => {
     setBirthDate(patient.editableClinicalData.birthDate);
@@ -485,6 +521,11 @@ function PatientDataDrawer({
   }, [patient.editableClinicalData, open]);
 
   const save = async () => {
+    if (formValidation.errors.length > 0) {
+      setStage('idle');
+      setSaveError('Corrige los campos marcados antes de guardar.');
+      return;
+    }
     try {
       setSaveError(null);
       setStage('validating');
@@ -492,20 +533,20 @@ function PatientDataDrawer({
       setStage('saving');
       const result = await api.updatePatient({
         patientId: patient.id,
-        birthDate,
-        gender,
-        systolicBloodPressure: optionalNumber(systolicBloodPressure),
-        diastolicBloodPressure: optionalNumber(diastolicBloodPressure),
-        hba1c: optionalNumber(hba1c),
-        fastingGlucose: optionalNumber(fastingGlucose),
-        ldlCholesterol: optionalNumber(ldlCholesterol),
-        bodyMassIndex: optionalNumber(bodyMassIndex),
-        bodyWeight: optionalNumber(bodyWeight),
-        bodyHeight: optionalNumber(bodyHeight),
+        birthDate: formValidation.values.birthDate,
+        gender: formValidation.values.gender,
+        systolicBloodPressure: formValidation.values.systolicBloodPressure,
+        diastolicBloodPressure: formValidation.values.diastolicBloodPressure,
+        hba1c: formValidation.values.hba1c,
+        fastingGlucose: formValidation.values.fastingGlucose,
+        ldlCholesterol: formValidation.values.ldlCholesterol,
+        bodyMassIndex: formValidation.values.bodyMassIndex,
+        bodyWeight: formValidation.values.bodyWeight,
+        bodyHeight: formValidation.values.bodyHeight,
         diabetesCondition,
         metforminMedication,
         encounterType,
-        clinicalResources,
+        clinicalResources: formValidation.values.clinicalResources,
       });
       setStage('reevaluating');
       await new Promise((resolve) => window.setTimeout(resolve, 360));
@@ -526,11 +567,7 @@ function PatientDataDrawer({
       footer={
         <>
           <Button onClick={onClose}>Cancelar</Button>
-          <Button
-            variant="primary"
-            onClick={save}
-            disabled={stage !== 'idle' && stage !== 'updated'}
-          >
+          <Button variant="primary" onClick={save} disabled={!canSave}>
             Guardar cambios
           </Button>
         </>
@@ -561,8 +598,8 @@ function PatientDataDrawer({
           <TextInput
             type="number"
             inputMode="numeric"
-            min={40}
-            max={260}
+            min={0}
+            max={400}
             step={1}
             value={systolicBloodPressure}
             onChange={(event) => setSystolicBloodPressure(event.target.value)}
@@ -572,8 +609,8 @@ function PatientDataDrawer({
           <TextInput
             type="number"
             inputMode="numeric"
-            min={30}
-            max={160}
+            min={0}
+            max={250}
             step={1}
             value={diastolicBloodPressure}
             onChange={(event) => setDiastolicBloodPressure(event.target.value)}
@@ -583,8 +620,8 @@ function PatientDataDrawer({
           <TextInput
             type="number"
             inputMode="decimal"
-            min={3}
-            max={18}
+            min={0}
+            max={30}
             step={0.1}
             value={hba1c}
             onChange={(event) => setHba1c(event.target.value)}
@@ -594,8 +631,8 @@ function PatientDataDrawer({
           <TextInput
             type="number"
             inputMode="numeric"
-            min={40}
-            max={600}
+            min={0}
+            max={1000}
             step={1}
             value={fastingGlucose}
             onChange={(event) => setFastingGlucose(event.target.value)}
@@ -605,8 +642,8 @@ function PatientDataDrawer({
           <TextInput
             type="number"
             inputMode="numeric"
-            min={20}
-            max={400}
+            min={0}
+            max={1000}
             step={1}
             value={ldlCholesterol}
             onChange={(event) => setLdlCholesterol(event.target.value)}
@@ -617,7 +654,7 @@ function PatientDataDrawer({
             type="number"
             inputMode="decimal"
             min={0}
-            max={200}
+            max={1000}
             step={0.1}
             value={bodyMassIndex}
             onChange={(event) => setBodyMassIndex(event.target.value)}
@@ -627,8 +664,8 @@ function PatientDataDrawer({
           <TextInput
             type="number"
             inputMode="decimal"
-            min={2}
-            max={300}
+            min={0}
+            max={500}
             step={0.1}
             value={bodyWeight}
             onChange={(event) => setBodyWeight(event.target.value)}
@@ -638,8 +675,8 @@ function PatientDataDrawer({
           <TextInput
             type="number"
             inputMode="decimal"
-            min={40}
-            max={230}
+            min={0}
+            max={300}
             step={0.1}
             value={bodyHeight}
             onChange={(event) => setBodyHeight(event.target.value)}
@@ -681,6 +718,16 @@ function PatientDataDrawer({
             {saveError}
           </div>
         ) : null}
+        {formValidation.errors.length > 0 ? (
+          <div className="state-box state-error form-validation" role="alert">
+            <strong>Revisa el formulario</strong>
+            <ul>
+              {formValidation.errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <WriteStage stage={stage} detail={`FHIR ${shortId(patient.id)}`} />
       </div>
     </Drawer>
@@ -692,11 +739,222 @@ function numericInput(value: number | undefined): string {
 }
 
 function optionalNumber(value: string): number | undefined {
-  if (!value.trim()) {
+  const normalized = normalizeNumericText(value);
+  if (!normalized) {
     return undefined;
   }
-  const parsed = Number(value);
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+interface PatientFormInput {
+  birthDate: string;
+  gender: PatientDetail['editableClinicalData']['gender'];
+  systolicBloodPressure: string;
+  diastolicBloodPressure: string;
+  hba1c: string;
+  fastingGlucose: string;
+  ldlCholesterol: string;
+  bodyMassIndex: string;
+  bodyWeight: string;
+  bodyHeight: string;
+  diabetesCondition: boolean;
+  metforminMedication: boolean;
+  encounterType: DemoEncounterType;
+  clinicalResources: EditableClinicalResource[];
+}
+
+interface PatientFormValues {
+  birthDate: string;
+  gender: PatientDetail['editableClinicalData']['gender'];
+  systolicBloodPressure?: number;
+  diastolicBloodPressure?: number;
+  hba1c?: number;
+  fastingGlucose?: number;
+  ldlCholesterol?: number;
+  bodyMassIndex?: number;
+  bodyWeight?: number;
+  bodyHeight?: number;
+  diabetesCondition: boolean;
+  metforminMedication: boolean;
+  encounterType: DemoEncounterType;
+  clinicalResources: EditableClinicalResource[];
+}
+
+interface NumericRule {
+  label: string;
+  min: number;
+  max: number;
+  maxDecimals: number;
+}
+
+const patientNumericRules = {
+  systolicBloodPressure: {
+    label: 'Presion sistolica',
+    min: 0,
+    max: 400,
+    maxDecimals: 0,
+  },
+  diastolicBloodPressure: {
+    label: 'Presion diastolica',
+    min: 0,
+    max: 250,
+    maxDecimals: 0,
+  },
+  hba1c: { label: 'HbA1c', min: 0, max: 30, maxDecimals: 1 },
+  fastingGlucose: { label: 'Glucosa en ayunas', min: 0, max: 1000, maxDecimals: 0 },
+  ldlCholesterol: { label: 'LDL', min: 0, max: 1000, maxDecimals: 0 },
+  bodyMassIndex: { label: 'IMC', min: 0, max: 1000, maxDecimals: 1 },
+  bodyWeight: { label: 'Peso', min: 0, max: 500, maxDecimals: 1 },
+  bodyHeight: { label: 'Talla', min: 0, max: 300, maxDecimals: 1 },
+} satisfies Record<
+  keyof Pick<
+    PatientFormValues,
+    | 'systolicBloodPressure'
+    | 'diastolicBloodPressure'
+    | 'hba1c'
+    | 'fastingGlucose'
+    | 'ldlCholesterol'
+    | 'bodyMassIndex'
+    | 'bodyWeight'
+    | 'bodyHeight'
+  >,
+  NumericRule
+>;
+
+function validatePatientForm(input: PatientFormInput): {
+  errors: string[];
+  values: PatientFormValues;
+} {
+  const errors: string[] = [];
+  const values: PatientFormValues = {
+    birthDate: input.birthDate,
+    gender: input.gender,
+    diabetesCondition: input.diabetesCondition,
+    metforminMedication: input.metforminMedication,
+    encounterType: input.encounterType,
+    clinicalResources: sanitizeClinicalResources(input.clinicalResources),
+  };
+
+  if (!isIsoDate(input.birthDate)) {
+    errors.push('Fecha de nacimiento: usa una fecha valida.');
+  }
+
+  const numericFields = [
+    ['systolicBloodPressure', input.systolicBloodPressure],
+    ['diastolicBloodPressure', input.diastolicBloodPressure],
+    ['hba1c', input.hba1c],
+    ['fastingGlucose', input.fastingGlucose],
+    ['ldlCholesterol', input.ldlCholesterol],
+    ['bodyMassIndex', input.bodyMassIndex],
+    ['bodyWeight', input.bodyWeight],
+    ['bodyHeight', input.bodyHeight],
+  ] as const;
+
+  numericFields.forEach(([key, raw]) => {
+    const parsed = parseOptionalNumberField(raw, patientNumericRules[key]);
+    if (parsed.error) {
+      errors.push(parsed.error);
+      return;
+    }
+    if (parsed.value !== undefined) {
+      values[key] = parsed.value;
+    }
+  });
+
+  errors.push(...validateClinicalResources(input.clinicalResources));
+  return { errors, values };
+}
+
+function parseOptionalNumberField(
+  raw: string,
+  rule: NumericRule,
+): { value?: number; error?: string } {
+  const normalized = normalizeNumericText(raw);
+  if (!normalized) {
+    return {};
+  }
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) {
+    return { error: `${rule.label}: ingresa solo numeros; puedes usar punto o coma decimal.` };
+  }
+  const decimals = normalized.split('.')[1]?.length ?? 0;
+  if (decimals > rule.maxDecimals) {
+    return {
+      error: `${rule.label}: usa maximo ${rule.maxDecimals} decimal${
+        rule.maxDecimals === 1 ? '' : 'es'
+      }.`,
+    };
+  }
+  const value = Number(normalized);
+  if (!Number.isFinite(value)) {
+    return { error: `${rule.label}: ingresa un numero valido.` };
+  }
+  if (value < rule.min || value > rule.max) {
+    return { error: `${rule.label}: debe estar entre ${rule.min} y ${rule.max}.` };
+  }
+  return { value };
+}
+
+function normalizeNumericText(value: string): string {
+  return value.trim().replace(',', '.');
+}
+
+function sanitizeClinicalResources(
+  resources: EditableClinicalResource[],
+): EditableClinicalResource[] {
+  return resources.map((resource) => ({
+    ...resource,
+    date: resource.date ?? todayInput(),
+  }));
+}
+
+function validateClinicalResources(resources: EditableClinicalResource[]): string[] {
+  return resources.flatMap((resource, index) => {
+    const errors: string[] = [];
+    const row = `Recurso ${index + 1}`;
+    const config = clinicalResourceCatalog[resource.type];
+    if (!config) {
+      return [`${row}: tipo de recurso no permitido.`];
+    }
+    const option = config.options.find((item) => item.code === resource.code);
+    if (!option) {
+      errors.push(`${row}: opcion no permitida para ${config.label}.`);
+    }
+    if (resource.status && !config.statuses.some((status) => status.value === resource.status)) {
+      errors.push(`${row}: estado no permitido para ${config.label}.`);
+    }
+    if (!isIsoDate(resource.date ?? '')) {
+      errors.push(`${row}: usa una fecha valida.`);
+    }
+    if (resource.type === 'observation') {
+      if (!isFiniteNumber(resource.value)) {
+        errors.push(`${row}: la observacion necesita un valor numerico.`);
+      } else if (option) {
+        const min = option.min ?? -1000;
+        const max = option.max ?? 10000;
+        if (resource.value < min || resource.value > max) {
+          errors.push(`${row}: ${option.label} debe estar entre ${min} y ${max}.`);
+        }
+        if (decimalPlaces(resource.value) > 2) {
+          errors.push(`${row}: usa maximo 2 decimales en la observacion.`);
+        }
+      }
+    }
+    return errors;
+  });
+}
+
+function isIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function decimalPlaces(value: number): number {
+  const text = String(value);
+  return text.includes('.') ? (text.split('.')[1]?.length ?? 0) : 0;
 }
 
 interface ClinicalResourceOption {

@@ -119,57 +119,57 @@ export class UpdatePatientDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
-  @Min(40)
-  @Max(260)
+  @Min(0)
+  @Max(400)
   systolicBloodPressure?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
-  @Min(30)
-  @Max(160)
+  @Min(0)
+  @Max(250)
   diastolicBloodPressure?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
-  @Min(3)
-  @Max(18)
+  @Min(0)
+  @Max(30)
   hba1c?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
-  @Min(40)
-  @Max(600)
+  @Min(0)
+  @Max(1000)
   fastingGlucose?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
-  @Min(20)
-  @Max(400)
+  @Min(0)
+  @Max(1000)
   ldlCholesterol?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
-  @Max(200)
+  @Max(1000)
   bodyMassIndex?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
-  @Min(2)
-  @Max(300)
+  @Min(0)
+  @Max(500)
   bodyWeight?: number;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
-  @Min(40)
-  @Max(230)
+  @Min(0)
+  @Max(300)
   bodyHeight?: number;
 
   @IsOptional()

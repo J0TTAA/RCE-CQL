@@ -592,6 +592,27 @@ dd {
   color: var(--color-critical);
 }
 
+.form-validation {
+  display: grid;
+  min-height: 0;
+  justify-content: stretch;
+  gap: 8px;
+  text-align: left;
+}
+
+.form-validation strong {
+  font-size: 14px;
+}
+
+.form-validation ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.form-validation li {
+  line-height: 1.45;
+}
+
 .badge,
 .status-pill {
   display: inline-flex;

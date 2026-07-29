@@ -1,0 +1,48 @@
+\section{Conceptos basicos}
+
+\subsection{Que hace el RCE}
+
+El RCE permite escribir reglas CQL dentro de la misma pantalla del sistema,
+validarlas contra CQL Translation Service, guardarlas como artefactos FHIR en
+HAPI y evaluarlas contra pacientes sinteticos. Cuando una regla aplica, el
+usuario ve una card CDS educativa.
+
+\subsection{Modo aula anonimo}
+
+No hay login visible. Cuando un navegador entra al RCE, el backend crea o
+recupera una sesion anonima mediante una cookie segura. Esa sesion apunta a un
+sandbox.
+
+Cada sandbox separa:
+
+\begin{itemize}
+  \item reglas creadas por el alumno;
+  \item cambios hechos sobre pacientes;
+  \item cards generadas;
+  \item historial de actividad CDS.
+\end{itemize}
+
+Asi varios alumnos pueden abrir el mismo paciente base sin pisarse entre ellos.
+El paciente sintetico base vive en HAPI; los cambios del alumno quedan como
+overlay de su sandbox.
+
+\subsection{Roles Alumno y Docente}
+
+El modo Alumno sirve para practicar: navegar pacientes, escribir reglas, probar
+reglas y ver cards dentro de su sandbox.
+
+El modo Docente habilita acciones de clase como publicar, activar o desactivar
+reglas compartidas. El cambio de rol es parte de la maqueta educativa; no es un
+sistema de autenticacion institucional.
+
+\rceScreenshot{04-sandbox-sesion.png}{Menu de sesion anonima con aula, sandbox y rol actual.}
+
+\subsection{Datos clinicos}
+
+Los datos se representan con recursos FHIR R4. HAPI FHIR es el repositorio
+logico y PostgreSQL es solo la persistencia interna de HAPI. El backend no entra
+a las tablas internas de PostgreSQL.
+
+Los pacientes de la demo son sinteticos y pueden incluir recursos como
+\texttt{Patient}, \texttt{Condition}, \texttt{Observation}, \texttt{MedicationRequest}
+y \texttt{Encounter}.

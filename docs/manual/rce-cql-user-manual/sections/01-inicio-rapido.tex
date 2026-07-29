@@ -1,0 +1,60 @@
+\section{Inicio rapido}
+
+Este manual explica como usar el RCE CQL en una clase. La idea es simple:
+el docente levanta una URL, los alumnos entran sin login y cada navegador queda
+asociado a su propio sandbox anonimo.
+
+\subsection{Levantar el entorno local}
+
+Desde Fedora, ubicarse en la carpeta del proyecto:
+
+\begin{lstlisting}
+cd ~/Desktop/RCE-CQL
+cp .env.example .env
+docker compose --profile local-hapi --profile local-translator up -d --build
+\end{lstlisting}
+
+Verificar servicios:
+
+\begin{lstlisting}
+docker ps
+curl -s http://localhost:3000/api/v1/health/ready | jq
+\end{lstlisting}
+
+Abrir el RCE:
+
+\begin{lstlisting}
+http://localhost:5173
+\end{lstlisting}
+
+\rceScreenshot{01-docker-servicios.png}{Servicios Docker levantados para la demo local.}
+\rceScreenshot{02-health-ready.png}{Health check del backend con HAPI y traductor disponibles.}
+
+\subsection{Cargar pacientes sinteticos}
+
+Si HAPI local esta vacio, cargar pacientes Synthea:
+
+\begin{lstlisting}
+docker compose --profile local-hapi --profile local-translator --profile seed-data run --rm synthea-seed
+\end{lstlisting}
+
+Confirmar que existen pacientes:
+
+\begin{lstlisting}
+curl -sG http://localhost:8080/fhir/Patient \
+  --data-urlencode '_summary=count' | jq '.total'
+\end{lstlisting}
+
+\subsection{URLs importantes}
+
+\begin{longtable}{>{\ttfamily}p{0.38\linewidth}p{0.52\linewidth}}
+\toprule
+URL & Uso \\
+\midrule
+http://localhost:5173 & Frontend del RCE. \\
+http://localhost:3000/api/v1/health/ready & Estado del backend y dependencias. \\
+http://localhost:3000/api/v1/cds-services & Discovery CDS Hooks. \\
+http://localhost:8080/fhir & HAPI FHIR local. \\
+http://localhost:8081 & CQL Translation Service local. \\
+\bottomrule
+\end{longtable}

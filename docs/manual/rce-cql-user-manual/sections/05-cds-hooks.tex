@@ -1,0 +1,78 @@
+\section{CDS Hooks}
+
+\subsection{Que es lo que se muestra}
+
+El RCE no usa hooks inventados para la API publica. Expone una fachada CDS
+Hooks estandar desde NestJS. Un cliente puede descubrir servicios y luego hacer
+un \texttt{POST} con \texttt{hook}, \texttt{hookInstance}, \texttt{fhirServer}
+y \texttt{context.patientId}. La respuesta contiene cards CDS.
+
+\subsection{Discovery}
+
+\begin{lstlisting}
+curl -s http://localhost:3000/api/v1/cds-services | jq
+\end{lstlisting}
+
+Servicios esperados:
+
+\begin{itemize}
+  \item \texttt{rce-patient-view}: hook \texttt{patient-view}.
+  \item \texttt{rce-order-select}: hook \texttt{order-select}.
+  \item \texttt{rce-order-sign}: hook \texttt{order-sign}.
+\end{itemize}
+
+\rceScreenshot{14-cds-discovery.png}{Discovery CDS Hooks con los servicios publicados por el RCE.}
+
+\subsection{Invocar patient-view}
+
+Reemplazar \texttt{<FHIR\_PATIENT\_ID>} por el id del paciente abierto en la
+ficha:
+
+\begin{lstlisting}
+curl -s -X POST http://localhost:3000/api/v1/cds-services/rce-patient-view \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "hook": "patient-view",
+    "hookInstance": "d1577c69-dfbe-44ad-ba6d-3e05e953b2ea",
+    "fhirServer": "http://localhost:8080/fhir",
+    "context": {
+      "userId": "Practitioner/rce-teacher",
+      "patientId": "<FHIR_PATIENT_ID>"
+    }
+  }' | jq
+\end{lstlisting}
+
+Si una regla aplica, la respuesta contiene:
+
+\begin{lstlisting}
+{
+  "cards": [
+    {
+      "summary": "Sospecha de diabetes por HbA1c",
+      "indicator": "critical",
+      "source": {
+        "label": "RceDiabetesRiskHba1c 0.1.0"
+      }
+    }
+  ]
+}
+\end{lstlisting}
+
+\rceScreenshot{15-cds-post-card.png}{Invocacion CDS Hooks patient-view devolviendo cards.}
+
+\subsection{Trazabilidad visual}
+
+En \texttt{Actividad CDS}, abrir una ejecucion con el boton \texttt{Detalle}.
+El panel muestra:
+
+\begin{itemize}
+  \item hook disparado;
+  \item paciente evaluado;
+  \item sandbox;
+  \item reglas evaluadas;
+  \item recursos FHIR considerados;
+  \item resultado y cards generadas.
+\end{itemize}
+
+\rceScreenshot{12-actividad-cds.png}{Actividad CDS generada por pruebas y cambios de paciente.}
+\rceScreenshot{13-trazabilidad-hook.png}{Trazabilidad visual de una ejecucion CDS Hooks.}

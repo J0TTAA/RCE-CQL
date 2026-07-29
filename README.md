@@ -33,7 +33,6 @@ Versiones candidatas y estado de verificacion:
 6. [docs/AGE_RULE_DEMO.md](./docs/AGE_RULE_DEMO.md): demo de regla por edad.
 7. [docs/CLINICAL_RULE_DEMO.md](./docs/CLINICAL_RULE_DEMO.md): demos clinicas.
 8. [docs/CDS_HOOKS_STANDARD.md](./docs/CDS_HOOKS_STANDARD.md): API CDS Hooks.
-9. [docs/manual-usuario-latex](./docs/manual-usuario-latex): manual de uso en LaTeX.
 
 Validar coherencia SDD:
 
@@ -428,7 +427,19 @@ Importante:
 - Un alumno no debe mandar `sandboxId`; NestJS lo resuelve desde la cookie.
 - Las reglas privadas, pruebas, overlays de paciente y actividad CDS se filtran
   por sandbox.
-- El rol docente puede protegerse con `CLASSROOM_TEACHER_PASSCODE`.
+- La clave para entrar al rol docente se define en `.env` con
+  `CLASSROOM_TEACHER_PASSCODE`.
+- Docker inyecta esa clave al contenedor `api` cuando se levanta el servicio. En
+  `production`, la API no arranca si esa variable no existe.
+- Si cambias `CLASSROOM_TEACHER_PASSCODE`, reinicia la API para que tome el
+  nuevo valor:
+
+```bash
+docker compose --env-file .env up -d --force-recreate api
+```
+
+- Los alumnos no ven esa clave; solo se solicita al cambiar desde `Alumno` a
+  `Docente` en la interfaz.
 - El modo anonimo no debe usarse con pacientes reales sin una capa externa de
   autenticacion/autorizacion institucional.
 

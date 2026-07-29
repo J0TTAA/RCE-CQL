@@ -49,4 +49,16 @@ describe('validateEnvironment', () => {
       /Invalid environment configuration/,
     );
   });
+
+  it('requires the teacher passcode in production', () => {
+    assert.throws(
+      () =>
+        validateEnvironment({
+          NODE_ENV: 'production',
+          HAPI_BASE_URL: 'http://hapi:8080/fhir',
+          CQL_TRANSLATOR_BASE_URL: 'http://cql-translator:8080',
+        }),
+      /CLASSROOM_TEACHER_PASSCODE/,
+    );
+  });
 });

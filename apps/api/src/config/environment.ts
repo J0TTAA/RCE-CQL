@@ -47,7 +47,11 @@ const environmentSchema = Joi.object<EnvironmentVariables>({
   CLASSROOM_DEFAULT_ID: Joi.string()
     .pattern(/^[A-Za-z0-9_-]+$/)
     .default('demo-aula'),
-  CLASSROOM_TEACHER_PASSCODE: Joi.string().min(4).default('docente-rce-cql'),
+  CLASSROOM_TEACHER_PASSCODE: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(8).required(),
+    otherwise: Joi.string().min(4).default('docente-rce-cql'),
+  }),
 }).unknown(true);
 
 export function validateEnvironment(config: Record<string, unknown>): EnvironmentVariables {

@@ -16,6 +16,12 @@ coverage/
 *.tmp
 *.temp
 
+# Manual de uso exportado por separado
+docs/manual-usuario-latex/
+docs/manual-rce-cql-latex.zip
+docs/manual/rce-cql-user-manual/
+docs/manual/rce-cql-user-manual.zip
+
 # Editors and operating systems
 .idea/
 .vscode/

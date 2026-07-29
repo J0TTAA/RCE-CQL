@@ -69,7 +69,7 @@ HAPI o al traductor.
 | FE-TASK-2.7  | Implementar RuleTestPanel.                                 | 2.5, 1.5      | FE-REQ-027, 029      | REVIEW |
 | FE-TASK-2.8  | Implementar permisos visuales y dialogs de publicacion.    | 2.4, 2.5      | FE-REQ-005, 028      | REVIEW |
 | FE-TASK-2.9  | Implementar CdsCardList y ApplySuggestionDialog.           | 2.2, 1.5      | FE-REQ-030 a 034     | REVIEW |
-| FE-TASK-2.10 | Implementar CdsActivityTable y detalle.                    | 1.4, 1.5      | FE-REQ-035           | REVIEW |
+| FE-TASK-2.10 | Implementar CdsActivityTable, detalle y traza CDS Hooks.   | 1.4, 1.5      | FE-REQ-035           | REVIEW |
 
 ## 5. Gate FE-P3 - Integracion Nest
 

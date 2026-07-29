@@ -13,9 +13,12 @@
   --color-interactive: #0b6e69;
   --color-interactive-strong: #075753;
   --color-info: #2867a8;
+  --color-info-bg: #eff6ff;
   --color-success: #27764b;
   --color-warning: #9a6400;
+  --color-warning-bg: #fff8e8;
   --color-critical: #b3313b;
+  --color-critical-bg: #fff1f0;
   --color-focus: #2f7dd1;
   --shadow-popover: 0 18px 45px rgb(23 33 38 / 16%);
   --radius-sm: 4px;

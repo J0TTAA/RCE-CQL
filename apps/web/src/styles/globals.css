@@ -1152,6 +1152,285 @@ dd {
   gap: 13px;
 }
 
+.activity-correlation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 10px 12px;
+}
+
+.activity-correlation span {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cds-trace {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.cds-trace-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px;
+}
+
+.cds-trace-header h3,
+.cds-trace-header p {
+  margin: 0;
+}
+
+.cds-trace-header h3 {
+  font-size: 16px;
+}
+
+.cds-trace-header p {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.cds-trace-result {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cds-trace-result-critical,
+.cds-trace-result-error {
+  border-color: #e8b8bf;
+  background: var(--color-critical-bg);
+  color: var(--color-critical);
+}
+
+.cds-trace-result-warning {
+  border-color: #e7cf9a;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.cds-trace-result-info {
+  border-color: #bfd7ef;
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.cds-trace-result-none {
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+}
+
+.cds-trace-flow {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 12px;
+}
+
+.cds-trace-flow-item {
+  display: flex;
+  min-width: min(170px, 72vw);
+  flex: 1 0 170px;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.cds-trace-node {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  align-content: start;
+  gap: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 10px;
+}
+
+.cds-trace-node-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cds-trace-node-icon {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
+
+.cds-trace-node strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.cds-trace-node small {
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.cds-trace-node-critical {
+  border-color: #e8b8bf;
+  background: var(--color-critical-bg);
+}
+
+.cds-trace-node-warning {
+  border-color: #e7cf9a;
+  background: var(--color-warning-bg);
+}
+
+.cds-trace-node-info {
+  border-color: #bfd7ef;
+  background: var(--color-info-bg);
+}
+
+.cds-trace-node-none {
+  background: var(--color-surface-muted);
+}
+
+.cds-trace-node-error {
+  border-color: #d98c98;
+  background: var(--color-critical-bg);
+  box-shadow: inset 0 0 0 1px #e8b8bf;
+}
+
+.cds-trace-node-critical .cds-trace-node-icon,
+.cds-trace-node-error .cds-trace-node-icon {
+  background: #fde3e4;
+  color: var(--color-critical);
+}
+
+.cds-trace-node-warning .cds-trace-node-icon {
+  background: #fff0ca;
+  color: var(--color-warning);
+}
+
+.cds-trace-node-info .cds-trace-node-icon {
+  background: #e3f0ff;
+  color: var(--color-info);
+}
+
+.cds-trace-connector {
+  display: inline-flex;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+}
+
+.cds-trace-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-canvas);
+  padding: 12px;
+}
+
+.cds-trace-detail {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.cds-trace-detail dt {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cds-trace-detail dd {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: var(--color-text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.cds-trace-detail-list {
+  grid-column: 1 / -1;
+}
+
+.cds-trace-detail ul,
+.cds-trace-warning-section ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cds-trace-warning-section {
+  border-top: 1px solid var(--color-border);
+  padding: 12px;
+}
+
+.cds-trace-warning-section p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  color: var(--color-warning);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cds-trace-warning-section li {
+  border: 1px solid #e7cf9a;
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  padding: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.cds-trace-warning-section .cds-trace-no-warnings {
+  margin: 0;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.cds-trace-muted {
+  color: var(--color-muted);
+}
+
 .drawer-section-title {
   display: flex;
   align-items: center;
@@ -1232,6 +1511,10 @@ dd {
   flex-direction: column;
   background: var(--color-surface);
   box-shadow: var(--shadow-popover);
+}
+
+.drawer-wide {
+  width: min(860px, 100vw);
 }
 
 .drawer-body {
@@ -1330,6 +1613,26 @@ dd {
 @media (max-width: 600px) {
   .toolbar {
     display: grid;
+  }
+
+  .cds-trace-flow {
+    flex-direction: column;
+    overflow-x: visible;
+  }
+
+  .cds-trace-flow-item {
+    min-width: 0;
+    flex-basis: auto;
+    flex-direction: column;
+  }
+
+  .cds-trace-connector {
+    min-height: 18px;
+    transform: rotate(90deg);
+  }
+
+  .cds-trace-details {
+    grid-template-columns: 1fr;
   }
 
   .toolbar-count {

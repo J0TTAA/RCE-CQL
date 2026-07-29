@@ -15,13 +15,14 @@ import {
   SelectInput,
   SeverityBadge,
 } from '../../components/ui/primitives';
+import { CdsExecutionTrace } from './CdsExecutionTrace';
 
 type ResultFilter = 'all' | ActivityEntry['result'];
 type SeverityFilter = 'all' | CdsSeverity | 'none';
 type HookFilter = 'all' | RuleHook;
 
 export function ActivityPage() {
-  const { api } = useRce();
+  const { api, session } = useRce();
   const [hook, setHook] = useState<HookFilter>('all');
   const [severity, setSeverity] = useState<SeverityFilter>('all');
   const [result, setResult] = useState<ResultFilter>('all');
@@ -105,7 +106,11 @@ export function ActivityPage() {
         </div>
       </AsyncState>
 
-      <ActivityDrawer entry={selected} onClose={() => setSelected(null)} />
+      <ActivityDrawer
+        entry={selected}
+        sandboxLabel={session?.sandboxLabel ?? 'Sandbox actual'}
+        onClose={() => setSelected(null)}
+      />
     </section>
   );
 }
@@ -162,29 +167,25 @@ function ActivityRow({ entry, onOpen }: { entry: ActivityEntry; onOpen: () => vo
   );
 }
 
-function ActivityDrawer({ entry, onClose }: { entry: ActivityEntry | null; onClose: () => void }) {
+function ActivityDrawer({
+  entry,
+  sandboxLabel,
+  onClose,
+}: {
+  entry: ActivityEntry | null;
+  sandboxLabel: string;
+  onClose: () => void;
+}) {
   return (
-    <Drawer open={Boolean(entry)} title="Detalle de ejecución CDS" onClose={onClose}>
+    <Drawer
+      open={Boolean(entry)}
+      title="Trazabilidad CDS Hooks"
+      className="drawer-wide"
+      onClose={onClose}
+    >
       {entry ? (
         <div className="activity-detail">
-          <dl className="confirm-list">
-            <div>
-              <dt>CorrelationId</dt>
-              <dd>{shortId(entry.correlationId)}</dd>
-            </div>
-            <div>
-              <dt>Hook</dt>
-              <dd>{entry.hook}</dd>
-            </div>
-            <div>
-              <dt>Reglas</dt>
-              <dd>{entry.rules.join(', ')}</dd>
-            </div>
-            <div>
-              <dt>Recursos considerados</dt>
-              <dd>{entry.consideredResources.join(', ')}</dd>
-            </div>
-          </dl>
+          <CdsExecutionTrace entry={entry} sandboxLabel={sandboxLabel} />
 
           <div className="drawer-section-title">
             <h3>Cards</h3>
@@ -209,16 +210,10 @@ function ActivityDrawer({ entry, onClose }: { entry: ActivityEntry | null; onClo
             </article>
           ))}
 
-          {entry.warnings.length > 0 ? (
-            <div className="warning-box">
-              <h3>Warnings</h3>
-              <ul>
-                {entry.warnings.map((warning) => (
-                  <li key={warning}>{warning}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+          <div className="activity-correlation">
+            <span>CorrelationId</span>
+            <code>{shortId(entry.correlationId)}</code>
+          </div>
         </div>
       ) : null}
     </Drawer>

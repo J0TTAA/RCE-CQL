@@ -203,12 +203,14 @@ export function Drawer({
   title,
   children,
   footer,
+  className = '',
   onClose,
 }: {
   open: boolean;
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  className?: string;
   onClose: () => void;
 }) {
   if (!open) {
@@ -217,7 +219,7 @@ export function Drawer({
   return (
     <div className="drawer-backdrop" role="presentation" onMouseDown={onClose}>
       <aside
-        className="drawer"
+        className={`drawer ${className}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

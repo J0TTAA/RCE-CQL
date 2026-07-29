@@ -222,7 +222,7 @@ Diagnosticos:
 - Tabla cronologica, no feed de cards.
 - Columnas: fecha, paciente, hook, reglas evaluadas, cards, duracion, estado y
   correlationId.
-- Drawer de detalle con cards emitidas y advertencias.
+- Drawer de detalle con `CdsExecutionTrace`, cards emitidas y advertencias.
 - Filtros por hook, severidad y resultado.
 
 ## 6. Sistema visual
@@ -356,17 +356,18 @@ src/
 
 ### 7.4 Componentes de pacientes/CDS
 
-| Componente               | Responsabilidad                          |
-| ------------------------ | ---------------------------------------- |
-| `PatientsTable`          | Busqueda y seleccion.                    |
-| `PatientHeader`          | Identidad sintetica y contexto clinico.  |
-| `PatientChartTabs`       | Recursos agregados.                      |
-| `ClinicalTimeline`       | Eventos ordenados.                       |
-| `ClinicalResourceDrawer` | Formularios editables permitidos.        |
-| `CdsCardList`            | Ordena y presenta cards.                 |
-| `CdsCardItem`            | Card individual con severidad accesible. |
-| `ApplySuggestionDialog`  | Confirmacion explicita de acciones FHIR. |
-| `CdsActivityTable`       | Historial de evaluaciones.               |
+| Componente               | Responsabilidad                                                       |
+| ------------------------ | --------------------------------------------------------------------- |
+| `PatientsTable`          | Busqueda y seleccion.                                                 |
+| `PatientHeader`          | Identidad sintetica y contexto clinico.                               |
+| `PatientChartTabs`       | Recursos agregados.                                                   |
+| `ClinicalTimeline`       | Eventos ordenados.                                                    |
+| `ClinicalResourceDrawer` | Formularios editables permitidos.                                     |
+| `CdsCardList`            | Ordena y presenta cards.                                              |
+| `CdsCardItem`            | Card individual con severidad accesible.                              |
+| `ApplySuggestionDialog`  | Confirmacion explicita de acciones FHIR.                              |
+| `CdsActivityTable`       | Historial de evaluaciones.                                            |
+| `CdsExecutionTrace`      | Diagrama docente de hook, sandbox, reglas, recursos FHIR y resultado. |
 
 No crear `DashboardCard`, `StatCard` o wrappers genericos que conviertan toda
 seccion en una card.

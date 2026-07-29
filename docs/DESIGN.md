@@ -107,6 +107,7 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-016 | Modo aula anonimo con sandbox por navegador        | El docente debe poder compartir una sola URL sin crear cuentas, pero 10 alumnos no pueden pisarse reglas ni pacientes.           | Nest emite una cookie firmada, resuelve `SessionContext` por solicitud y filtra/etiqueta todo dato mutable por `sandboxId`.   |
 | ADR-017 | Cache corto para listado de pacientes base         | Evita llamadas N+1 a `Patient/$everything` y reduce 503 en HAPI local durante clases.                                            | El listado usa TTL breve e indices de Condition/Encounter; la ficha y la evaluacion CQL siguen leyendo datos vigentes.        |
 | ADR-018 | Observaciones pedagogicas como overlay FHIR        | Edad sola no demuestra reglas clinicas compuestas; se necesitan signos vitales y laboratorio editables sin contaminar HAPI base. | El overlay `Basic` puede guardar valores controlados y Nest los materializa como `Observation` FHIR R4 en el bundle efectivo. |
+| ADR-019 | Facade CDS Hooks sobre evaluacion existente        | El RCE debe ser invocable por clientes CDS Hooks sin duplicar el motor CQL ni el acceso FHIR.                                    | `CdsHooksModule` expone discovery y servicios estables, y delega evaluacion al mismo flujo sandbox usado por la UI.           |
 
 ## 7. Vista de contexto
 
@@ -494,9 +495,14 @@ Servicios discovery:
 Reglas de datos:
 
 - Se utilizara `prefetch` cuando sea suficiente.
-- Si faltan datos, Nest consultara `FHIR_BASE_URL` configurado.
-- Un `fhirServer` recibido solo se usara si coincide con la allowlist.
+- Si faltan datos, Nest consultara el HAPI configurado por backend.
+- En el MVP, `fhirServer` recibido se trata como dato no confiable y no reemplaza
+  la configuracion de HAPI del servidor. La allowlist de servidores FHIR externos
+  queda como endurecimiento posterior.
 - Sin recomendaciones se devolvera `200` y `{"cards": []}`.
+- Las reglas no se limitan a fixtures: cualquier `Library` CQL validada,
+  publicada, habilitada y asociada al hook participa si su expresion configurada
+  devuelve Boolean contra el bundle FHIR efectivo del paciente.
 
 ### 10.5 Contrato de error
 
@@ -1014,4 +1020,5 @@ Estas decisiones no bloquean la prueba de arquitectura ni los contratos principa
 - [CQL Language Server](https://github.com/cqframework/cql-language-server)
 - [HAPI Clinical Reasoning](https://hapifhir.io/hapi-fhir/docs/clinical_reasoning/overview.html)
 - [FHIR R4 Library](https://hl7.org/fhir/R4/library.html)
-- [CDS Hooks](https://cds-hooks.org/specification/current/)
+- [CDS Hooks 2.0.1](https://cds-hooks.hl7.org/index.html)
+- [CDS Hooks patient-view](https://cds-hooks.hl7.org/hooks/patient-view/STU1/patient-view/)

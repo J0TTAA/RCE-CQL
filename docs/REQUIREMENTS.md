@@ -323,6 +323,6 @@ La trazabilidad detallada se mantendra en las tablas de cada tarea y en los caso
 - [ISO/IEC/IEEE 29148:2018](https://www.iso.org/standard/72089.html)
 - [FHIR R4](https://hl7.org/fhir/R4/)
 - [Clinical Quality Language](https://cql.hl7.org/)
-- [CDS Hooks](https://cds-hooks.org/specification/current/)
+- [CDS Hooks 2.0.1](https://cds-hooks.hl7.org/index.html)
 - [HAPI FHIR Clinical Reasoning](https://hapifhir.io/hapi-fhir/docs/clinical_reasoning/overview.html)
 - [CQL Translation Service](https://github.com/cqframework/cql-translation-service)

@@ -9,5 +9,6 @@ import { UiController } from './presentation/ui.controller';
   imports: [FhirModule, CqlModule, ClassroomSessionModule],
   controllers: [UiController],
   providers: [UiService],
+  exports: [UiService],
 })
 export class UiModule {}

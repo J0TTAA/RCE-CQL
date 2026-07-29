@@ -197,16 +197,16 @@ Objetivo: ejecutar reglas y exponer soporte de decisiones estandar.
 | TASK-5.1  | Implementar RuleExecutionModule con `cql-execution` y `cql-exec-fhir`. | 2.2, 0.7      | REQ-F-020                                             | L      | REVIEW |
 | TASK-5.2  | Normalizar resultado booleano/errores a RuleEvaluationResult.          | 5.1           | REQ-F-021, REQ-F-022                                  | M      | REVIEW |
 | TASK-5.3  | Implementar prueba de borrador validated con bundle FHIR de paciente.  | 5.1, 4.4, 0.8 | REQ-F-018, REQ-F-019                                  | M      | REVIEW |
-| TASK-5.4  | Implementar seleccion y evaluacion de reglas activas por hook.         | 3.10, 5.2     | REQ-F-023, REQ-F-024                                  | L      | TODO   |
-| TASK-5.5  | Implementar mapper RuleEvaluationResult a CDS Card.                    | 5.2, 3.5      | REQ-F-021, REQ-F-034 a REQ-F-037                      | M      | TODO   |
-| TASK-5.6  | Implementar CDS Services Discovery.                                    | 5.4           | REQ-F-032, REQ-I-004                                  | M      | TODO   |
-| TASK-5.7  | Implementar `rce-patient-view`.                                        | 5.4 a 5.6     | REQ-F-033, REQ-F-034, REQ-F-035, REQ-F-036, REQ-F-037 | L      | TODO   |
-| TASK-5.8  | Implementar `rce-order-select` y `rce-order-sign`.                     | 5.7           | REQ-F-033 a REQ-F-037                                 | L      | TODO   |
+| TASK-5.4  | Implementar seleccion y evaluacion de reglas activas por hook.         | 3.10, 5.2     | REQ-F-023, REQ-F-024                                  | L      | REVIEW |
+| TASK-5.5  | Implementar mapper RuleEvaluationResult a CDS Card.                    | 5.2, 3.5      | REQ-F-021, REQ-F-034 a REQ-F-037                      | M      | REVIEW |
+| TASK-5.6  | Implementar CDS Services Discovery.                                    | 5.4           | REQ-F-032, REQ-I-004                                  | M      | REVIEW |
+| TASK-5.7  | Implementar `rce-patient-view`.                                        | 5.4 a 5.6     | REQ-F-033, REQ-F-034, REQ-F-035, REQ-F-036, REQ-F-037 | L      | REVIEW |
+| TASK-5.8  | Implementar `rce-order-select` y `rce-order-sign`.                     | 5.7           | REQ-F-033 a REQ-F-037                                 | L      | REVIEW |
 | TASK-5.9  | Implementar prefetch y allowlist de fhirServer.                        | 5.7, 2.5      | REQ-NF-011, REQ-I-004                                 | M      | TODO   |
-| TASK-5.10 | Implementar aislamiento, concurrencia limitada y orden de cards.       | 5.4, 5.5      | REQ-F-024, REQ-F-037, REQ-NF-006                      | M      | TODO   |
+| TASK-5.10 | Implementar aislamiento, concurrencia limitada y orden de cards.       | 5.4, 5.5      | REQ-F-024, REQ-F-037, REQ-NF-006                      | M      | REVIEW |
 | TASK-5.11 | Implementar feedback CDS y AuditEvent.                                 | 5.6, 3.11     | REQ-F-041, REQ-F-044                                  | M      | TODO   |
 | TASK-5.12 | Crear contract/e2e tests CDS Hooks.                                    | 5.6 a 5.11    | AC-004, AC-006, AC-007                                | L      | TODO   |
-| TASK-5.13 | Filtrar evaluacion CDS por sandbox y reglas compartidas.               | 5.4, 3.12     | REQ-F-052, REQ-F-053, REQ-NF-027                      | M      | TODO   |
+| TASK-5.13 | Filtrar evaluacion CDS por sandbox y reglas compartidas.               | 5.4, 3.12     | REQ-F-052, REQ-F-053, REQ-NF-027                      | M      | REVIEW |
 
 Gate `M3`: `patient-view` produce cards dinamicas desde CQL ejecutado en HAPI.
 

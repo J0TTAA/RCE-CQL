@@ -180,6 +180,15 @@ interface CachedValue<T> {
   value: T;
 }
 
+export interface HookEvaluationInput {
+  patientId: string;
+  sandboxId: string;
+  hook: RuleHook;
+  persistActivity?: boolean;
+  correlationId?: string;
+  additionalResources?: FhirResource[];
+}
+
 @Injectable()
 export class UiService {
   private readonly listCacheTtlMs = 30_000;
@@ -234,7 +243,12 @@ export class UiService {
     if (!patient) {
       throw new NotFoundException('Paciente no encontrado en HAPI.');
     }
-    const cards = await this.evaluateActiveRules(patientId, sandboxId, 'patient-view', false);
+    const cards = await this.evaluateHook({
+      patientId,
+      sandboxId,
+      hook: 'patient-view',
+      persistActivity: false,
+    });
     return this.patientBundleToDetail(patient, bundle, cards.cards, Boolean(overlay.birthDate));
   }
 
@@ -256,13 +270,32 @@ export class UiService {
     }
     const currentOverlay = await this.getPatientOverlay(patientId, sandboxId);
     await this.savePatientOverlay(patientId, sandboxId, mergePatientOverlay(currentOverlay, input));
-    const evaluation = await this.evaluateActiveRules(patientId, sandboxId, 'patient-view', true);
+    const evaluation = await this.evaluateHook({
+      patientId,
+      sandboxId,
+      hook: 'patient-view',
+      persistActivity: true,
+    });
     const detail = await this.getPatient(patientId, sandboxId);
     return { patient: detail, cards: evaluation.cards, activity: evaluation.activity };
   }
 
   async getPatientCards(patientId: string, sandboxId: string): Promise<CdsCard[]> {
-    return (await this.evaluateActiveRules(patientId, sandboxId, 'patient-view', false)).cards;
+    return (
+      await this.evaluateHook({
+        patientId,
+        sandboxId,
+        hook: 'patient-view',
+        persistActivity: false,
+      })
+    ).cards;
+  }
+
+  async evaluateHook(input: HookEvaluationInput): Promise<{
+    cards: CdsCard[];
+    activity: ActivityEntry;
+  }> {
+    return this.evaluateActiveRules(input);
   }
 
   async listRules(
@@ -824,21 +857,26 @@ export class UiService {
     };
   }
 
-  private async evaluateActiveRules(
-    patientId: string,
-    sandboxId: string,
-    hook: RuleHook,
-    persistActivity: boolean,
-  ): Promise<{ cards: CdsCard[]; activity: ActivityEntry }> {
+  private async evaluateActiveRules(input: HookEvaluationInput): Promise<{
+    cards: CdsCard[];
+    activity: ActivityEntry;
+  }> {
     const startedAt = performance.now();
+    const persistActivity = input.persistActivity ?? false;
     const [rules, bundle] = await Promise.all([
-      this.listRules(sandboxId, { hook, activation: 'active' }),
-      this.patientBundleWithOverlay(patientId, sandboxId),
+      this.listRules(input.sandboxId, { hook: input.hook, activation: 'active' }),
+      this.patientBundleWithOverlay(input.patientId, input.sandboxId),
     ]);
+    appendAdditionalResources(bundle, input.additionalResources);
     const patient = firstResourceOfType(bundle, 'Patient');
     const cards: CdsCard[] = [];
     const warnings: string[] = [];
-    const consideredResources = [`Patient/${patientId}`];
+    const consideredResources = [
+      `Patient/${input.patientId}`,
+      ...(input.additionalResources ?? [])
+        .map((resource) => resourceKey(resource.resourceType, resource.id))
+        .filter((key) => key),
+    ];
     for (const rule of rules) {
       try {
         const result = await this.evaluateRule(rule, bundle);
@@ -851,20 +889,23 @@ export class UiService {
         warnings.push(error instanceof Error ? error.message : 'No se pudo evaluar una regla CQL.');
       }
     }
+    sortCardsBySeverity(cards);
     const activity = await this.saveActivity(
       {
-        patientId,
-        patientName: patient ? patientDisplay(patient) : patientId,
-        hook,
+        patientId: input.patientId,
+        patientName: patient ? patientDisplay(patient) : input.patientId,
+        hook: input.hook,
         rules: rules.map((rule) => `${rule.cqlName} ${rule.version}`),
         cards,
         durationMs: Math.round(performance.now() - startedAt),
-        correlationId: `corr-${hash(`${sandboxId}:${patientId}:${Date.now()}`).slice(0, 10)}`,
+        correlationId:
+          input.correlationId ??
+          `corr-${hash(`${input.sandboxId}:${input.patientId}:${Date.now()}`).slice(0, 10)}`,
         consideredResources: [...new Set(consideredResources)],
         warnings,
         scope: 'sandbox',
       },
-      sandboxId,
+      input.sandboxId,
       persistActivity,
     );
     return { cards, activity };
@@ -980,6 +1021,41 @@ function resourcesOfType(bundle: FhirBundle, resourceType: string): FhirResource
 
 function firstResourceOfType(bundle: FhirBundle, resourceType: string): FhirResource | undefined {
   return resourcesOfType(bundle, resourceType)[0];
+}
+
+function appendAdditionalResources(
+  bundle: FhirBundle,
+  resources: FhirResource[] | undefined,
+): void {
+  if (!resources?.length) {
+    return;
+  }
+  const existingKeys = new Set(
+    (bundle.entry ?? []).map((entry) =>
+      resourceKey(entry.resource?.resourceType, entry.resource?.id),
+    ),
+  );
+  const additionalEntries = resources
+    .filter((resource) => resource.resourceType)
+    .filter((resource) => {
+      const key = resourceKey(resource.resourceType, resource.id);
+      if (!key) {
+        return true;
+      }
+      if (existingKeys.has(key)) {
+        return false;
+      }
+      existingKeys.add(key);
+      return true;
+    })
+    .map((resource) => ({ resource }));
+  if (additionalEntries.length > 0) {
+    bundle.entry = [...(bundle.entry ?? []), ...additionalEntries];
+  }
+}
+
+function resourceKey(resourceType: unknown, id: unknown): string {
+  return typeof resourceType === 'string' && typeof id === 'string' ? `${resourceType}/${id}` : '';
 }
 
 function applyObservationOverlay(
@@ -1308,6 +1384,11 @@ function maxSeverity(cards: CdsCard[]): Severity | 'none' {
     return 'info';
   }
   return 'none';
+}
+
+function sortCardsBySeverity(cards: CdsCard[]): void {
+  const rank: Record<Severity, number> = { critical: 0, warning: 1, info: 2 };
+  cards.sort((left, right) => rank[left.severity] - rank[right.severity]);
 }
 
 function mergePatientOverlay(

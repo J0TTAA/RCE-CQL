@@ -10,7 +10,7 @@
     "lint": "eslint src --max-warnings=0",
     "format": "prettier --write \"src/**/*.ts\" \"*.{json,mjs,ts}\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"*.{json,mjs,ts}\"",
-    "test": "tsx --test src/common/logging/json-logger.service.spec.ts src/config/environment.spec.ts src/modules/classroom-session/application/classroom-session.service.spec.ts src/modules/cql/infrastructure/cql-translation-http.adapter.spec.ts src/modules/fhir/infrastructure/hapi-fhir-http.adapter.spec.ts src/modules/health/health.service.spec.ts",
+    "test": "tsx --test src/common/logging/json-logger.service.spec.ts src/config/environment.spec.ts src/modules/classroom-session/application/classroom-session.service.spec.ts src/modules/cds-hooks/application/cds-hooks.service.spec.ts src/modules/cql/infrastructure/cql-translation-http.adapter.spec.ts src/modules/fhir/infrastructure/hapi-fhir-http.adapter.spec.ts src/modules/health/health.service.spec.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

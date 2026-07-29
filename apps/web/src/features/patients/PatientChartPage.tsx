@@ -463,6 +463,7 @@ function PatientDataDrawer({
   const [stage, setStage] = useState<'idle' | 'validating' | 'saving' | 'reevaluating' | 'updated'>(
     'idle',
   );
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setBirthDate(patient.editableClinicalData.birthDate);
@@ -480,33 +481,40 @@ function PatientDataDrawer({
     setEncounterType(patient.editableClinicalData.encounterType ?? 'none');
     setClinicalResources(patient.editableClinicalData.clinicalResources ?? []);
     setStage('idle');
+    setSaveError(null);
   }, [patient.editableClinicalData, open]);
 
   const save = async () => {
-    setStage('validating');
-    await new Promise((resolve) => window.setTimeout(resolve, 280));
-    setStage('saving');
-    const result = await api.updatePatient({
-      patientId: patient.id,
-      birthDate,
-      gender,
-      systolicBloodPressure: optionalNumber(systolicBloodPressure),
-      diastolicBloodPressure: optionalNumber(diastolicBloodPressure),
-      hba1c: optionalNumber(hba1c),
-      fastingGlucose: optionalNumber(fastingGlucose),
-      ldlCholesterol: optionalNumber(ldlCholesterol),
-      bodyMassIndex: optionalNumber(bodyMassIndex),
-      bodyWeight: optionalNumber(bodyWeight),
-      bodyHeight: optionalNumber(bodyHeight),
-      diabetesCondition,
-      metforminMedication,
-      encounterType,
-      clinicalResources,
-    });
-    setStage('reevaluating');
-    await new Promise((resolve) => window.setTimeout(resolve, 360));
-    setStage('updated');
-    onUpdated(result);
+    try {
+      setSaveError(null);
+      setStage('validating');
+      await new Promise((resolve) => window.setTimeout(resolve, 280));
+      setStage('saving');
+      const result = await api.updatePatient({
+        patientId: patient.id,
+        birthDate,
+        gender,
+        systolicBloodPressure: optionalNumber(systolicBloodPressure),
+        diastolicBloodPressure: optionalNumber(diastolicBloodPressure),
+        hba1c: optionalNumber(hba1c),
+        fastingGlucose: optionalNumber(fastingGlucose),
+        ldlCholesterol: optionalNumber(ldlCholesterol),
+        bodyMassIndex: optionalNumber(bodyMassIndex),
+        bodyWeight: optionalNumber(bodyWeight),
+        bodyHeight: optionalNumber(bodyHeight),
+        diabetesCondition,
+        metforminMedication,
+        encounterType,
+        clinicalResources,
+      });
+      setStage('reevaluating');
+      await new Promise((resolve) => window.setTimeout(resolve, 360));
+      setStage('updated');
+      onUpdated(result);
+    } catch (error) {
+      setStage('idle');
+      setSaveError(error instanceof Error ? error.message : 'No se pudo guardar el paciente.');
+    }
   };
 
   return (
@@ -608,8 +616,8 @@ function PatientDataDrawer({
           <TextInput
             type="number"
             inputMode="decimal"
-            min={10}
-            max={80}
+            min={0}
+            max={200}
             step={0.1}
             value={bodyMassIndex}
             onChange={(event) => setBodyMassIndex(event.target.value)}
@@ -668,6 +676,11 @@ function PatientDataDrawer({
         <div className="state-box compact-state">
           Los cambios quedan como overlay del sandbox y se usan al reevaluar CQL.
         </div>
+        {saveError ? (
+          <div className="state-box state-error" role="alert">
+            {saveError}
+          </div>
+        ) : null}
         <WriteStage stage={stage} detail={`FHIR ${shortId(patient.id)}`} />
       </div>
     </Drawer>

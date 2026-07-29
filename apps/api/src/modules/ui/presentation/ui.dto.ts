@@ -154,8 +154,8 @@ export class UpdatePatientDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
-  @Min(10)
-  @Max(80)
+  @Min(0)
+  @Max(200)
   bodyMassIndex?: number;
 
   @IsOptional()

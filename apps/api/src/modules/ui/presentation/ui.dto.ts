@@ -111,67 +111,67 @@ export class ClinicalResourceDto {
 export class UpdatePatientDto {
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/)
-  birthDate?: string;
+  birthDate?: string | null;
 
   @IsOptional()
   @IsIn(patientGenders)
-  gender?: PatientGender;
+  gender?: PatientGender | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(0)
   @Max(400)
-  systolicBloodPressure?: number;
+  systolicBloodPressure?: number | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(0)
   @Max(250)
-  diastolicBloodPressure?: number;
+  diastolicBloodPressure?: number | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
   @Max(30)
-  hba1c?: number;
+  hba1c?: number | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(0)
   @Max(1000)
-  fastingGlucose?: number;
+  fastingGlucose?: number | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(0)
   @Max(1000)
-  ldlCholesterol?: number;
+  ldlCholesterol?: number | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
   @Max(1000)
-  bodyMassIndex?: number;
+  bodyMassIndex?: number | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
   @Max(500)
-  bodyWeight?: number;
+  bodyWeight?: number | null;
 
   @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 1 })
   @Min(0)
   @Max(300)
-  bodyHeight?: number;
+  bodyHeight?: number | null;
 
   @IsOptional()
   @IsBoolean()

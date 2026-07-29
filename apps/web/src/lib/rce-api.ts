@@ -42,16 +42,16 @@ export interface ActivityFilters {
 
 export interface PatientUpdateInput {
   patientId: string;
-  birthDate?: string;
-  gender?: PatientDetail['editableClinicalData']['gender'];
-  systolicBloodPressure?: number;
-  diastolicBloodPressure?: number;
-  hba1c?: number;
-  fastingGlucose?: number;
-  ldlCholesterol?: number;
-  bodyMassIndex?: number;
-  bodyWeight?: number;
-  bodyHeight?: number;
+  birthDate?: string | null;
+  gender?: PatientDetail['editableClinicalData']['gender'] | null;
+  systolicBloodPressure?: number | null;
+  diastolicBloodPressure?: number | null;
+  hba1c?: number | null;
+  fastingGlucose?: number | null;
+  ldlCholesterol?: number | null;
+  bodyMassIndex?: number | null;
+  bodyWeight?: number | null;
+  bodyHeight?: number | null;
   diabetesCondition?: boolean;
   metforminMedication?: boolean;
   encounterType?: PatientDetail['editableClinicalData']['encounterType'];

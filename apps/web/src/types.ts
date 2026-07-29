@@ -15,7 +15,7 @@ export type EditableClinicalResourceType =
   | 'procedure'
   | 'immunization'
   | 'serviceRequest';
-export type Cohort = 'niños' | 'adolescentes' | 'adultos' | 'adultos mayores';
+export type Cohort = 'niños' | 'adolescentes' | 'adultos' | 'adultos mayores' | 'sin edad';
 
 export interface ServicesStatus {
   api: DependencyState;
@@ -120,7 +120,7 @@ export interface PatientSummary {
   id: string;
   synId: string;
   name: string;
-  age: number;
+  age: number | null;
   cohort: Cohort;
   sex: string;
   activeConditions: string[];
@@ -131,9 +131,9 @@ export interface PatientSummary {
 }
 
 export interface PatientDetail extends PatientSummary {
-  birthDate: string;
+  birthDate: string | null;
   editableClinicalData: {
-    birthDate: string;
+    birthDate: string | null;
     gender: PatientGender;
     systolicBloodPressure?: number;
     diastolicBloodPressure?: number;

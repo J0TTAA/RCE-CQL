@@ -58,16 +58,15 @@ deben exponerse directamente a los alumnos en un despliegue normal.
 
 | Caso | Archivo base | Perfiles Compose | Resultado |
 | --- | --- | --- | --- |
-| Notebook/demo completa | `.env.example` | `local-hapi,local-translator` | Levanta web, API, traductor, HAPI y PostgreSQL locales. |
-| Clase con pacientes sinteticos en el mismo servidor | `.env.example` | `local-hapi,local-translator` | Igual que demo, pero se publica la URL del RCE mediante proxy o puerto web. |
 | Servidor con HAPI institucional existente | `.env.server.example` | `local-translator` | Levanta web, API y traductor; usa el HAPI externo configurado. |
 | HAPI externo y traductor externo | `.env.server.example` | vacio | Levanta solo web y API; ambos motores externos se configuran por URL. |
+| Clase con HAPI sintetico propio | `.env.example` | `local-hapi,local-translator` | Levanta web, API, traductor, HAPI y PostgreSQL locales para docencia aislada. |
 
 ## Requisitos de maquina
 
 - Docker Engine/Desktop con Docker Compose v2.20 o superior.
 - Git para clonar o actualizar el repositorio.
-- 4 GB de RAM libres como minimo para demo local; 8 GB recomendados si se levanta
+- 4 GB de RAM libres como minimo; 8 GB recomendados si se levanta
   HAPI, PostgreSQL, traductor y frontend juntos.
 - Acceso de red desde el contenedor `api` hacia el HAPI externo cuando se use un
   servidor institucional.
@@ -76,101 +75,7 @@ deben exponerse directamente a los alumnos en un despliegue normal.
 No se requiere una distribucion Linux especifica. Los comandos cambian solo en
 la forma de copiar archivos o consultar HTTP.
 
-## Despliegue local completo
-
-Este modo sirve para desarrollar, probar en notebook y hacer clases sin depender
-del servidor institucional.
-
-### 1. Preparar entorno
-
-Bash, Linux o macOS:
-
-```bash
-cp .env.example .env
-```
-
-PowerShell, Windows:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Revisa `.env` antes de iniciar. Por defecto queda:
-
-```text
-COMPOSE_PROFILES=local-hapi,local-translator
-HAPI_BASE_URL=http://hapi:8080/fhir
-CQL_TRANSLATOR_BASE_URL=http://cql-translator:8080
-ANONYMOUS_CLASSROOM_ENABLED=true
-```
-
-### 2. Levantar servicios
-
-```bash
-docker compose --env-file .env up -d --build
-docker compose --env-file .env ps
-```
-
-En PowerShell es el mismo comando.
-
-URLs locales:
-
-| Uso | URL |
-| --- | --- |
-| RCE Web | `http://localhost:5173` |
-| API via Web | `http://localhost:5173/api/v1` |
-| API directa | `http://localhost:3000/api/v1` |
-| Swagger | `http://localhost:3000/docs` |
-| HAPI FHIR local | `http://localhost:8080/fhir` |
-| CQL Translator local | `http://localhost:8081` |
-
-### 3. Verificar salud
-
-Bash:
-
-```bash
-curl -fsS http://localhost:5173/api/v1/health/live
-curl -fsS http://localhost:5173/api/v1/health/ready
-```
-
-PowerShell:
-
-```powershell
-Invoke-RestMethod http://localhost:5173/api/v1/health/live
-Invoke-RestMethod http://localhost:5173/api/v1/health/ready
-```
-
-`live` comprueba que NestJS esta vivo. `ready` comprueba HAPI, FHIR R4, `Library`
-y una traduccion CQL real. Si `ready` responde 503, la API esta funcionando pero
-alguna dependencia aun no esta lista o no es alcanzable.
-
-### 4. Poblar HAPI local con pacientes sinteticos
-
-El HAPI local no viene poblado con pacientes utiles para la demo. Se usa Synthea
-para generar 30 pacientes ficticios: ninos, adolescentes, adultos y adultos
-mayores.
-
-```bash
-docker compose --env-file .env --profile local-hapi --profile seed-data build synthea-seed
-docker compose --env-file .env --profile local-hapi --profile seed-data run --rm synthea-seed
-```
-
-La primera construccion descarga el JAR oficial de Synthea y puede tardar varios
-minutos. El job termina al cargar los datos.
-
-Comprobar cantidad de pacientes:
-
-```bash
-curl -sG http://localhost:8080/fhir/Patient \
-  --data-urlencode '_tag=https://rce-cql.local/fhir/tags/dataset|synthea-4.0.0-v1' \
-  --data-urlencode '_summary=count'
-```
-
-El total esperado con la configuracion por defecto es `30`.
-
-Mas detalle: [docs/SYNTHETIC_DATA.md](./docs/SYNTHETIC_DATA.md).
-
-## Despliegue en servidor con HAPI externo
+## Despliegue recomendado: servidor con HAPI externo
 
 Este es el modo pensado para el servidor o VM del docente cuando ya existe un
 HAPI con pacientes. El RCE no levanta HAPI ni PostgreSQL propios; NestJS se
@@ -200,13 +105,13 @@ Normalmente termina en `/fhir`.
 
 ### 2. Crear `.env` de servidor
 
-Bash:
+Bash, Linux o macOS:
 
 ```bash
 cp .env.server.example .env
 ```
 
-PowerShell:
+PowerShell, Windows:
 
 ```powershell
 Copy-Item .env.server.example .env
@@ -221,6 +126,7 @@ HAPI_AUTH_BEARER_TOKEN=
 CORS_ORIGINS=https://rce.institucion.cl
 ANONYMOUS_SESSION_SECRET=un-secreto-largo-y-unico-para-este-servidor
 CLASSROOM_TEACHER_PASSCODE=clave-docente-real
+ANONYMOUS_CLASSROOM_ENABLED=true
 ANONYMOUS_SESSION_COOKIE_SECURE=true
 ANONYMOUS_SESSION_COOKIE_SAMESITE=Lax
 ```
@@ -330,6 +236,121 @@ Si el HAPI institucional solo permite lectura de pacientes, el RCE podra mostrar
 fichas pero no tendra el flujo completo de reglas publicadas, overlays de
 sandbox y cards dinamicas. En ese caso conviene usar HAPI local sintetico o un
 HAPI institucional separado para docencia.
+
+### 8. Pacientes con campos incompletos
+
+FHIR R4 permite que algunos datos vengan ausentes. El RCE debe tratar esos casos
+como datos no informados, no como error de servidor.
+
+El backend tolera, entre otros:
+
+- `Patient` sin `name`, `birthDate`, `gender` o `identifier`.
+- Recursos clinicos sin fecha visible.
+- Observaciones sin `valueQuantity`, mientras tengan algun valor FHIR legible o
+  puedan mostrarse como "Sin valor".
+- Condiciones, medicamentos, alergias, encuentros, procedimientos,
+  inmunizaciones u ordenes con codigos o estados no informados.
+
+Cuando un dato no existe en HAPI, la UI muestra "Sin dato", "Sin fecha" o
+"Sin edad". Si el alumno edita un valor desde el RCE, ese cambio se guarda como
+overlay del sandbox y no modifica directamente el recurso original del HAPI
+institucional.
+
+## Entorno local de pruebas con HAPI propio
+
+Este modo sirve para desarrollo y para clases sin depender del servidor
+institucional. Levanta HAPI y PostgreSQL dentro de Compose, junto con web, API y
+traductor CQL.
+
+### 1. Preparar entorno
+
+Bash, Linux o macOS:
+
+```bash
+cp .env.example .env
+```
+
+PowerShell, Windows:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Revisa `.env` antes de iniciar. Para HAPI local debe quedar:
+
+```text
+COMPOSE_PROFILES=local-hapi,local-translator
+HAPI_BASE_URL=http://hapi:8080/fhir
+CQL_TRANSLATOR_BASE_URL=http://cql-translator:8080
+ANONYMOUS_CLASSROOM_ENABLED=true
+CLASSROOM_TEACHER_PASSCODE=clave-docente-local
+```
+
+### 2. Levantar servicios
+
+```bash
+docker compose --env-file .env up -d --build
+docker compose --env-file .env ps
+```
+
+En PowerShell es el mismo comando.
+
+URLs locales:
+
+| Uso | URL |
+| --- | --- |
+| RCE Web | `http://localhost:5173` |
+| API via Web | `http://localhost:5173/api/v1` |
+| API directa | `http://localhost:3000/api/v1` |
+| Swagger | `http://localhost:3000/docs` |
+| HAPI FHIR local | `http://localhost:8080/fhir` |
+| CQL Translator local | `http://localhost:8081` |
+
+### 3. Verificar salud
+
+Bash:
+
+```bash
+curl -fsS http://localhost:5173/api/v1/health/live
+curl -fsS http://localhost:5173/api/v1/health/ready
+```
+
+PowerShell:
+
+```powershell
+Invoke-RestMethod http://localhost:5173/api/v1/health/live
+Invoke-RestMethod http://localhost:5173/api/v1/health/ready
+```
+
+`live` comprueba que NestJS esta vivo. `ready` comprueba HAPI, FHIR R4, `Library`
+y una traduccion CQL real. Si `ready` responde 503, la API esta funcionando pero
+alguna dependencia aun no esta lista o no es alcanzable.
+
+### 4. Poblar HAPI local con pacientes sinteticos
+
+El HAPI local no viene poblado con pacientes utiles para la demo. Se usa Synthea
+para generar 30 pacientes ficticios: ninos, adolescentes, adultos y adultos
+mayores.
+
+```bash
+docker compose --env-file .env --profile local-hapi --profile seed-data build synthea-seed
+docker compose --env-file .env --profile local-hapi --profile seed-data run --rm synthea-seed
+```
+
+La primera construccion descarga el JAR oficial de Synthea y puede tardar varios
+minutos. El job termina al cargar los datos.
+
+Comprobar cantidad de pacientes:
+
+```bash
+curl -sG http://localhost:8080/fhir/Patient \
+  --data-urlencode '_tag=https://rce-cql.local/fhir/tags/dataset|synthea-4.0.0-v1' \
+  --data-urlencode '_summary=count'
+```
+
+El total esperado con la configuracion por defecto es `30`.
+
+Mas detalle: [docs/SYNTHETIC_DATA.md](./docs/SYNTHETIC_DATA.md).
 
 ## Publicar la URL a alumnos
 

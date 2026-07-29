@@ -56,7 +56,7 @@ export interface EditableClinicalResource {
 }
 
 export interface EditableClinicalData {
-  birthDate: string;
+  birthDate: string | null;
   gender: PatientGender;
   systolicBloodPressure?: number;
   diastolicBloodPressure?: number;
@@ -103,7 +103,7 @@ export interface PatientSummary {
   id: string;
   synId: string;
   name: string;
-  age: number;
+  age: number | null;
   cohort: string;
   sex: string;
   activeConditions: string[];
@@ -114,7 +114,7 @@ export interface PatientSummary {
 }
 
 export interface PatientDetail extends PatientSummary {
-  birthDate: string;
+  birthDate: string | null;
   editableClinicalData: EditableClinicalData;
   conditions: Array<{
     id: string;
@@ -250,16 +250,16 @@ interface MedicationOverlay {
 }
 
 export interface PatientClinicalUpdate {
-  birthDate?: string;
-  gender?: PatientGender;
-  systolicBloodPressure?: number;
-  diastolicBloodPressure?: number;
-  hba1c?: number;
-  fastingGlucose?: number;
-  ldlCholesterol?: number;
-  bodyMassIndex?: number;
-  bodyWeight?: number;
-  bodyHeight?: number;
+  birthDate?: string | null;
+  gender?: PatientGender | null;
+  systolicBloodPressure?: number | null;
+  diastolicBloodPressure?: number | null;
+  hba1c?: number | null;
+  fastingGlucose?: number | null;
+  ldlCholesterol?: number | null;
+  bodyMassIndex?: number | null;
+  bodyWeight?: number | null;
+  bodyHeight?: number | null;
   diabetesCondition?: boolean;
   metforminMedication?: boolean;
   encounterType?: DemoEncounterType;
@@ -363,7 +363,7 @@ export class UiService {
     cards: CdsCard[];
     activity: ActivityEntry;
   }> {
-    if (input.birthDate !== undefined) {
+    if (input.birthDate !== undefined && input.birthDate !== null) {
       assertDate(input.birthDate);
     }
     const patient = await this.fhir.read('Patient', patientId);
@@ -692,12 +692,14 @@ export class UiService {
       ...(overlay.birthDate ? { birthDate: overlay.birthDate } : {}),
       ...(overlay.gender ? { gender: overlay.gender } : {}),
     };
+    const birthDate = optionalDateField(merged, 'birthDate');
+    const age = ageFromBirthDate(birthDate);
     return {
       id: String(merged.id ?? ''),
       synId: patientIdentifier(merged),
       name: patientDisplay(merged),
-      age: ageFromBirthDate(stringField(merged, 'birthDate')),
-      cohort: cohortForAge(ageFromBirthDate(stringField(merged, 'birthDate'))),
+      age,
+      cohort: cohortForAge(age),
       sex: genderLabel(stringField(merged, 'gender')),
       activeConditions: clinicalSummary.activeConditions,
       lastEncounter: clinicalSummary.lastEncounter,
@@ -882,7 +884,8 @@ export class UiService {
     sandboxTouched: boolean,
     overlay: PatientOverlay,
   ): PatientDetail {
-    const birthDate = stringField(patient, 'birthDate');
+    const birthDate = optionalDateField(patient, 'birthDate');
+    const age = ageFromBirthDate(birthDate);
     const conditions = resourcesOfType(bundle, 'Condition').map((condition) => ({
       id: String(condition.id ?? ''),
       code: codeDisplay(condition),
@@ -970,8 +973,8 @@ export class UiService {
       id: String(patient.id ?? ''),
       synId: patientIdentifier(patient),
       name: patientDisplay(patient),
-      age: ageFromBirthDate(birthDate),
-      cohort: cohortForAge(ageFromBirthDate(birthDate)),
+      age,
+      cohort: cohortForAge(age),
       sex: genderLabel(stringField(patient, 'gender')),
       activeConditions: conditions
         .filter((condition) => condition.clinicalStatus.toLowerCase().includes('active'))
@@ -1879,6 +1882,11 @@ function stringField(resource: FhirResource, field: string): string {
   return typeof value === 'string' ? value : '';
 }
 
+function optionalDateField(resource: FhirResource, field: string): string | null {
+  const value = stringField(resource, field);
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
 function firstArrayItem(value: unknown): FhirResource {
   return Array.isArray(value) && typeof value[0] === 'object' && value[0] !== null
     ? (value[0] as FhirResource)
@@ -1888,7 +1896,7 @@ function firstArrayItem(value: unknown): FhirResource {
 function patientDisplay(patient: FhirResource): string {
   const names = patient.name;
   if (!Array.isArray(names)) {
-    return `Patient/${patient.id ?? ''}`;
+    return 'Paciente sin nombre';
   }
   const name = firstArrayItem(names);
   if (typeof name.text === 'string') {
@@ -1898,7 +1906,7 @@ function patientDisplay(patient: FhirResource): string {
     ? name.given.filter((item) => typeof item === 'string').join(' ')
     : '';
   const family = typeof name.family === 'string' ? name.family : '';
-  return `${given} ${family}`.trim() || `Patient/${patient.id ?? ''}`;
+  return `${given} ${family}`.trim() || 'Paciente sin nombre';
 }
 
 function patientIdentifier(patient: FhirResource): string {
@@ -1926,12 +1934,15 @@ function patientIdFromReference(reference: string): string {
   return index >= 0 ? (reference.slice(index + patientMarker.length).split('/')[0] ?? '') : '';
 }
 
-function ageFromBirthDate(birthDate: string): number {
+function ageFromBirthDate(birthDate: string | null): number | null {
   if (!birthDate) {
-    return 0;
+    return null;
   }
   const todayDate = new Date();
   const born = new Date(`${birthDate}T00:00:00Z`);
+  if (Number.isNaN(born.getTime())) {
+    return null;
+  }
   let age = todayDate.getUTCFullYear() - born.getUTCFullYear();
   const monthDelta = todayDate.getUTCMonth() - born.getUTCMonth();
   if (monthDelta < 0 || (monthDelta === 0 && todayDate.getUTCDate() < born.getUTCDate())) {
@@ -1940,7 +1951,10 @@ function ageFromBirthDate(birthDate: string): number {
   return Math.max(age, 0);
 }
 
-function cohortForAge(age: number): string {
+function cohortForAge(age: number | null): string {
+  if (age === null) {
+    return 'sin edad';
+  }
   if (age <= 11) {
     return 'niños';
   }
@@ -1954,13 +1968,16 @@ function cohortForAge(age: number): string {
 }
 
 function genderLabel(gender: string): string {
+  if (!gender) {
+    return 'sin dato';
+  }
   return (
     (
       { male: 'masculino', female: 'femenino', other: 'otro', unknown: 'desconocido' } as Record<
         string,
         string
       >
-    )[gender] ?? gender
+    )[gender] ?? 'sin dato'
   );
 }
 
@@ -2327,20 +2344,30 @@ function mergePatientOverlay(
   input: PatientClinicalUpdate,
 ): PatientOverlay {
   return {
-    birthDate: input.birthDate ?? current.birthDate,
-    gender: input.gender ?? current.gender,
+    birthDate: input.birthDate === null ? undefined : (input.birthDate ?? current.birthDate),
+    gender: input.gender === null ? undefined : (input.gender ?? current.gender),
     observations: normalizeObservationOverlay({
       ...current.observations,
-      systolicBloodPressure:
-        input.systolicBloodPressure ?? current.observations?.systolicBloodPressure,
-      diastolicBloodPressure:
-        input.diastolicBloodPressure ?? current.observations?.diastolicBloodPressure,
-      hba1c: input.hba1c ?? current.observations?.hba1c,
-      fastingGlucose: input.fastingGlucose ?? current.observations?.fastingGlucose,
-      ldlCholesterol: input.ldlCholesterol ?? current.observations?.ldlCholesterol,
-      bodyMassIndex: input.bodyMassIndex ?? current.observations?.bodyMassIndex,
-      bodyWeight: input.bodyWeight ?? current.observations?.bodyWeight,
-      bodyHeight: input.bodyHeight ?? current.observations?.bodyHeight,
+      systolicBloodPressure: mergeOptionalNumber(
+        input.systolicBloodPressure,
+        current.observations?.systolicBloodPressure,
+      ),
+      diastolicBloodPressure: mergeOptionalNumber(
+        input.diastolicBloodPressure,
+        current.observations?.diastolicBloodPressure,
+      ),
+      hba1c: mergeOptionalNumber(input.hba1c, current.observations?.hba1c),
+      fastingGlucose: mergeOptionalNumber(
+        input.fastingGlucose,
+        current.observations?.fastingGlucose,
+      ),
+      ldlCholesterol: mergeOptionalNumber(
+        input.ldlCholesterol,
+        current.observations?.ldlCholesterol,
+      ),
+      bodyMassIndex: mergeOptionalNumber(input.bodyMassIndex, current.observations?.bodyMassIndex),
+      bodyWeight: mergeOptionalNumber(input.bodyWeight, current.observations?.bodyWeight),
+      bodyHeight: mergeOptionalNumber(input.bodyHeight, current.observations?.bodyHeight),
     }),
     conditions: normalizeConditionOverlay({
       ...current.conditions,
@@ -2356,6 +2383,13 @@ function mergePatientOverlay(
         ? current.clinicalResources
         : normalizeClinicalResources(input.clinicalResources),
   };
+}
+
+function mergeOptionalNumber(
+  input: number | null | undefined,
+  current: number | undefined,
+): number | undefined {
+  return input === null ? undefined : (input ?? current);
 }
 
 function hasPatientOverlay(overlay: PatientOverlay): boolean {

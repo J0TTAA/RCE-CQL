@@ -2,7 +2,7 @@ import { CheckCircle2, ClipboardEdit, Plus, RotateCw, Trash2 } from 'lucide-reac
 import { useEffect, useMemo, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
-import { formatDate, shortId } from '../../lib/formatters';
+import { formatAge, formatDate, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
 import type {
   CdsCard,
@@ -258,7 +258,7 @@ function PatientHeader({
         </div>
         <h1>{patient.name}</h1>
         <p className="patient-demographics">
-          <span>{patient.age} años</span>
+          <span>{formatAge(patient.age)}</span>
           <span>{formatDate(patient.birthDate)}</span>
           <span>{patient.sex}</span>
           <span className="technical-id" title={`Patient/${patient.id}`}>
@@ -337,7 +337,7 @@ function ResourceTable({ headers, rows }: { headers: string[]; rows: string[][] 
           {rows.map((row, rowIndex) => (
             <tr key={`${rowIndex}-${row.join('-')}`}>
               {row.map((cell, cellIndex) => (
-                <td key={`${cellIndex}-${cell}`}>{cell}</td>
+                <td key={`${cellIndex}-${cell}`}>{cell || 'Sin dato'}</td>
               ))}
             </tr>
           ))}
@@ -424,7 +424,7 @@ function PatientDataDrawer({
   onUpdated: (result: { patient: PatientDetail; cards: CdsCard[] }) => void;
 }) {
   const { api } = useRce();
-  const [birthDate, setBirthDate] = useState(patient.editableClinicalData.birthDate);
+  const [birthDate, setBirthDate] = useState(patient.editableClinicalData.birthDate ?? '');
   const [gender, setGender] = useState(patient.editableClinicalData.gender);
   const [systolicBloodPressure, setSystolicBloodPressure] = useState(
     numericInput(patient.editableClinicalData.systolicBloodPressure),
@@ -502,7 +502,7 @@ function PatientDataDrawer({
   const canSave = (stage === 'idle' || stage === 'updated') && formValidation.errors.length === 0;
 
   useEffect(() => {
-    setBirthDate(patient.editableClinicalData.birthDate);
+    setBirthDate(patient.editableClinicalData.birthDate ?? '');
     setGender(patient.editableClinicalData.gender);
     setSystolicBloodPressure(numericInput(patient.editableClinicalData.systolicBloodPressure));
     setDiastolicBloodPressure(numericInput(patient.editableClinicalData.diastolicBloodPressure));
@@ -765,16 +765,16 @@ interface PatientFormInput {
 }
 
 interface PatientFormValues {
-  birthDate: string;
+  birthDate: string | null;
   gender: PatientDetail['editableClinicalData']['gender'];
-  systolicBloodPressure?: number;
-  diastolicBloodPressure?: number;
-  hba1c?: number;
-  fastingGlucose?: number;
-  ldlCholesterol?: number;
-  bodyMassIndex?: number;
-  bodyWeight?: number;
-  bodyHeight?: number;
+  systolicBloodPressure?: number | null;
+  diastolicBloodPressure?: number | null;
+  hba1c?: number | null;
+  fastingGlucose?: number | null;
+  ldlCholesterol?: number | null;
+  bodyMassIndex?: number | null;
+  bodyWeight?: number | null;
+  bodyHeight?: number | null;
   diabetesCondition: boolean;
   metforminMedication: boolean;
   encounterType: DemoEncounterType;
@@ -828,7 +828,7 @@ function validatePatientForm(input: PatientFormInput): {
 } {
   const errors: string[] = [];
   const values: PatientFormValues = {
-    birthDate: input.birthDate,
+    birthDate: input.birthDate || null,
     gender: input.gender,
     diabetesCondition: input.diabetesCondition,
     metforminMedication: input.metforminMedication,
@@ -836,7 +836,7 @@ function validatePatientForm(input: PatientFormInput): {
     clinicalResources: sanitizeClinicalResources(input.clinicalResources),
   };
 
-  if (!isIsoDate(input.birthDate)) {
+  if (input.birthDate && !isIsoDate(input.birthDate)) {
     errors.push('Fecha de nacimiento: usa una fecha valida.');
   }
 
@@ -852,6 +852,10 @@ function validatePatientForm(input: PatientFormInput): {
   ] as const;
 
   numericFields.forEach(([key, raw]) => {
+    if (!normalizeNumericText(raw)) {
+      values[key] = null;
+      return;
+    }
     const parsed = parseOptionalNumberField(raw, patientNumericRules[key]);
     if (parsed.error) {
       errors.push(parsed.error);

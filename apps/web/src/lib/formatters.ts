@@ -42,6 +42,10 @@ export function formatDate(date?: string | null): string {
   }).format(parsed);
 }
 
+export function formatAge(age?: number | null): string {
+  return typeof age === 'number' ? `${age} años` : 'Sin edad';
+}
+
 export function shortId(value: string): string {
   return value.length > 14 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
 }

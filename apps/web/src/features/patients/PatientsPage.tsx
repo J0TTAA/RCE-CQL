@@ -2,7 +2,7 @@ import { ChevronRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
-import { formatDate, shortId } from '../../lib/formatters';
+import { formatAge, formatDate, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
 import type { Cohort, PatientSummary } from '../../types';
 import {
@@ -19,6 +19,7 @@ const cohorts: Array<Cohort | 'all'> = [
   'adolescentes',
   'adultos',
   'adultos mayores',
+  'sin edad',
 ];
 
 export function PatientsPage() {
@@ -112,7 +113,7 @@ function PatientRow({ patient }: { patient: PatientSummary }) {
         </Link>
       </td>
       <td>
-        {patient.age}
+        {formatAge(patient.age)}
         <span className="cell-muted">{patient.cohort}</span>
       </td>
       <td>{patient.sex}</td>

@@ -254,10 +254,17 @@ Desde el host:
 curl -fsS https://hapi.institucion.cl/fhir/metadata
 ```
 
+Si HAPI exige Bearer token:
+
+```bash
+curl -fsS https://hapi.institucion.cl/fhir/metadata \
+  -H "Authorization: Bearer $HAPI_AUTH_BEARER_TOKEN"
+```
+
 Desde el contenedor API:
 
 ```bash
-docker compose --env-file .env run --rm --no-deps api node -e "fetch(process.env.HAPI_BASE_URL + '/metadata').then(async r => { console.log(r.status); if (!r.ok) process.exit(1); }).catch(e => { console.error(e.message); process.exit(1); })"
+docker compose --env-file .env run --rm --no-deps api node -e "const h = process.env.HAPI_AUTH_BEARER_TOKEN ? { authorization: 'Bearer ' + process.env.HAPI_AUTH_BEARER_TOKEN } : {}; fetch(process.env.HAPI_BASE_URL + '/metadata', { headers: h }).then(r => { console.log(r.status); if (!r.ok) process.exit(1); }).catch(e => { console.error(e.message); process.exit(1); })"
 ```
 
 Luego verificar el RCE:
@@ -528,7 +535,7 @@ Revisar cookies:
 El navegador no prueba lo mismo que la API. Validar desde el contenedor:
 
 ```bash
-docker compose --env-file .env run --rm --no-deps api node -e "fetch(process.env.HAPI_BASE_URL + '/metadata').then(r => console.log(r.status)).catch(e => { console.error(e.message); process.exit(1); })"
+docker compose --env-file .env run --rm --no-deps api node -e "const h = process.env.HAPI_AUTH_BEARER_TOKEN ? { authorization: 'Bearer ' + process.env.HAPI_AUTH_BEARER_TOKEN } : {}; fetch(process.env.HAPI_BASE_URL + '/metadata', { headers: h }).then(r => console.log(r.status)).catch(e => { console.error(e.message); process.exit(1); })"
 ```
 
 Si falla, revisar DNS, VPN, firewall, certificado TLS o ruta del proxy.

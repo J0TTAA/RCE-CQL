@@ -1,0 +1,373 @@
+\documentclass[12pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{fancyhdr}
+
+\geometry{margin=2.3cm}
+\setlength{\parskip}{0.7em}
+\setlength{\parindent}{0pt}
+\setlist[itemize]{leftmargin=1.5em}
+\setlist[enumerate]{leftmargin=1.7em}
+
+\definecolor{rcegreen}{HTML}{08786F}
+\definecolor{rceblue}{HTML}{2B6CB0}
+\definecolor{softgray}{HTML}{F4F7F8}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=rcegreen,
+  urlcolor=rceblue,
+  pdftitle={Manual de uso RCE CQL},
+  pdfauthor={RCE CQL}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{Manual de uso RCE CQL}
+\rhead{\thepage}
+
+\newcommand{\manualfigure}[3]{
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{figures/#1}
+    \caption{#2}
+    \label{fig:#3}
+  \end{figure}
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{2cm}
+  {\Huge \textbf{Manual de uso RCE CQL}\par}
+  \vspace{0.5cm}
+  {\Large Prototipo educativo con HL7 FHIR, CQL, ELM y CDS Hooks\par}
+  \vspace{1.5cm}
+  {\large Guia para docente y alumnos\par}
+  \vfill
+  \begin{tabular}{ll}
+    Sistema & RCE CQL educativo \\
+    Datos & Pacientes sinteticos \\
+    Estandares & HL7 FHIR R4, CQL/ELM, CDS Hooks \\
+    Uso esperado & Clases, demostraciones y pruebas controladas \\
+  \end{tabular}
+  \vfill
+  {\large \today\par}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{Proposito del manual}
+
+Este manual explica como usar el RCE CQL en una clase. La idea principal es que
+el alumno pueda escribir reglas CQL, validarlas, probarlas contra pacientes
+sinteticos y observar como aparecen o desaparecen recomendaciones clinicas.
+
+El sistema no usa pacientes reales. Los nombres, fechas y eventos clinicos de
+las capturas son datos sinteticos generados para docencia. Por eso se pueden
+mostrar en clases sin exponer informacion sensible.
+
+\section{Inicio de uso}
+
+Al comenzar una clase, el docente puede entregar una unica URL del sistema. Cada
+alumno abre esa URL en su navegador y trabaja en modo \textbf{Alumno}. No es
+necesario crear una cuenta ni iniciar sesion manualmente.
+
+Antes de iniciar la demostracion, revise en el menu lateral que los servicios
+\textbf{API}, \textbf{HAPI} y \textbf{CQL} aparezcan como operativos. Si alguno
+no aparece operativo, conviene resolver ese problema antes de crear reglas o
+editar pacientes.
+
+Flujo general de uso del software:
+
+\begin{enumerate}
+  \item Abrir la pantalla de pacientes.
+  \item Seleccionar un paciente sintetico.
+  \item Revisar su ficha clinica y sus datos disponibles.
+  \item Crear o abrir una regla CQL.
+  \item Validar la regla y revisar el ELM generado.
+  \item Probar la regla con un paciente.
+  \item Publicar la regla para que pueda generar cards CDS.
+  \item Cambiar datos del paciente y reevaluar.
+  \item Revisar Actividad CDS para ver el paso a paso de la evaluacion.
+\end{enumerate}
+
+La etiqueta de sandbox que aparece en la barra superior identifica el espacio
+privado de ese navegador. Los cambios de pacientes, reglas y cards generadas por
+un alumno quedan dentro de ese sandbox y no modifican el trabajo de otros
+alumnos.
+
+\section{Pantalla de pacientes}
+
+La pantalla de pacientes es el punto de entrada para explorar los datos
+sinteticos. En la parte izquierda se encuentra la navegacion principal:
+Pacientes, Reglas CQL y Actividad CDS. En la parte inferior se ve el estado de
+los servicios API, HAPI y CQL.
+
+\manualfigure{01-listado-pacientes.png}{Listado principal de pacientes sinteticos. La tabla muestra edad, sexo, condiciones activas, ultimo encuentro y estado CDS.}{listado-pacientes}
+
+El filtro de cohortes permite seleccionar grupos por edad. Esto es util para
+demostrar reglas que dependen de la edad, como reglas para ninos, adolescentes,
+adultos o adultos mayores.
+
+\manualfigure{02-filtro-cohortes.png}{Filtro de cohortes. Permite navegar pacientes por grupo etario antes de probar una regla CQL.}{filtro-cohortes}
+
+\section{Ficha clinica del paciente}
+
+Al abrir un paciente, el RCE muestra una ficha con datos demograficos,
+resumen clinico, linea temporal y recomendaciones CDS.
+
+\manualfigure{03-ficha-resumen-card.png}{Ficha de paciente con una card CDS activa. La recomendacion aparece porque una regla CQL publicada aplica al paciente.}{ficha-resumen-card}
+
+La ficha se organiza en pestanas. Cada pestana agrupa recursos FHIR
+relacionados. El alumno no necesita conocer JSON FHIR para entender los datos:
+la interfaz muestra tablas clinicas simples.
+
+\manualfigure{04-ficha-condiciones.png}{Pestana de condiciones. Estas filas representan recursos FHIR \texttt{Condition}.}{ficha-condiciones}
+
+Las observaciones representan mediciones y resultados. En FHIR se modelan como
+\texttt{Observation}. Este recurso es clave para reglas que dependen de
+signos vitales o laboratorio.
+
+\manualfigure{05-ficha-observaciones.png}{Pestana de observaciones. Incluye peso, talla, frecuencia cardiaca, resultados y otras mediciones FHIR.}{ficha-observaciones}
+
+Las inmunizaciones se muestran como recursos \texttt{Immunization}. En una
+clase se pueden usar para explicar que FHIR no solo representa diagnosticos,
+sino tambien eventos preventivos como vacunas.
+
+\manualfigure{06-ficha-inmunizaciones.png}{Pestana de inmunizaciones. Cada fila corresponde a una vacuna registrada como recurso FHIR.}{ficha-inmunizaciones}
+
+\section{Editar datos del paciente}
+
+El boton \textbf{Editar dato} abre un formulario controlado. Este formulario
+permite modificar datos utiles para probar reglas, pero sin pedir al alumno que
+edite JSON FHIR manualmente.
+
+\manualfigure{07-editar-demografia-observaciones.png}{Formulario de edicion. Permite modificar demografia, signos vitales y laboratorio dentro del sandbox.}{editar-demografia-observaciones}
+
+Las modificaciones se guardan como overlay del sandbox. En otras palabras, el
+paciente base de HAPI se mantiene como referencia, y el alumno trabaja con una
+copia pedagogica de sus cambios. Esto evita que una prueba afecte a otros
+alumnos.
+
+\subsection{Recursos clinicos controlados}
+
+Ademas de datos simples, la maqueta permite agregar recursos clinicos
+controlados. El menu evita errores de escritura y mantiene las opciones dentro
+de un conjunto seguro para docencia.
+
+\manualfigure{08-agregar-recurso-menu.png}{Menu de recursos clinicos del sandbox. Permite agregar condiciones, observaciones, medicamentos, alergias, encuentros, procedimientos, inmunizaciones y ordenes.}{agregar-recurso-menu}
+
+Por ejemplo, se puede agregar un medicamento activo. En FHIR, un medicamento
+indicado se representa como \texttt{MedicationRequest}. Esta accion puede ser
+usada por una regla CQL para detectar si el paciente tiene un tratamiento
+activo.
+
+\manualfigure{09-agregar-medicamento.png}{Ejemplo de medicamento agregado al sandbox. La interfaz usa selects para reducir errores del alumno.}{agregar-medicamento}
+
+La misma lista de recursos aparece cuando el usuario desea agregar otros tipos
+clinicos. Esta captura refuerza que el sandbox trabaja sobre recursos FHIR,
+pero los presenta con formularios simples.
+
+\manualfigure{11-menu-recursos-clinicos.png}{Selector de recursos clinicos. El alumno elige el tipo de dato que quiere agregar sin escribir JSON.}{menu-recursos-clinicos}
+
+\section{Catalogo de reglas CQL}
+
+La pantalla de reglas muestra el catalogo de reglas disponibles en el sandbox.
+Cada regla tiene nombre, version automatica, estado, hook, activacion y alcance.
+
+\manualfigure{10-catalogo-reglas.png}{Catalogo de reglas CQL. La version es automatica y el alcance indica si la regla pertenece al sandbox.}{catalogo-reglas}
+
+Los estados mas importantes para la clase son:
+
+\begin{itemize}
+  \item \textbf{Borrador}: la regla esta en edicion.
+  \item \textbf{Validada}: el CQL fue traducido correctamente a ELM.
+  \item \textbf{Publicada}: la regla puede participar en la evaluacion CDS.
+  \item \textbf{Activa}: la regla publicada se evalua cuando ocurre el hook.
+\end{itemize}
+
+El versionado es automatico. El alumno no escribe manualmente la version. El
+backend mantiene la coherencia entre CQL, ELM y la \texttt{Library} FHIR.
+
+\section{Editor de reglas CQL}
+
+El editor permite escribir CQL directamente dentro del RCE. La parte izquierda
+contiene el codigo, y la parte derecha contiene metadata de la regla.
+
+\manualfigure{12-editor-regla-cql.png}{Editor de regla CQL con version automatica. La expresion booleana indica que resultado se usara para decidir si la card aparece.}{editor-regla-cql}
+
+Un ejemplo simple de regla por edad es:
+
+\begin{verbatim}
+library ReglaAdultoDemo version '0.1.0'
+
+using FHIR version '4.0.1'
+
+context Patient
+
+define "Aplica":
+  AgeInYears() >= 18
+\end{verbatim}
+
+La regla anterior se lee asi: para el paciente actual, la expresion
+\texttt{Aplica} devuelve verdadero si la edad en anos es mayor o igual a 18.
+Si devuelve verdadero y la regla esta publicada y activa, el RCE muestra una
+card CDS.
+
+\subsection{Validar y ver ELM}
+
+El boton \textbf{Validar} envia el CQL al servicio de traduccion. Si el CQL es
+correcto, el sistema muestra el ELM generado. Esto permite ensenar que CQL es
+el lenguaje que escribe el alumno, mientras que ELM es la representacion que se
+puede ejecutar.
+
+\manualfigure{13-elm-validado.png}{ELM generado tras validar la regla. El mensaje indica que la regla esta lista para publicar.}{elm-validado}
+
+\subsection{Publicar regla}
+
+Publicar una regla significa dejarla disponible para que participe en la
+evaluacion CDS. En este paso el backend asigna la siguiente version automatica
+y guarda la regla como una \texttt{Library} FHIR.
+
+\manualfigure{14-publicar-regla.png}{Dialogo de publicacion. Muestra la Library, ELM guardado, version automatica y alcance del sandbox.}{publicar-regla}
+
+\section{Probar reglas con pacientes}
+
+Antes o despues de publicar, el alumno puede probar la regla contra un paciente
+seleccionado. La prueba muestra si la regla aplica o no aplica y que recursos
+FHIR fueron usados.
+
+\manualfigure{16-prueba-no-aplica.png}{Prueba de regla contra un paciente menor de edad. La regla no aplica porque la condicion CQL devuelve falso.}{prueba-no-aplica}
+
+Este ejemplo es pedagogicamente importante: no toda regla debe generar una
+card. Si el resultado CQL es falso, el comportamiento correcto es no mostrar
+recomendaciones.
+
+\section{Cards CDS en la ficha}
+
+Cuando una regla publicada y activa devuelve verdadero, aparece una card CDS en
+la ficha del paciente. La card muestra severidad, resumen, detalle y fuente de
+la regla.
+
+\manualfigure{15-paciente-cards-publicadas.png}{Paciente adulto con cards CDS activas. Las recomendaciones fueron generadas por reglas CQL publicadas.}{paciente-cards-publicadas}
+
+La card no cambia datos del paciente por si sola. Su funcion es recomendar o
+avisar. Si en el futuro una card incluye una sugerencia, el usuario debe
+confirmarla antes de aplicar cambios.
+
+\section{Demostracion: cambiar edad para activar o desactivar una regla}
+
+Una demostracion facil para clases es usar una regla de edad. Primero se toma
+un paciente adulto que cumple la condicion y luego se cambia su fecha de
+nacimiento para que deje de cumplirla.
+
+\manualfigure{17-editar-fecha-nacimiento.png}{Cambio de fecha de nacimiento en el sandbox. Al modificar la fecha cambia la edad efectiva del paciente.}{editar-fecha-nacimiento}
+
+Despues de guardar, el backend reevalua las reglas. Si el paciente queda menor
+de 18 anos, la regla de adulto ya no aplica y la card desaparece.
+
+\manualfigure{18-paciente-sin-cards.png}{Paciente despues del cambio de edad. No hay recomendaciones activas porque la condicion CQL devolvio falso.}{paciente-sin-cards}
+
+Este flujo ayuda a explicar tres ideas:
+
+\begin{enumerate}
+  \item Los datos clinicos del paciente se representan como HL7 FHIR.
+  \item La regla CQL consulta esos datos y devuelve verdadero o falso.
+  \item CDS Hooks muestra cards solo cuando hay recomendaciones aplicables.
+\end{enumerate}
+
+\section{Actividad CDS}
+
+La pantalla Actividad CDS muestra el historial de evaluaciones. No es una tabla
+de pacientes ni una lista de errores: es una vista para explicar que evaluacion
+ocurrio, con que paciente, en que momento CDS Hooks y cuantas cards se
+generaron.
+
+\manualfigure{19-actividad-cds.png}{Actividad CDS. Cada fila representa una evaluacion de reglas CQL contra datos FHIR del sandbox.}{actividad-cds}
+
+Al presionar \textbf{Paso a paso}, se abre una trazabilidad pensada para la
+clase. La interfaz evita poner como foco identificadores tecnicos y privilegia
+el flujo conceptual.
+
+\manualfigure{20-paso-a-paso-cds-hooks.png}{Paso a paso CDS Hooks. Muestra el flujo desde el momento clinico hasta el resultado de la card.}{paso-a-paso-cds-hooks}
+
+La lectura recomendada para explicar esta pantalla es:
+
+\begin{enumerate}
+  \item El alumno abre o reevalua una ficha.
+  \item Ese momento se representa como un hook, por ejemplo \texttt{patient-view}.
+  \item El backend toma el paciente y el sandbox del navegador.
+  \item Los datos se leen como recursos HL7 FHIR.
+  \item Las reglas CQL activas se evaluan sobre esos datos.
+  \item Si una regla devuelve verdadero, aparece una card CDS.
+\end{enumerate}
+
+\section{Rol Alumno y rol Docente}
+
+El modo Alumno permite explorar pacientes, crear reglas, validar CQL, probar
+reglas y publicar reglas dentro de su propio sandbox. Esto permite que cada
+alumno trabaje sin afectar a los demas.
+
+El modo Docente esta pensado para preparar reglas compartidas y conducir la
+clase. En una instalacion real, el acceso docente debe protegerse con clave o
+autenticacion institucional.
+
+\section{Guion corto para una clase}
+
+\begin{enumerate}
+  \item Abrir la pantalla de pacientes y explicar que los datos son sinteticos.
+  \item Filtrar por cohorte para elegir un paciente adulto.
+  \item Abrir la ficha y mostrar que los datos se agrupan como recursos FHIR.
+  \item Ir a Reglas CQL y abrir una regla por edad.
+  \item Explicar la expresion \texttt{AgeInYears() >= 18}.
+  \item Validar la regla y mostrar el ELM.
+  \item Publicar la regla.
+  \item Volver al paciente y reevaluar para ver la card.
+  \item Editar la fecha de nacimiento para dejar al paciente menor de edad.
+  \item Guardar y mostrar que la card desaparece.
+  \item Abrir Actividad CDS y revisar el paso a paso.
+\end{enumerate}
+
+\section{Buenas practicas de uso}
+
+\begin{itemize}
+  \item Usar siempre pacientes sinteticos para demostraciones.
+  \item Explicar que HAPI FHIR es la fuente de datos y artefactos, no una base
+  SQL consultada directamente por el alumno.
+  \item Recordar que CQL no escribe datos por si solo: evalua condiciones.
+  \item Validar antes de publicar para asegurar que existe ELM.
+  \item Usar el sandbox para que cada alumno pruebe cambios sin afectar a otros.
+  \item Leer una ausencia de cards como un resultado valido: la regla no aplica.
+\end{itemize}
+
+\section{Glosario rapido}
+
+\begin{longtable}{>{\bfseries}p{0.24\linewidth}p{0.68\linewidth}}
+Termino & Explicacion simple \\
+\hline
+RCE & Aplicacion que simula una ficha clinica educativa. \\
+FHIR & Estandar HL7 para representar datos clinicos como recursos. \\
+HAPI FHIR & Servidor usado para guardar y consultar recursos FHIR. \\
+CQL & Lenguaje para escribir reglas clinicas. \\
+ELM & Resultado traducido de CQL, listo para evaluacion. \\
+CDS Hooks & Forma estandar de pedir recomendaciones clinicas en un punto del flujo. \\
+Card CDS & Recomendacion visible para el usuario. \\
+Sandbox & Espacio privado de pruebas por navegador. \\
+Library & Recurso FHIR que guarda CQL, ELM y metadata de una regla. \\
+\end{longtable}
+
+\end{document}

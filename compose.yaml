@@ -37,7 +37,7 @@ services:
       retries: 30
       start_period: 90s
     ports:
-      - '127.0.0.1:${HAPI_PORT:-8080}:8080'
+      - '${HAPI_BIND_ADDRESS:-127.0.0.1}:${HAPI_PORT:-8080}:8080'
     volumes:
       - ./infra/hapi/application-local.yaml:/app/config/application-local.yaml:ro
     networks:
@@ -48,7 +48,7 @@ services:
     image: cqframework/cql-translation-service:v2.9.0
     profiles: ['local-translator']
     ports:
-      - '127.0.0.1:${CQL_TRANSLATOR_PORT:-8081}:8080'
+      - '${CQL_TRANSLATOR_BIND_ADDRESS:-127.0.0.1}:${CQL_TRANSLATOR_PORT:-8081}:8080'
     networks:
       - rce-cql
     restart: unless-stopped
@@ -100,6 +100,8 @@ services:
       cql-translator:
         condition: service_started
         required: false
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     healthcheck:
       test:
         [
@@ -113,7 +115,7 @@ services:
       retries: 10
       start_period: 10s
     ports:
-      - '127.0.0.1:${API_PORT:-3000}:3000'
+      - '${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-3000}:3000'
     networks:
       - rce-cql
     restart: unless-stopped
@@ -128,7 +130,7 @@ services:
       api:
         condition: service_healthy
     ports:
-      - '127.0.0.1:${WEB_PORT:-5173}:5173'
+      - '${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-5173}:5173'
     networks:
       - rce-cql
     restart: unless-stopped

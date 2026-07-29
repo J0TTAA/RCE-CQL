@@ -1,16 +1,26 @@
-import { FilePlus2, MoreHorizontal } from 'lucide-react';
+import {
+  Archive,
+  Copy,
+  FilePenLine,
+  FilePlus2,
+  FlaskConical,
+  MoreHorizontal,
+  Power,
+  PowerOff,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link, useRouter } from '../../app/router';
 import { lifecycleLabel } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
-import type { ClinicalRule, Lifecycle, RuleHook } from '../../types';
+import type { ClinicalRule, Lifecycle, Role, RuleHook } from '../../types';
 import {
   AsyncState,
   Badge,
   Button,
   IconButton,
   LifecycleBadge,
+  Modal,
   SelectInput,
   TextInput,
 } from '../../components/ui/primitives';
@@ -24,6 +34,7 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
   const [hook, setHook] = useState<RuleHook | 'all'>('all');
   const [activation, setActivation] = useState<'all' | 'active' | 'inactive'>('all');
   const [activationBusy, setActivationBusy] = useState<string | null>(null);
+  const [actionRule, setActionRule] = useState<ClinicalRule | null>(null);
   const filters = useMemo(
     () => ({ query, lifecycle, hook, activation }),
     [activation, hook, lifecycle, query],
@@ -180,7 +191,10 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
                   </td>
                   <td>{rule.modified}</td>
                   <td className="row-action">
-                    <IconButton label={`Acciones de ${rule.title}`}>
+                    <IconButton
+                      label={`Acciones de ${rule.title}`}
+                      onClick={() => setActionRule(rule)}
+                    >
                       <MoreHorizontal size={16} />
                     </IconButton>
                   </td>
@@ -190,7 +204,114 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
           </table>
         </div>
       </AsyncState>
+      <RuleActionsDialog
+        rule={actionRule}
+        role={role}
+        busy={actionRule ? activationBusy === actionRule.id : false}
+        onClose={() => setActionRule(null)}
+        onOpenEditor={(rule) => {
+          setActionRule(null);
+          router.navigate(`/rules/${rule.id}`);
+        }}
+        onOpenTest={(rule) => {
+          setActionRule(null);
+          router.navigate(`/rules/${rule.id}/test`);
+        }}
+        onToggleActivation={async (rule) => {
+          await toggleActivation(rule);
+          setActionRule(null);
+        }}
+      />
     </section>
+  );
+}
+
+function RuleActionsDialog({
+  rule,
+  role,
+  busy,
+  onClose,
+  onOpenEditor,
+  onOpenTest,
+  onToggleActivation,
+}: {
+  rule: ClinicalRule | null;
+  role: Role;
+  busy: boolean;
+  onClose: () => void;
+  onOpenEditor: (rule: ClinicalRule) => void;
+  onOpenTest: (rule: ClinicalRule) => void;
+  onToggleActivation: (rule: ClinicalRule) => Promise<void>;
+}) {
+  if (!rule) {
+    return null;
+  }
+  const canToggleActivation = role === 'teacher' && rule.lifecycle === 'published';
+  const activationLabel = rule.activation ? 'Desactivar regla' : 'Activar regla';
+  const ActivationIcon = rule.activation ? PowerOff : Power;
+
+  return (
+    <Modal open={Boolean(rule)} title="Acciones de regla" onClose={onClose}>
+      <div className="rule-action-dialog">
+        <div className="rule-action-summary">
+          <strong>{rule.title}</strong>
+          <span>
+            {rule.cqlName} v{rule.version}
+          </span>
+          <div className="rule-action-badges">
+            <LifecycleBadge lifecycle={rule.lifecycle} />
+            <Badge tone={rule.activation ? 'success' : 'neutral'}>
+              {rule.activation ? 'Activa' : 'Inactiva'}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="rule-action-list" role="list">
+          <button type="button" onClick={() => onOpenEditor(rule)}>
+            <FilePenLine size={16} aria-hidden />
+            <span>
+              <strong>Abrir editor</strong>
+              <small>Editar CQL, metadata, validar y publicar.</small>
+            </span>
+          </button>
+          <button type="button" onClick={() => onOpenTest(rule)}>
+            <FlaskConical size={16} aria-hidden />
+            <span>
+              <strong>Probar con paciente</strong>
+              <small>Abrir el panel de prueba de esta regla.</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleActivation(rule)}
+            disabled={!canToggleActivation || busy}
+            title={
+              !canToggleActivation ? 'Disponible solo para docentes con reglas publicadas' : undefined
+            }
+          >
+            <ActivationIcon size={16} aria-hidden />
+            <span>
+              <strong>{activationLabel}</strong>
+              <small>Controla si participa en las cards CDS.</small>
+            </span>
+          </button>
+          <button type="button" disabled title="Pendiente de endpoint backend">
+            <Copy size={16} aria-hidden />
+            <span>
+              <strong>Duplicar version</strong>
+              <small>Pendiente para una siguiente iteracion.</small>
+            </span>
+          </button>
+          <button type="button" disabled title="Pendiente de endpoint backend">
+            <Archive size={16} aria-hidden />
+            <span>
+              <strong>Retirar regla</strong>
+              <small>Pendiente hasta implementar lifecycle retired.</small>
+            </span>
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

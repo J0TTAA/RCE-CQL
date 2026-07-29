@@ -174,9 +174,11 @@ Tabla con filtros persistentes en la URL:
 | Activacion | Switch solo para Docente y published          |
 | Modificada | Fecha y autor sintetico                       |
 | Alcance    | Mi sandbox o compartida                       |
-| Acciones   | Abrir, duplicar version, retirar              |
+| Acciones   | Menu con abrir, probar, activar/desactivar y acciones futuras deshabilitadas |
 
 El boton `Nueva regla` es el unico CTA primario de la pagina.
+En el MVP, duplicar version y retirar se muestran como pendientes mientras no
+existan endpoints de backend para esas transiciones.
 
 ### 5.4 Workspace de regla
 

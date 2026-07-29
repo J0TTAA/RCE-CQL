@@ -749,6 +749,66 @@ dd {
   align-items: center;
 }
 
+.rule-action-dialog {
+  display: grid;
+  gap: 14px;
+}
+
+.rule-action-summary {
+  display: grid;
+  gap: 5px;
+}
+
+.rule-action-summary > span {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.rule-action-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rule-action-list {
+  display: grid;
+  gap: 8px;
+}
+
+.rule-action-list button {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 28px 1fr;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 10px;
+  text-align: left;
+}
+
+.rule-action-list button:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-muted);
+}
+
+.rule-action-list button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.rule-action-list button span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.rule-action-list button small {
+  color: var(--color-muted);
+}
+
 .row-action {
   width: 48px;
   text-align: right;

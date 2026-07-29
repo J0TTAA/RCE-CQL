@@ -31,6 +31,24 @@ export type RuleHook = 'patient-view' | 'order-select' | 'order-sign';
 export type RuleScope = 'sandbox' | 'shared';
 export type PatientGender = 'male' | 'female' | 'other' | 'unknown';
 export type DemoEncounterType = 'none' | 'ambulatory' | 'emergency' | 'inpatient';
+export type EditableClinicalResourceType =
+  | 'condition'
+  | 'observation'
+  | 'medication'
+  | 'allergy'
+  | 'encounter'
+  | 'procedure'
+  | 'immunization'
+  | 'serviceRequest';
+
+export interface EditableClinicalResource {
+  id: string;
+  type: EditableClinicalResourceType;
+  code: string;
+  status?: string;
+  date?: string;
+  value?: number;
+}
 
 export interface EditableClinicalData {
   birthDate: string;
@@ -46,6 +64,7 @@ export interface EditableClinicalData {
   diabetesCondition?: boolean;
   metforminMedication?: boolean;
   encounterType?: DemoEncounterType;
+  clinicalResources: EditableClinicalResource[];
 }
 
 export interface RuleMetadata {
@@ -122,6 +141,34 @@ export interface PatientDetail extends PatientSummary {
     clinician: string;
     status: string;
   }>;
+  allergies: Array<{
+    id: string;
+    display: string;
+    clinicalStatus: string;
+    criticality: string;
+    recordedDate: string;
+  }>;
+  procedures: Array<{
+    id: string;
+    code: string;
+    display: string;
+    status: string;
+    performedDate: string;
+  }>;
+  immunizations: Array<{
+    id: string;
+    vaccine: string;
+    status: string;
+    occurrenceDate: string;
+  }>;
+  serviceRequests: Array<{
+    id: string;
+    code: string;
+    display: string;
+    status: string;
+    intent: string;
+    authoredOn: string;
+  }>;
   timeline: Array<{ id: string; date: string; kind: string; label: string }>;
 }
 
@@ -173,6 +220,7 @@ interface PatientOverlay {
   conditions?: ConditionOverlay;
   medications?: MedicationOverlay;
   encounterType?: DemoEncounterType;
+  clinicalResources?: EditableClinicalResource[];
 }
 
 interface ObservationOverlay {
@@ -208,6 +256,7 @@ export interface PatientClinicalUpdate {
   diabetesCondition?: boolean;
   metforminMedication?: boolean;
   encounterType?: DemoEncounterType;
+  clinicalResources?: EditableClinicalResource[];
 }
 
 interface PatientClinicalSummary {
@@ -289,7 +338,13 @@ export class UiService {
       hook: 'patient-view',
       persistActivity: false,
     });
-    return this.patientBundleToDetail(patient, bundle, cards.cards, hasPatientOverlay(overlay));
+    return this.patientBundleToDetail(
+      patient,
+      bundle,
+      cards.cards,
+      hasPatientOverlay(overlay),
+      overlay,
+    );
   }
 
   async updatePatientClinicalData(
@@ -677,6 +732,7 @@ export class UiService {
     applyConditionOverlay(bundle, patientId, overlay.conditions);
     applyMedicationOverlay(bundle, patientId, overlay.medications);
     applyEncounterOverlay(bundle, patientId, overlay.encounterType);
+    applyClinicalResourceOverlay(bundle, patientId, overlay.clinicalResources);
     return bundle;
   }
 
@@ -699,6 +755,9 @@ export class UiService {
         extensionValueString(basic, 'patient-medications-json'),
       ),
       encounterType: normalizeEncounterType(extensionValueString(basic, 'patient-encounter-type')),
+      clinicalResources: clinicalResourcesFromJson(
+        extensionValueString(basic, 'patient-clinical-resources-json'),
+      ),
     };
   }
 
@@ -711,6 +770,7 @@ export class UiService {
     const conditions = normalizeConditionOverlay(overlay.conditions);
     const medications = normalizeMedicationOverlay(overlay.medications);
     const encounterType = normalizeEncounterType(overlay.encounterType);
+    const clinicalResources = normalizeClinicalResources(overlay.clinicalResources);
     await this.fhir.update('Basic', overlayId(patientId, sandboxId), {
       resourceType: 'Basic',
       id: overlayId(patientId, sandboxId),
@@ -752,6 +812,14 @@ export class UiService {
         ...(encounterType && encounterType !== 'none'
           ? [{ url: `${EXT_BASE}/patient-encounter-type`, valueCode: encounterType }]
           : []),
+        ...(clinicalResources.length > 0
+          ? [
+              {
+                url: `${EXT_BASE}/patient-clinical-resources-json`,
+                valueString: JSON.stringify(clinicalResources),
+              },
+            ]
+          : []),
       ],
     });
   }
@@ -761,6 +829,7 @@ export class UiService {
     bundle: FhirBundle,
     cards: CdsCard[],
     sandboxTouched: boolean,
+    overlay: PatientOverlay,
   ): PatientDetail {
     const birthDate = stringField(patient, 'birthDate');
     const conditions = resourcesOfType(bundle, 'Condition').map((condition) => ({
@@ -806,6 +875,46 @@ export class UiService {
         clinician: '',
         status: stringField(encounter, 'status'),
       }));
+    const allergies = resourcesOfType(bundle, 'AllergyIntolerance')
+      .slice(0, 20)
+      .map((allergy) => ({
+        id: String(allergy.id ?? ''),
+        display: codeDisplay(objectField(allergy, 'code')) || 'AllergyIntolerance',
+        clinicalStatus: codeDisplay(objectField(allergy, 'clinicalStatus')),
+        criticality: stringField(allergy, 'criticality'),
+        recordedDate: dateLike(allergy, 'recordedDate') || '',
+      }));
+    const procedures = resourcesOfType(bundle, 'Procedure')
+      .slice(0, 20)
+      .map((procedure) => ({
+        id: String(procedure.id ?? ''),
+        code: codingCode(procedure),
+        display: codeDisplay(procedure) || 'Procedure',
+        status: stringField(procedure, 'status'),
+        performedDate:
+          dateLike(procedure, 'performedDateTime') || dateLike(procedure, 'performedDate') || '',
+      }));
+    const immunizations = resourcesOfType(bundle, 'Immunization')
+      .slice(0, 20)
+      .map((immunization) => ({
+        id: String(immunization.id ?? ''),
+        vaccine: codeDisplay(objectField(immunization, 'vaccineCode')) || 'Immunization',
+        status: stringField(immunization, 'status'),
+        occurrenceDate:
+          dateLike(immunization, 'occurrenceDateTime') ||
+          dateLike(immunization, 'occurrenceDate') ||
+          '',
+      }));
+    const serviceRequests = resourcesOfType(bundle, 'ServiceRequest')
+      .slice(0, 20)
+      .map((serviceRequest) => ({
+        id: String(serviceRequest.id ?? ''),
+        code: codingCode(serviceRequest),
+        display: codeDisplay(serviceRequest) || 'ServiceRequest',
+        status: stringField(serviceRequest, 'status'),
+        intent: stringField(serviceRequest, 'intent'),
+        authoredOn: dateLike(serviceRequest, 'authoredOn') || '',
+      }));
     const summary: PatientSummary = {
       id: String(patient.id ?? ''),
       synId: patientIdentifier(patient),
@@ -847,11 +956,16 @@ export class UiService {
           '860975',
         ),
         encounterType: encounterTypeFromBundle(bundle),
+        clinicalResources: normalizeClinicalResources(overlay.clinicalResources),
       },
       conditions,
       observations,
       medications,
       encounters,
+      allergies,
+      procedures,
+      immunizations,
+      serviceRequests,
       timeline: [
         ...encounters.map((item) => ({
           id: `enc-${item.id}`,
@@ -870,6 +984,30 @@ export class UiService {
           date: item.effectiveDate,
           kind: 'observacion',
           label: `${item.display} ${item.value} ${item.unit}`,
+        })),
+        ...allergies.map((item) => ({
+          id: `allergy-${item.id}`,
+          date: item.recordedDate,
+          kind: 'alergia',
+          label: item.display,
+        })),
+        ...procedures.map((item) => ({
+          id: `proc-${item.id}`,
+          date: item.performedDate,
+          kind: 'procedimiento',
+          label: item.display,
+        })),
+        ...immunizations.map((item) => ({
+          id: `imm-${item.id}`,
+          date: item.occurrenceDate,
+          kind: 'inmunizacion',
+          label: item.vaccine,
+        })),
+        ...serviceRequests.map((item) => ({
+          id: `sr-${item.id}`,
+          date: item.authoredOn,
+          kind: 'orden',
+          label: item.display,
         })),
       ]
         .filter((item) => item.date)
@@ -1283,8 +1421,10 @@ function quantityObservation(input: {
   unit: string;
   unitCode: string;
   category: 'vital-signs' | 'laboratory';
+  effectiveDate?: string;
 }): FhirResource {
   const now = new Date().toISOString();
+  const effectiveDateTime = input.effectiveDate ? `${input.effectiveDate}T00:00:00.000Z` : now;
   return {
     resourceType: 'Observation',
     id: input.id,
@@ -1305,7 +1445,7 @@ function quantityObservation(input: {
       text: input.display,
     },
     subject: { reference: `Patient/${input.patientId}` },
-    effectiveDateTime: now,
+    effectiveDateTime,
     issued: now,
     valueQuantity: {
       value: input.value,
@@ -1457,6 +1597,222 @@ function applyEncounterOverlay(
       (entry) => !(entry.resource?.id && generatedIds.has(entry.resource.id)),
     ),
   ];
+}
+
+function applyClinicalResourceOverlay(
+  bundle: FhirBundle,
+  patientId: string,
+  resources: EditableClinicalResource[] | undefined,
+): void {
+  const normalized = normalizeClinicalResources(resources);
+  const generated = normalized
+    .map((resource) => buildClinicalResource(patientId, resource))
+    .filter((resource): resource is FhirResource => Boolean(resource));
+  bundle.entry = [
+    ...generated.map((resource) => ({ resource })),
+    ...(bundle.entry ?? []).filter((entry) => !isGeneratedClinicalResource(entry.resource)),
+  ];
+}
+
+function buildClinicalResource(
+  patientId: string,
+  resource: EditableClinicalResource,
+): FhirResource | null {
+  const date = resource.date || today();
+  const id = clinicalResourceId(resource);
+  const meta = { tag: [{ system: SANDBOX_TAG_SYSTEM, code: 'bundle-overlay' }] };
+  if (resource.type === 'observation') {
+    const definition = OBSERVATION_RESOURCE_CATALOG[resource.code];
+    if (!definition || !validNumber(resource.value)) {
+      return null;
+    }
+    return quantityObservation({
+      id,
+      patientId,
+      code: definition.code,
+      display: definition.display,
+      value: resource.value,
+      unit: definition.unit,
+      unitCode: definition.unitCode,
+      category: definition.category,
+      effectiveDate: date,
+    });
+  }
+  if (resource.type === 'condition') {
+    const definition = CONDITION_RESOURCE_CATALOG[resource.code];
+    if (!definition) {
+      return null;
+    }
+    const status = resource.status === 'resolved' ? 'resolved' : 'active';
+    return {
+      resourceType: 'Condition',
+      id,
+      meta,
+      clinicalStatus: {
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/condition-clinical',
+            code: status,
+            display: status === 'resolved' ? 'Resolved' : 'Active',
+          },
+        ],
+      },
+      verificationStatus: {
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/condition-ver-status',
+            code: 'confirmed',
+            display: 'Confirmed',
+          },
+        ],
+      },
+      category: [
+        {
+          coding: [
+            {
+              system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+              code: 'problem-list-item',
+              display: 'Problem List Item',
+            },
+          ],
+        },
+      ],
+      code: codedConcept(definition.system, definition.code, definition.display),
+      subject: { reference: `Patient/${patientId}` },
+      onsetDateTime: `${date}T00:00:00.000Z`,
+    };
+  }
+  if (resource.type === 'medication') {
+    const definition = MEDICATION_RESOURCE_CATALOG[resource.code];
+    if (!definition) {
+      return null;
+    }
+    return {
+      resourceType: 'MedicationRequest',
+      id,
+      meta,
+      status: normalizeResourceStatus(resource.type, resource.status),
+      intent: 'order',
+      medicationCodeableConcept: codedConcept(
+        definition.system,
+        definition.code,
+        definition.display,
+      ),
+      subject: { reference: `Patient/${patientId}` },
+      authoredOn: `${date}T00:00:00.000Z`,
+      dosageInstruction: [{ text: definition.dosage }],
+    };
+  }
+  if (resource.type === 'allergy') {
+    const definition = ALLERGY_RESOURCE_CATALOG[resource.code];
+    if (!definition) {
+      return null;
+    }
+    const status = normalizeResourceStatus(resource.type, resource.status);
+    return {
+      resourceType: 'AllergyIntolerance',
+      id,
+      meta,
+      clinicalStatus: {
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical',
+            code: status,
+            display: status === 'inactive' ? 'Inactive' : 'Active',
+          },
+        ],
+      },
+      verificationStatus: {
+        coding: [
+          {
+            system: 'http://terminology.hl7.org/CodeSystem/allergyintolerance-verification',
+            code: 'confirmed',
+            display: 'Confirmed',
+          },
+        ],
+      },
+      type: 'allergy',
+      category: [definition.category],
+      criticality: definition.criticality,
+      code: codedConcept(definition.system, definition.code, definition.display),
+      patient: { reference: `Patient/${patientId}` },
+      recordedDate: `${date}T00:00:00.000Z`,
+    };
+  }
+  if (resource.type === 'encounter') {
+    const definition = ENCOUNTER_RESOURCE_CATALOG[resource.code];
+    if (!definition) {
+      return null;
+    }
+    return {
+      resourceType: 'Encounter',
+      id,
+      meta,
+      status: normalizeResourceStatus(resource.type, resource.status),
+      class: {
+        system: ACT_CODE_SYSTEM,
+        code: definition.classCode,
+        display: definition.classDisplay,
+      },
+      type: [codedConcept(definition.system, definition.code, definition.display)],
+      subject: { reference: `Patient/${patientId}` },
+      period: { start: `${date}T00:00:00.000Z`, end: `${date}T00:30:00.000Z` },
+    };
+  }
+  if (resource.type === 'procedure') {
+    const definition = PROCEDURE_RESOURCE_CATALOG[resource.code];
+    if (!definition) {
+      return null;
+    }
+    return {
+      resourceType: 'Procedure',
+      id,
+      meta,
+      status: normalizeResourceStatus(resource.type, resource.status),
+      code: codedConcept(definition.system, definition.code, definition.display),
+      subject: { reference: `Patient/${patientId}` },
+      performedDateTime: `${date}T00:00:00.000Z`,
+    };
+  }
+  if (resource.type === 'immunization') {
+    const definition = IMMUNIZATION_RESOURCE_CATALOG[resource.code];
+    if (!definition) {
+      return null;
+    }
+    return {
+      resourceType: 'Immunization',
+      id,
+      meta,
+      status: normalizeResourceStatus(resource.type, resource.status),
+      vaccineCode: codedConcept(definition.system, definition.code, definition.display),
+      patient: { reference: `Patient/${patientId}` },
+      occurrenceDateTime: `${date}T00:00:00.000Z`,
+    };
+  }
+  if (resource.type === 'serviceRequest') {
+    const definition = SERVICE_REQUEST_RESOURCE_CATALOG[resource.code];
+    if (!definition) {
+      return null;
+    }
+    return {
+      resourceType: 'ServiceRequest',
+      id,
+      meta,
+      status: normalizeResourceStatus(resource.type, resource.status),
+      intent: 'order',
+      code: codedConcept(definition.system, definition.code, definition.display),
+      subject: { reference: `Patient/${patientId}` },
+      authoredOn: `${date}T00:00:00.000Z`,
+    };
+  }
+  return null;
+}
+
+function codedConcept(system: string, code: string, display: string): FhirResource {
+  return {
+    coding: [{ system, code, display }],
+    text: display,
+  };
 }
 
 function objectField(resource: unknown, field: string): FhirResource {
@@ -1696,6 +2052,225 @@ function sortCardsBySeverity(cards: CdsCard[]): void {
   cards.sort((left, right) => rank[left.severity] - rank[right.severity]);
 }
 
+interface CodeDefinition {
+  system: string;
+  code: string;
+  display: string;
+}
+
+interface ObservationDefinition extends CodeDefinition {
+  unit: string;
+  unitCode: string;
+  category: 'vital-signs' | 'laboratory';
+}
+
+interface MedicationDefinition extends CodeDefinition {
+  dosage: string;
+}
+
+interface AllergyDefinition extends CodeDefinition {
+  category: 'food' | 'medication' | 'environment' | 'biologic';
+  criticality: 'low' | 'high' | 'unable-to-assess';
+}
+
+interface EncounterDefinitionItem extends CodeDefinition {
+  classCode: string;
+  classDisplay: string;
+}
+
+const CONDITION_RESOURCE_CATALOG: Record<string, CodeDefinition> = {
+  diabetes: { system: SNOMED_SYSTEM, code: '44054006', display: 'Diabetes mellitus' },
+  hypertension: { system: SNOMED_SYSTEM, code: '38341003', display: 'Hypertensive disorder' },
+  asthma: { system: SNOMED_SYSTEM, code: '195967001', display: 'Asthma' },
+  kidneyDisease: { system: SNOMED_SYSTEM, code: '709044004', display: 'Chronic kidney disease' },
+  pregnancy: { system: SNOMED_SYSTEM, code: '77386006', display: 'Pregnant' },
+  depression: { system: SNOMED_SYSTEM, code: '35489007', display: 'Depressive disorder' },
+};
+
+const OBSERVATION_RESOURCE_CATALOG: Record<string, ObservationDefinition> = {
+  systolicBloodPressure: {
+    system: LOINC_SYSTEM,
+    code: '8480-6',
+    display: 'Systolic Blood Pressure',
+    unit: 'mmHg',
+    unitCode: 'mm[Hg]',
+    category: 'vital-signs',
+  },
+  diastolicBloodPressure: {
+    system: LOINC_SYSTEM,
+    code: '8462-4',
+    display: 'Diastolic Blood Pressure',
+    unit: 'mmHg',
+    unitCode: 'mm[Hg]',
+    category: 'vital-signs',
+  },
+  hba1c: {
+    system: LOINC_SYSTEM,
+    code: '4548-4',
+    display: 'Hemoglobin A1c/Hemoglobin.total in Blood',
+    unit: '%',
+    unitCode: '%',
+    category: 'laboratory',
+  },
+  fastingGlucose: {
+    system: LOINC_SYSTEM,
+    code: '1558-6',
+    display: 'Glucose [Mass/volume] in Serum or Plasma --fasting',
+    unit: 'mg/dL',
+    unitCode: 'mg/dL',
+    category: 'laboratory',
+  },
+  ldlCholesterol: {
+    system: LOINC_SYSTEM,
+    code: '13457-7',
+    display: 'Cholesterol in LDL [Mass/volume] in Serum or Plasma',
+    unit: 'mg/dL',
+    unitCode: 'mg/dL',
+    category: 'laboratory',
+  },
+  creatinine: {
+    system: LOINC_SYSTEM,
+    code: '2160-0',
+    display: 'Creatinine [Mass/volume] in Serum or Plasma',
+    unit: 'mg/dL',
+    unitCode: 'mg/dL',
+    category: 'laboratory',
+  },
+  egfr: {
+    system: LOINC_SYSTEM,
+    code: '33914-3',
+    display: 'Glomerular filtration rate/1.73 sq M.predicted',
+    unit: 'mL/min/1.73m2',
+    unitCode: 'mL/min/{1.73_m2}',
+    category: 'laboratory',
+  },
+  oxygenSaturation: {
+    system: LOINC_SYSTEM,
+    code: '59408-5',
+    display: 'Oxygen saturation in Arterial blood by Pulse oximetry',
+    unit: '%',
+    unitCode: '%',
+    category: 'vital-signs',
+  },
+  heartRate: {
+    system: LOINC_SYSTEM,
+    code: '8867-4',
+    display: 'Heart rate',
+    unit: '/min',
+    unitCode: '/min',
+    category: 'vital-signs',
+  },
+};
+
+const MEDICATION_RESOURCE_CATALOG: Record<string, MedicationDefinition> = {
+  metformin: {
+    system: RXNORM_SYSTEM,
+    code: '860975',
+    display: 'metformin hydrochloride 500 MG Oral Tablet',
+    dosage: '500 mg por via oral cada 12 horas',
+  },
+  insulinGlargine: {
+    system: RXNORM_SYSTEM,
+    code: '274783',
+    display: 'insulin glargine',
+    dosage: '10 unidades subcutaneas nocturnas',
+  },
+  lisinopril: {
+    system: RXNORM_SYSTEM,
+    code: '314076',
+    display: 'lisinopril 10 MG Oral Tablet',
+    dosage: '10 mg por via oral al dia',
+  },
+  atorvastatin: {
+    system: RXNORM_SYSTEM,
+    code: '617314',
+    display: 'atorvastatin 20 MG Oral Tablet',
+    dosage: '20 mg por via oral al dia',
+  },
+  amoxicillin: {
+    system: RXNORM_SYSTEM,
+    code: '308182',
+    display: 'amoxicillin 500 MG Oral Capsule',
+    dosage: '500 mg por via oral cada 8 horas',
+  },
+};
+
+const ALLERGY_RESOURCE_CATALOG: Record<string, AllergyDefinition> = {
+  penicillin: {
+    system: SNOMED_SYSTEM,
+    code: '91936005',
+    display: 'Allergy to penicillin',
+    category: 'medication',
+    criticality: 'high',
+  },
+  latex: {
+    system: SNOMED_SYSTEM,
+    code: '300916003',
+    display: 'Latex allergy',
+    category: 'environment',
+    criticality: 'high',
+  },
+  peanut: {
+    system: SNOMED_SYSTEM,
+    code: '91935009',
+    display: 'Allergy to peanut',
+    category: 'food',
+    criticality: 'high',
+  },
+};
+
+const ENCOUNTER_RESOURCE_CATALOG: Record<string, EncounterDefinitionItem> = {
+  ambulatory: {
+    system: SNOMED_SYSTEM,
+    code: '185349003',
+    display: 'Encounter for check up',
+    classCode: 'AMB',
+    classDisplay: 'ambulatory',
+  },
+  emergency: {
+    system: SNOMED_SYSTEM,
+    code: '50849002',
+    display: 'Emergency room admission',
+    classCode: 'EMER',
+    classDisplay: 'emergency',
+  },
+  inpatient: {
+    system: SNOMED_SYSTEM,
+    code: '32485007',
+    display: 'Hospital admission',
+    classCode: 'IMP',
+    classDisplay: 'inpatient encounter',
+  },
+};
+
+const PROCEDURE_RESOURCE_CATALOG: Record<string, CodeDefinition> = {
+  appendectomy: { system: SNOMED_SYSTEM, code: '80146002', display: 'Appendectomy' },
+  dialysis: { system: SNOMED_SYSTEM, code: '108241001', display: 'Hemodialysis' },
+  colonoscopy: { system: SNOMED_SYSTEM, code: '73761001', display: 'Colonoscopy' },
+  cesarean: { system: SNOMED_SYSTEM, code: '11466000', display: 'Cesarean section' },
+};
+
+const IMMUNIZATION_RESOURCE_CATALOG: Record<string, CodeDefinition> = {
+  influenza: { system: 'http://hl7.org/fhir/sid/cvx', code: '141', display: 'Influenza vaccine' },
+  covid19: { system: 'http://hl7.org/fhir/sid/cvx', code: '207', display: 'COVID-19 vaccine' },
+  hepatitisB: { system: 'http://hl7.org/fhir/sid/cvx', code: '45', display: 'Hepatitis B vaccine' },
+};
+
+const SERVICE_REQUEST_RESOURCE_CATALOG: Record<string, CodeDefinition> = {
+  completeBloodCount: {
+    system: LOINC_SYSTEM,
+    code: '58410-2',
+    display: 'Complete blood count panel',
+  },
+  lipidPanel: { system: LOINC_SYSTEM, code: '57698-3', display: 'Lipid panel' },
+  chestXray: { system: SNOMED_SYSTEM, code: '168731009', display: 'Chest X-ray' },
+  cardiologyReferral: {
+    system: SNOMED_SYSTEM,
+    code: '306206005',
+    display: 'Referral to cardiology service',
+  },
+};
+
 function mergePatientOverlay(
   current: PatientOverlay,
   input: PatientClinicalUpdate,
@@ -1725,6 +2300,10 @@ function mergePatientOverlay(
       metformin: input.metforminMedication ?? current.medications?.metformin,
     }),
     encounterType: input.encounterType ?? current.encounterType,
+    clinicalResources:
+      input.clinicalResources === undefined
+        ? current.clinicalResources
+        : normalizeClinicalResources(input.clinicalResources),
   };
 }
 
@@ -1735,7 +2314,8 @@ function hasPatientOverlay(overlay: PatientOverlay): boolean {
     hasObservationOverlay(overlay.observations) ||
     hasConditionOverlay(overlay.conditions) ||
     hasMedicationOverlay(overlay.medications) ||
-    Boolean(normalizeEncounterType(overlay.encounterType))
+    Boolean(normalizeEncounterType(overlay.encounterType)) ||
+    hasClinicalResourceOverlay(overlay.clinicalResources)
   );
 }
 
@@ -1846,6 +2426,112 @@ function normalizeEncounterType(value: unknown): DemoEncounterType | undefined {
   return ['ambulatory', 'emergency', 'inpatient'].includes(normalized)
     ? (normalized as DemoEncounterType)
     : undefined;
+}
+
+function clinicalResourcesFromJson(value: string): EditableClinicalResource[] {
+  if (!value) {
+    return [];
+  }
+  try {
+    return normalizeClinicalResources(JSON.parse(value));
+  } catch {
+    return [];
+  }
+}
+
+function normalizeClinicalResources(value: unknown): EditableClinicalResource[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .slice(0, 60)
+    .map((item) => normalizeClinicalResource(item))
+    .filter((item): item is EditableClinicalResource => Boolean(item));
+}
+
+function normalizeClinicalResource(value: unknown): EditableClinicalResource | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const candidate = value as Record<string, unknown>;
+  const id =
+    typeof candidate.id === 'string' && /^[A-Za-z0-9_-]{1,48}$/.test(candidate.id)
+      ? candidate.id
+      : '';
+  const type = normalizeClinicalResourceType(candidate.type);
+  const code = typeof candidate.code === 'string' ? candidate.code : '';
+  if (!id || !type || !clinicalResourceCatalogHas(type, code)) {
+    return null;
+  }
+  const normalized: EditableClinicalResource = {
+    id,
+    type,
+    code,
+    status: normalizeResourceStatus(type, primitiveToString(candidate.status)),
+    date: normalizeClinicalDate(candidate.date),
+  };
+  if (type === 'observation') {
+    const valueNumber = Number(candidate.value);
+    if (!Number.isFinite(valueNumber)) {
+      return null;
+    }
+    normalized.value = valueNumber;
+  }
+  return normalized;
+}
+
+function normalizeClinicalResourceType(value: unknown): EditableClinicalResourceType | undefined {
+  return [
+    'condition',
+    'observation',
+    'medication',
+    'allergy',
+    'encounter',
+    'procedure',
+    'immunization',
+    'serviceRequest',
+  ].includes(String(value))
+    ? (String(value) as EditableClinicalResourceType)
+    : undefined;
+}
+
+function normalizeClinicalDate(value: unknown): string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : today();
+}
+
+function normalizeResourceStatus(
+  type: EditableClinicalResourceType,
+  status: string | undefined,
+): string {
+  const allowed: Record<EditableClinicalResourceType, string[]> = {
+    condition: ['active', 'resolved'],
+    observation: ['final', 'preliminary'],
+    medication: ['active', 'completed', 'stopped'],
+    allergy: ['active', 'inactive'],
+    encounter: ['finished', 'in-progress', 'planned'],
+    procedure: ['completed', 'in-progress', 'not-done'],
+    immunization: ['completed', 'not-done'],
+    serviceRequest: ['active', 'completed', 'draft'],
+  };
+  return allowed[type].includes(status ?? '') ? (status as string) : (allowed[type][0] ?? 'active');
+}
+
+function clinicalResourceCatalogHas(type: EditableClinicalResourceType, code: string): boolean {
+  const catalogs: Record<EditableClinicalResourceType, Record<string, unknown>> = {
+    condition: CONDITION_RESOURCE_CATALOG,
+    observation: OBSERVATION_RESOURCE_CATALOG,
+    medication: MEDICATION_RESOURCE_CATALOG,
+    allergy: ALLERGY_RESOURCE_CATALOG,
+    encounter: ENCOUNTER_RESOURCE_CATALOG,
+    procedure: PROCEDURE_RESOURCE_CATALOG,
+    immunization: IMMUNIZATION_RESOURCE_CATALOG,
+    serviceRequest: SERVICE_REQUEST_RESOURCE_CATALOG,
+  };
+  return Boolean(catalogs[type][code]);
+}
+
+function hasClinicalResourceOverlay(resources: EditableClinicalResource[] | undefined): boolean {
+  return normalizeClinicalResources(resources).length > 0;
 }
 
 function validNumber(value: unknown): value is number {
@@ -1982,6 +2668,14 @@ function medicationRequestId(kind: string): string {
 
 function encounterId(kind: string): string {
   return `rce-demo-encounter-${kind}`;
+}
+
+function clinicalResourceId(resource: EditableClinicalResource): string {
+  return `rce-demo-resource-${hash(`${resource.type}:${resource.id}`).slice(0, 28)}`;
+}
+
+function isGeneratedClinicalResource(resource: FhirResource | undefined): boolean {
+  return typeof resource?.id === 'string' && resource.id.startsWith('rce-demo-resource-');
 }
 
 function overlayId(patientId: string, sandboxId: string): string {

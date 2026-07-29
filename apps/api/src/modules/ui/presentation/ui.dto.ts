@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsBoolean,
   IsIn,
   IsNumber,
@@ -12,6 +13,7 @@ import {
 } from 'class-validator';
 import type {
   DemoEncounterType,
+  EditableClinicalResourceType,
   PatientGender,
   RuleHook,
   Severity,
@@ -21,6 +23,16 @@ const hooks: RuleHook[] = ['patient-view', 'order-select', 'order-sign'];
 const severities: Severity[] = ['info', 'warning', 'critical'];
 const patientGenders: PatientGender[] = ['male', 'female', 'other', 'unknown'];
 const encounterTypes: DemoEncounterType[] = ['none', 'ambulatory', 'emergency', 'inpatient'];
+const clinicalResourceTypes: EditableClinicalResourceType[] = [
+  'condition',
+  'observation',
+  'medication',
+  'allergy',
+  'encounter',
+  'procedure',
+  'immunization',
+  'serviceRequest',
+];
 
 export class RuleMetadataDto {
   @IsString()
@@ -67,6 +79,32 @@ export class ValidateRuleDto {
 export class TestRuleDto {
   @IsString()
   patientId!: string;
+}
+
+export class ClinicalResourceDto {
+  @Matches(/^[A-Za-z0-9_-]{1,48}$/)
+  id!: string;
+
+  @IsIn(clinicalResourceTypes)
+  type!: EditableClinicalResourceType;
+
+  @IsString()
+  code!: string;
+
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  date?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(-1000)
+  @Max(10000)
+  value?: number;
 }
 
 export class UpdatePatientDto {
@@ -145,6 +183,12 @@ export class UpdatePatientDto {
   @IsOptional()
   @IsIn(encounterTypes)
   encounterType?: DemoEncounterType;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ClinicalResourceDto)
+  clinicalResources?: ClinicalResourceDto[];
 }
 
 export class RuleActivationDto {

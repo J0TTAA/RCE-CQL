@@ -1,10 +1,16 @@
-import { CheckCircle2, ClipboardEdit, RotateCw } from 'lucide-react';
+import { CheckCircle2, ClipboardEdit, Plus, RotateCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
 import { formatDate, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
-import type { CdsCard, DemoEncounterType, PatientDetail } from '../../types';
+import type {
+  CdsCard,
+  DemoEncounterType,
+  EditableClinicalResource,
+  EditableClinicalResourceType,
+  PatientDetail,
+} from '../../types';
 import {
   AsyncState,
   Badge,
@@ -18,7 +24,16 @@ import {
 } from '../../components/ui/primitives';
 
 type PatientTab =
-  'resumen' | 'condiciones' | 'observaciones' | 'medicamentos' | 'encuentros' | 'cds';
+  | 'resumen'
+  | 'condiciones'
+  | 'observaciones'
+  | 'medicamentos'
+  | 'alergias'
+  | 'encuentros'
+  | 'procedimientos'
+  | 'inmunizaciones'
+  | 'ordenes'
+  | 'cds';
 
 export function PatientChartPage({ patientId }: { patientId: string }) {
   const { api } = useRce();
@@ -84,7 +99,11 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                       'condiciones',
                       'observaciones',
                       'medicamentos',
+                      'alergias',
                       'encuentros',
+                      'procedimientos',
+                      'inmunizaciones',
+                      'ordenes',
                     ] as PatientTab[]
                   ).map((item) => (
                     <button
@@ -138,6 +157,17 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                     headers={['Medicamento', 'Dosis', 'Vía', 'Estado']}
                   />
                 ) : null}
+                {tab === 'alergias' ? (
+                  <ResourceTable
+                    rows={displayedPatient.allergies.map((item) => [
+                      item.display,
+                      item.clinicalStatus,
+                      item.criticality,
+                      formatDate(item.recordedDate),
+                    ])}
+                    headers={['Alergia', 'Estado', 'Criticidad', 'Registro']}
+                  />
+                ) : null}
                 {tab === 'encuentros' ? (
                   <ResourceTable
                     rows={displayedPatient.encounters.map((item) => [
@@ -147,6 +177,39 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                       item.status,
                     ])}
                     headers={['Tipo', 'Motivo', 'Fecha', 'Estado']}
+                  />
+                ) : null}
+                {tab === 'procedimientos' ? (
+                  <ResourceTable
+                    rows={displayedPatient.procedures.map((item) => [
+                      item.display,
+                      item.code,
+                      item.status,
+                      formatDate(item.performedDate),
+                    ])}
+                    headers={['Procedimiento', 'Codigo', 'Estado', 'Fecha']}
+                  />
+                ) : null}
+                {tab === 'inmunizaciones' ? (
+                  <ResourceTable
+                    rows={displayedPatient.immunizations.map((item) => [
+                      item.vaccine,
+                      item.status,
+                      formatDate(item.occurrenceDate),
+                    ])}
+                    headers={['Vacuna', 'Estado', 'Fecha']}
+                  />
+                ) : null}
+                {tab === 'ordenes' ? (
+                  <ResourceTable
+                    rows={displayedPatient.serviceRequests.map((item) => [
+                      item.display,
+                      item.code,
+                      item.status,
+                      item.intent,
+                      formatDate(item.authoredOn),
+                    ])}
+                    headers={['Orden', 'Codigo', 'Estado', 'Intencion', 'Fecha']}
                   />
                 ) : null}
                 {tab === 'cds' ? <CdsRail cards={displayedCards} embedded /> : null}
@@ -271,10 +334,10 @@ function ResourceTable({ headers, rows }: { headers: string[]; rows: string[][] 
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.join('-')}>
-              {row.map((cell) => (
-                <td key={cell}>{cell}</td>
+          {rows.map((row, rowIndex) => (
+            <tr key={`${rowIndex}-${row.join('-')}`}>
+              {row.map((cell, cellIndex) => (
+                <td key={`${cellIndex}-${cell}`}>{cell}</td>
               ))}
             </tr>
           ))}
@@ -394,6 +457,9 @@ function PatientDataDrawer({
   const [encounterType, setEncounterType] = useState<DemoEncounterType>(
     patient.editableClinicalData.encounterType ?? 'none',
   );
+  const [clinicalResources, setClinicalResources] = useState<EditableClinicalResource[]>(
+    patient.editableClinicalData.clinicalResources ?? [],
+  );
   const [stage, setStage] = useState<'idle' | 'validating' | 'saving' | 'reevaluating' | 'updated'>(
     'idle',
   );
@@ -412,6 +478,7 @@ function PatientDataDrawer({
     setDiabetesCondition(Boolean(patient.editableClinicalData.diabetesCondition));
     setMetforminMedication(Boolean(patient.editableClinicalData.metforminMedication));
     setEncounterType(patient.editableClinicalData.encounterType ?? 'none');
+    setClinicalResources(patient.editableClinicalData.clinicalResources ?? []);
     setStage('idle');
   }, [patient.editableClinicalData, open]);
 
@@ -434,6 +501,7 @@ function PatientDataDrawer({
       diabetesCondition,
       metforminMedication,
       encounterType,
+      clinicalResources,
     });
     setStage('reevaluating');
     await new Promise((resolve) => window.setTimeout(resolve, 360));
@@ -445,6 +513,7 @@ function PatientDataDrawer({
     <Drawer
       open={open}
       title="Editar datos del paciente"
+      className="drawer-wide"
       onClose={onClose}
       footer={
         <>
@@ -587,9 +656,7 @@ function PatientDataDrawer({
         <Field label="Encuentro pedagogico">
           <SelectInput
             value={encounterType}
-            onChange={(event) =>
-              setEncounterType(event.target.value as DemoEncounterType)
-            }
+            onChange={(event) => setEncounterType(event.target.value as DemoEncounterType)}
           >
             <option value="none">Sin encuentro generado</option>
             <option value="ambulatory">Ambulatorio</option>
@@ -597,6 +664,7 @@ function PatientDataDrawer({
             <option value="inpatient">Hospitalizacion</option>
           </SelectInput>
         </Field>
+        <ClinicalResourcesEditor resources={clinicalResources} onChange={setClinicalResources} />
         <div className="state-box compact-state">
           Los cambios quedan como overlay del sandbox y se usan al reevaluar CQL.
         </div>
@@ -616,6 +684,403 @@ function optionalNumber(value: string): number | undefined {
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+interface ClinicalResourceOption {
+  code: string;
+  label: string;
+  unit?: string;
+  defaultValue?: number;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+interface ClinicalResourceTypeConfig {
+  label: string;
+  addLabel: string;
+  options: ClinicalResourceOption[];
+  statuses: Array<{ value: string; label: string }>;
+}
+
+const clinicalResourceCatalog: Record<EditableClinicalResourceType, ClinicalResourceTypeConfig> = {
+  condition: {
+    label: 'Condicion',
+    addLabel: 'Agregar condicion',
+    statuses: [
+      { value: 'active', label: 'Activa' },
+      { value: 'resolved', label: 'Resuelta' },
+    ],
+    options: [
+      { code: 'diabetes', label: 'Diabetes mellitus' },
+      { code: 'hypertension', label: 'Hipertension' },
+      { code: 'asthma', label: 'Asma' },
+      { code: 'kidneyDisease', label: 'Enfermedad renal cronica' },
+      { code: 'pregnancy', label: 'Embarazo' },
+      { code: 'depression', label: 'Depresion' },
+    ],
+  },
+  observation: {
+    label: 'Observacion',
+    addLabel: 'Agregar observacion',
+    statuses: [
+      { value: 'final', label: 'Final' },
+      { value: 'preliminary', label: 'Preliminar' },
+    ],
+    options: [
+      {
+        code: 'systolicBloodPressure',
+        label: 'Presion sistolica',
+        unit: 'mmHg',
+        defaultValue: 140,
+        min: 40,
+        max: 260,
+        step: 1,
+      },
+      {
+        code: 'diastolicBloodPressure',
+        label: 'Presion diastolica',
+        unit: 'mmHg',
+        defaultValue: 90,
+        min: 30,
+        max: 160,
+        step: 1,
+      },
+      { code: 'hba1c', label: 'HbA1c', unit: '%', defaultValue: 7.2, min: 3, max: 18, step: 0.1 },
+      {
+        code: 'fastingGlucose',
+        label: 'Glucosa en ayunas',
+        unit: 'mg/dL',
+        defaultValue: 126,
+        min: 40,
+        max: 600,
+        step: 1,
+      },
+      {
+        code: 'ldlCholesterol',
+        label: 'LDL',
+        unit: 'mg/dL',
+        defaultValue: 130,
+        min: 20,
+        max: 400,
+        step: 1,
+      },
+      {
+        code: 'creatinine',
+        label: 'Creatinina',
+        unit: 'mg/dL',
+        defaultValue: 1.2,
+        min: 0.1,
+        max: 15,
+        step: 0.1,
+      },
+      {
+        code: 'egfr',
+        label: 'eGFR',
+        unit: 'mL/min/1.73m2',
+        defaultValue: 60,
+        min: 1,
+        max: 150,
+        step: 1,
+      },
+      {
+        code: 'oxygenSaturation',
+        label: 'Saturacion O2',
+        unit: '%',
+        defaultValue: 95,
+        min: 50,
+        max: 100,
+        step: 1,
+      },
+      {
+        code: 'heartRate',
+        label: 'Frecuencia cardiaca',
+        unit: '/min',
+        defaultValue: 80,
+        min: 20,
+        max: 220,
+        step: 1,
+      },
+    ],
+  },
+  medication: {
+    label: 'Medicamento',
+    addLabel: 'Agregar medicamento',
+    statuses: [
+      { value: 'active', label: 'Activo' },
+      { value: 'completed', label: 'Completado' },
+      { value: 'stopped', label: 'Suspendido' },
+    ],
+    options: [
+      { code: 'metformin', label: 'Metformina' },
+      { code: 'insulinGlargine', label: 'Insulina glargina' },
+      { code: 'lisinopril', label: 'Lisinopril' },
+      { code: 'atorvastatin', label: 'Atorvastatina' },
+      { code: 'amoxicillin', label: 'Amoxicilina' },
+    ],
+  },
+  allergy: {
+    label: 'Alergia',
+    addLabel: 'Agregar alergia',
+    statuses: [
+      { value: 'active', label: 'Activa' },
+      { value: 'inactive', label: 'Inactiva' },
+    ],
+    options: [
+      { code: 'penicillin', label: 'Penicilina' },
+      { code: 'latex', label: 'Latex' },
+      { code: 'peanut', label: 'Mani' },
+    ],
+  },
+  encounter: {
+    label: 'Encuentro',
+    addLabel: 'Agregar encuentro',
+    statuses: [
+      { value: 'finished', label: 'Finalizado' },
+      { value: 'in-progress', label: 'En curso' },
+      { value: 'planned', label: 'Planificado' },
+    ],
+    options: [
+      { code: 'ambulatory', label: 'Ambulatorio' },
+      { code: 'emergency', label: 'Urgencia' },
+      { code: 'inpatient', label: 'Hospitalizacion' },
+    ],
+  },
+  procedure: {
+    label: 'Procedimiento',
+    addLabel: 'Agregar procedimiento',
+    statuses: [
+      { value: 'completed', label: 'Completado' },
+      { value: 'in-progress', label: 'En curso' },
+      { value: 'not-done', label: 'No realizado' },
+    ],
+    options: [
+      { code: 'appendectomy', label: 'Apendicectomia' },
+      { code: 'dialysis', label: 'Hemodialisis' },
+      { code: 'colonoscopy', label: 'Colonoscopia' },
+      { code: 'cesarean', label: 'Cesarea' },
+    ],
+  },
+  immunization: {
+    label: 'Inmunizacion',
+    addLabel: 'Agregar inmunizacion',
+    statuses: [
+      { value: 'completed', label: 'Completada' },
+      { value: 'not-done', label: 'No realizada' },
+    ],
+    options: [
+      { code: 'influenza', label: 'Influenza' },
+      { code: 'covid19', label: 'COVID-19' },
+      { code: 'hepatitisB', label: 'Hepatitis B' },
+    ],
+  },
+  serviceRequest: {
+    label: 'Orden clinica',
+    addLabel: 'Agregar orden',
+    statuses: [
+      { value: 'active', label: 'Activa' },
+      { value: 'completed', label: 'Completada' },
+      { value: 'draft', label: 'Borrador' },
+    ],
+    options: [
+      { code: 'completeBloodCount', label: 'Hemograma' },
+      { code: 'lipidPanel', label: 'Perfil lipidico' },
+      { code: 'chestXray', label: 'Radiografia de torax' },
+      { code: 'cardiologyReferral', label: 'Derivacion cardiologia' },
+    ],
+  },
+};
+
+const clinicalResourceTypes = Object.keys(
+  clinicalResourceCatalog,
+) as EditableClinicalResourceType[];
+
+function ClinicalResourcesEditor({
+  resources,
+  onChange,
+}: {
+  resources: EditableClinicalResource[];
+  onChange: (resources: EditableClinicalResource[]) => void;
+}) {
+  const [typeToAdd, setTypeToAdd] = useState<EditableClinicalResourceType>('condition');
+  const grouped = useMemo(
+    () =>
+      clinicalResourceTypes.map((type) => ({
+        type,
+        label: clinicalResourceCatalog[type].label,
+        resources: resources.filter((resource) => resource.type === type),
+      })),
+    [resources],
+  );
+
+  const addResource = () => {
+    onChange([...resources, createClinicalResource(typeToAdd)]);
+  };
+
+  const updateResource = (resource: EditableClinicalResource) => {
+    onChange(resources.map((item) => (item.id === resource.id ? resource : item)));
+  };
+
+  const removeResource = (id: string) => {
+    onChange(resources.filter((resource) => resource.id !== id));
+  };
+
+  return (
+    <section className="clinical-resource-editor">
+      <div className="clinical-resource-editor-header">
+        <div>
+          <h3>Recursos clinicos del sandbox</h3>
+          <p>Agrega, edita o elimina recursos FHIR controlados para probar reglas CQL.</p>
+        </div>
+        <div className="clinical-resource-add">
+          <SelectInput
+            value={typeToAdd}
+            onChange={(event) => setTypeToAdd(event.target.value as EditableClinicalResourceType)}
+            aria-label="Tipo de recurso"
+          >
+            {clinicalResourceTypes.map((type) => (
+              <option key={type} value={type}>
+                {clinicalResourceCatalog[type].label}
+              </option>
+            ))}
+          </SelectInput>
+          <Button onClick={addResource}>
+            <Plus size={15} aria-hidden />
+            Agregar
+          </Button>
+        </div>
+      </div>
+      {resources.length === 0 ? (
+        <div className="state-box compact-state">Sin recursos agregados en este sandbox.</div>
+      ) : null}
+      {grouped.map((group) =>
+        group.resources.length > 0 ? (
+          <div className="clinical-resource-group" key={group.type}>
+            <h4>{group.label}</h4>
+            {group.resources.map((resource) => (
+              <ClinicalResourceRow
+                key={resource.id}
+                resource={resource}
+                onChange={updateResource}
+                onRemove={() => removeResource(resource.id)}
+              />
+            ))}
+          </div>
+        ) : null,
+      )}
+    </section>
+  );
+}
+
+function ClinicalResourceRow({
+  resource,
+  onChange,
+  onRemove,
+}: {
+  resource: EditableClinicalResource;
+  onChange: (resource: EditableClinicalResource) => void;
+  onRemove: () => void;
+}) {
+  const config = clinicalResourceCatalog[resource.type];
+  const selectedOption =
+    config.options.find((option) => option.code === resource.code) ?? config.options[0];
+  const switchType = (type: EditableClinicalResourceType) => {
+    onChange(createClinicalResource(type, resource.id));
+  };
+  const updateCode = (code: string) => {
+    const nextOption = config.options.find((option) => option.code === code) ?? config.options[0];
+    onChange({
+      ...resource,
+      code,
+      ...(resource.type === 'observation'
+        ? { value: nextOption.defaultValue ?? 0 }
+        : { value: undefined }),
+    });
+  };
+
+  return (
+    <article className="clinical-resource-row">
+      <Field label="Tipo">
+        <SelectInput
+          value={resource.type}
+          onChange={(event) => switchType(event.target.value as EditableClinicalResourceType)}
+        >
+          {clinicalResourceTypes.map((type) => (
+            <option key={type} value={type}>
+              {clinicalResourceCatalog[type].label}
+            </option>
+          ))}
+        </SelectInput>
+      </Field>
+      <Field label="Opcion">
+        <SelectInput value={resource.code} onChange={(event) => updateCode(event.target.value)}>
+          {config.options.map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.label}
+            </option>
+          ))}
+        </SelectInput>
+      </Field>
+      <Field label="Estado">
+        <SelectInput
+          value={resource.status ?? config.statuses[0]?.value}
+          onChange={(event) => onChange({ ...resource, status: event.target.value })}
+        >
+          {config.statuses.map((status) => (
+            <option key={status.value} value={status.value}>
+              {status.label}
+            </option>
+          ))}
+        </SelectInput>
+      </Field>
+      <Field label="Fecha">
+        <TextInput
+          type="date"
+          value={resource.date ?? todayInput()}
+          onChange={(event) => onChange({ ...resource, date: event.target.value })}
+        />
+      </Field>
+      {resource.type === 'observation' ? (
+        <Field label={`Valor${selectedOption?.unit ? ` (${selectedOption.unit})` : ''}`}>
+          <TextInput
+            type="number"
+            inputMode="decimal"
+            min={selectedOption?.min}
+            max={selectedOption?.max}
+            step={selectedOption?.step ?? 1}
+            value={numericInput(resource.value ?? selectedOption?.defaultValue)}
+            onChange={(event) =>
+              onChange({ ...resource, value: optionalNumber(event.target.value) })
+            }
+          />
+        </Field>
+      ) : null}
+      <Button variant="ghost" onClick={onRemove} className="clinical-resource-remove">
+        <Trash2 size={15} aria-hidden />
+        Eliminar
+      </Button>
+    </article>
+  );
+}
+
+function createClinicalResource(
+  type: EditableClinicalResourceType,
+  id = `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+): EditableClinicalResource {
+  const config = clinicalResourceCatalog[type];
+  const option = config.options[0];
+  return {
+    id,
+    type,
+    code: option.code,
+    status: config.statuses[0]?.value,
+    date: todayInput(),
+    ...(type === 'observation' ? { value: option.defaultValue ?? 0 } : {}),
+  };
+}
+
+function todayInput(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function maxCardSeverity(cards: CdsCard[]): PatientDetail['cdsStatus'] {

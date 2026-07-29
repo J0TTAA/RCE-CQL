@@ -214,23 +214,23 @@ Gate `M3`: `patient-view` produce cards dinamicas desde CQL ejecutado en HAPI.
 
 Objetivo: permitir modificar pacientes y observar cambios en las reglas dentro del RCE.
 
-| ID        | Tarea/entregable                                                | Dependencias         | Requisitos                                   | Tamano | Estado |
-| --------- | --------------------------------------------------------------- | -------------------- | -------------------------------------------- | ------ | ------ |
-| TASK-6.1  | Implementar busqueda y listado de pacientes.                    | 2.2                  | REQ-F-025                                    | M      | TODO   |
-| TASK-6.2  | Implementar ficha agregada y queries relacionadas.              | 6.1                  | REQ-F-026                                    | L      | TODO   |
-| TASK-6.3  | Implementar allowlist y actualizacion con `$validate`/ETag.     | 2.3, 2.4, 6.2        | REQ-F-027, REQ-F-028                         | L      | TODO   |
-| TASK-6.4  | Implementar transaction clinica multi-recurso.                  | 6.3                  | REQ-F-029                                    | M      | TODO   |
-| TASK-6.5  | Implementar ClinicalDataChanged y reevaluacion sincrona.        | 6.3, 5.4             | REQ-F-030, REQ-F-031, REQ-F-042              | L      | TODO   |
-| TASK-6.6  | Implementar validacion y aplicacion idempotente de sugerencias. | 6.3, 6.4, 3.11, 5.5  | REQ-F-038, REQ-F-039, REQ-F-040, AC-008      | L      | TODO   |
-| TASK-6.7  | Crear SPA React/Vite y cliente tipado de API.                   | 1.1, 1.7             | REQ-I-001, REQ-I-005                         | M      | TODO   |
-| TASK-6.8  | Implementar catalogo de reglas y estados visuales.              | 6.7, 3.8             | REQ-F-017, REQ-NF-020                        | M      | TODO   |
-| TASK-6.9  | Integrar Monaco, metadata, guardado y markers.                  | 6.7, 4.5             | REQ-F-002, REQ-F-004 a REQ-F-007, REQ-NF-018 | L      | TODO   |
-| TASK-6.10 | Implementar ElmViewer y RuleTestPanel.                          | 6.9, 5.3             | REQ-F-007, REQ-F-018 a REQ-F-021             | M      | TODO   |
-| TASK-6.11 | Implementar PatientChart y formularios clinicos.                | 6.2 a 6.5, 6.7, 6.14 | REQ-F-025 a REQ-F-031, REQ-D-011             | L      | REVIEW |
-| TASK-6.12 | Implementar CdsCardList y confirmacion de sugerencias.          | 5.5, 6.6, 6.7        | REQ-F-034 a REQ-F-040                        | L      | TODO   |
-| TASK-6.13 | Crear pacientes y reglas sinteticas de demostracion.            | 6.11, 4.7            | REQ-D-007, AC-004, AC-005                    | L      | TODO   |
-| TASK-6.14 | Implementar copy-on-write de pacientes base por sandbox.        | 6.2, 2.11            | REQ-D-011, REQ-F-052, REQ-F-053              | L      | REVIEW |
-| TASK-6.15 | Mostrar sesion anonima y reinicio de sandbox en la UI.          | 6.7, 7.1             | REQ-F-051, REQ-F-054, REQ-I-007              | M      | TODO   |
+| ID        | Tarea/entregable                                                                  | Dependencias         | Requisitos                                   | Tamano | Estado |
+| --------- | --------------------------------------------------------------------------------- | -------------------- | -------------------------------------------- | ------ | ------ |
+| TASK-6.1  | Implementar busqueda y listado de pacientes.                                      | 2.2                  | REQ-F-025                                    | M      | TODO   |
+| TASK-6.2  | Implementar ficha agregada y queries relacionadas.                                | 6.1                  | REQ-F-026                                    | L      | TODO   |
+| TASK-6.3  | Implementar allowlist y actualizacion con `$validate`/ETag.                       | 2.3, 2.4, 6.2        | REQ-F-027, REQ-F-028                         | L      | TODO   |
+| TASK-6.4  | Implementar transaction clinica multi-recurso.                                    | 6.3                  | REQ-F-029                                    | M      | TODO   |
+| TASK-6.5  | Implementar ClinicalDataChanged y reevaluacion sincrona.                          | 6.3, 5.4             | REQ-F-030, REQ-F-031, REQ-F-042              | L      | TODO   |
+| TASK-6.6  | Implementar validacion y aplicacion idempotente de sugerencias.                   | 6.3, 6.4, 3.11, 5.5  | REQ-F-038, REQ-F-039, REQ-F-040, AC-008      | L      | TODO   |
+| TASK-6.7  | Crear SPA React/Vite y cliente tipado de API.                                     | 1.1, 1.7             | REQ-I-001, REQ-I-005                         | M      | TODO   |
+| TASK-6.8  | Implementar catalogo de reglas y estados visuales.                                | 6.7, 3.8             | REQ-F-017, REQ-NF-020                        | M      | TODO   |
+| TASK-6.9  | Integrar Monaco, metadata, guardado y markers.                                    | 6.7, 4.5             | REQ-F-002, REQ-F-004 a REQ-F-007, REQ-NF-018 | L      | TODO   |
+| TASK-6.10 | Implementar ElmViewer y RuleTestPanel.                                            | 6.9, 5.3             | REQ-F-007, REQ-F-018 a REQ-F-021             | M      | TODO   |
+| TASK-6.11 | Implementar PatientChart, formularios clinicos y CRUD guiado de recursos sandbox. | 6.2 a 6.5, 6.7, 6.14 | REQ-F-025 a REQ-F-031, REQ-D-011             | L      | REVIEW |
+| TASK-6.12 | Implementar CdsCardList y confirmacion de sugerencias.                            | 5.5, 6.6, 6.7        | REQ-F-034 a REQ-F-040                        | L      | TODO   |
+| TASK-6.13 | Crear pacientes y reglas sinteticas de demostracion.                              | 6.11, 4.7            | REQ-D-007, AC-004, AC-005                    | L      | TODO   |
+| TASK-6.14 | Implementar copy-on-write de pacientes base por sandbox.                          | 6.2, 2.11            | REQ-D-011, REQ-F-052, REQ-F-053              | L      | REVIEW |
+| TASK-6.15 | Mostrar sesion anonima y reinicio de sandbox en la UI.                            | 6.7, 7.1             | REQ-F-051, REQ-F-054, REQ-I-007              | M      | TODO   |
 
 Gate `M4`: editar un paciente desde la UI hace aparecer o desaparecer una card sin salir del RCE.
 

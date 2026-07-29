@@ -55,6 +55,7 @@ export interface PatientUpdateInput {
   diabetesCondition?: boolean;
   metforminMedication?: boolean;
   encounterType?: PatientDetail['editableClinicalData']['encounterType'];
+  clinicalResources?: PatientDetail['editableClinicalData']['clinicalResources'];
 }
 
 export interface PatientUpdateResult {
@@ -107,10 +108,7 @@ class HttpRceApi implements RceUiApi {
     }
   }
 
-  async setRole(
-    role: SessionContext['role'],
-    teacherPasscode?: string,
-  ): Promise<SessionContext> {
+  async setRole(role: SessionContext['role'], teacherPasscode?: string): Promise<SessionContext> {
     const session = await this.request<SessionContext>('/ui/session/role', {
       method: 'PATCH',
       body: JSON.stringify({ role, teacherPasscode }),
@@ -175,6 +173,7 @@ class HttpRceApi implements RceUiApi {
         diabetesCondition: input.diabetesCondition,
         metforminMedication: input.metforminMedication,
         encounterType: input.encounterType,
+        clinicalResources: input.clinicalResources,
       }),
     });
   }

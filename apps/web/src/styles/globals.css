@@ -1031,6 +1031,84 @@ dd {
   accent-color: var(--color-interactive);
 }
 
+.clinical-resource-editor {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 12px;
+}
+
+.clinical-resource-editor-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.clinical-resource-editor-header h3,
+.clinical-resource-editor-header p,
+.clinical-resource-group h4 {
+  margin: 0;
+}
+
+.clinical-resource-editor-header p {
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.clinical-resource-add {
+  display: flex;
+  min-width: min(100%, 330px);
+  align-items: center;
+  gap: 8px;
+}
+
+.clinical-resource-add .select {
+  flex: 1;
+}
+
+.clinical-resource-group {
+  display: grid;
+  gap: 8px;
+}
+
+.clinical-resource-group h4 {
+  color: var(--color-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.clinical-resource-row {
+  display: grid;
+  grid-template-columns:
+    minmax(130px, 0.8fr) minmax(180px, 1.2fr) minmax(120px, 0.8fr) minmax(140px, 0.8fr)
+    minmax(120px, 0.7fr) auto;
+  gap: 8px;
+  align-items: end;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 10px;
+}
+
+.clinical-resource-row .field {
+  min-width: 0;
+}
+
+.clinical-resource-row .button {
+  min-height: 38px;
+}
+
+.clinical-resource-remove {
+  align-self: end;
+  color: var(--color-critical);
+}
+
 .spin-icon {
   animation: spin 0.85s linear infinite;
 }
@@ -1709,6 +1787,14 @@ dd {
     position: static;
   }
 
+  .clinical-resource-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .clinical-resource-remove {
+    justify-self: start;
+  }
+
   .activity-row {
     grid-template-columns: 40px minmax(0, 1fr) auto;
   }
@@ -1779,6 +1865,15 @@ dd {
 
 @media (max-width: 600px) {
   .toolbar {
+    display: grid;
+  }
+
+  .clinical-resource-add,
+  .clinical-resource-row {
+    grid-template-columns: 1fr;
+  }
+
+  .clinical-resource-add {
     display: grid;
   }
 

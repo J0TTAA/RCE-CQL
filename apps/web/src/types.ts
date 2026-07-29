@@ -6,6 +6,15 @@ export type RuleHook = 'patient-view' | 'order-select' | 'order-sign';
 export type RuleScope = 'sandbox' | 'shared';
 export type PatientGender = 'male' | 'female' | 'other' | 'unknown';
 export type DemoEncounterType = 'none' | 'ambulatory' | 'emergency' | 'inpatient';
+export type EditableClinicalResourceType =
+  | 'condition'
+  | 'observation'
+  | 'medication'
+  | 'allergy'
+  | 'encounter'
+  | 'procedure'
+  | 'immunization'
+  | 'serviceRequest';
 export type Cohort = 'niños' | 'adolescentes' | 'adultos' | 'adultos mayores';
 
 export interface ServicesStatus {
@@ -59,6 +68,47 @@ export interface EncounterItem {
   status: string;
 }
 
+export interface AllergyItem {
+  id: string;
+  display: string;
+  clinicalStatus: string;
+  criticality: string;
+  recordedDate: string;
+}
+
+export interface ProcedureItem {
+  id: string;
+  code: string;
+  display: string;
+  status: string;
+  performedDate: string;
+}
+
+export interface ImmunizationItem {
+  id: string;
+  vaccine: string;
+  status: string;
+  occurrenceDate: string;
+}
+
+export interface ServiceRequestItem {
+  id: string;
+  code: string;
+  display: string;
+  status: string;
+  intent: string;
+  authoredOn: string;
+}
+
+export interface EditableClinicalResource {
+  id: string;
+  type: EditableClinicalResourceType;
+  code: string;
+  status?: string;
+  date?: string;
+  value?: number;
+}
+
 export interface TimelineItem {
   id: string;
   date: string;
@@ -96,11 +146,16 @@ export interface PatientDetail extends PatientSummary {
     diabetesCondition?: boolean;
     metforminMedication?: boolean;
     encounterType?: DemoEncounterType;
+    clinicalResources: EditableClinicalResource[];
   };
   conditions: ClinicalCondition[];
   observations: ClinicalObservation[];
   medications: MedicationItem[];
   encounters: EncounterItem[];
+  allergies: AllergyItem[];
+  procedures: ProcedureItem[];
+  immunizations: ImmunizationItem[];
+  serviceRequests: ServiceRequestItem[];
   timeline: TimelineItem[];
 }
 

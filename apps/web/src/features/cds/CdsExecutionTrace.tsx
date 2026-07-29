@@ -61,7 +61,7 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
     {
       icon: UserRound,
       title: 'Paciente',
-      value: `Patient/${entry.patientId}`,
+      value: `Patient/${shortId(entry.patientId)}`,
       detail: entry.patientName || 'Paciente FHIR',
       variant: 'default',
     },

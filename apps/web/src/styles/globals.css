@@ -359,6 +359,36 @@ dd {
   color: var(--color-muted);
 }
 
+.patient-demographics {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.patient-demographics span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.patient-demographics span + span::before {
+  content: '·';
+  margin-right: 7px;
+  color: var(--color-muted);
+}
+
+.technical-id {
+  max-width: 190px;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .breadcrumbs,
 .rule-meta-line,
 .activity-meta {

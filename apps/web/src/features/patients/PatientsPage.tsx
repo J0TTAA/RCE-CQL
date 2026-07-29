@@ -2,7 +2,7 @@ import { ChevronRight, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
-import { formatDate } from '../../lib/formatters';
+import { formatDate, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
 import type { Cohort, PatientSummary } from '../../types';
 import {
@@ -102,12 +102,13 @@ export function PatientsPage() {
 }
 
 function PatientRow({ patient }: { patient: PatientSummary }) {
+  const technicalId = patient.synId || patient.id;
   return (
     <tr>
       <td>
         <Link to={`/patients/${patient.id}`} className="table-primary-link">
           <strong>{patient.name}</strong>
-          <span>{patient.synId}</span>
+          <span title={`Patient/${patient.id}`}>FHIR {shortId(technicalId)}</span>
         </Link>
       </td>
       <td>

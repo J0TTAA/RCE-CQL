@@ -116,7 +116,7 @@ Tabla:
 
 | Columna             | Comportamiento                                   |
 | ------------------- | ------------------------------------------------ |
-| Paciente            | Nombre sintetico + `SYN-xxxx`                    |
+| Paciente            | Nombre sintetico + identificador FHIR compacto   |
 | Edad                | Numero + cohorte secundaria                      |
 | Sexo                | Texto FHIR administrativo                        |
 | Condiciones activas | Conteo y hasta dos nombres truncados con tooltip |
@@ -131,7 +131,9 @@ target de foco visible.
 
 Cabecera no flotante:
 
-- Nombre sintetico, identificador, edad, fecha de nacimiento y sexo.
+- Nombre sintetico, edad, fecha de nacimiento y sexo como lectura principal.
+- Identificador FHIR compacto como metadata tecnica, con ID completo solo como
+  tooltip o detalle de trazabilidad.
 - Badge `Datos sinteticos`.
 - Badge compacto `Mi sandbox` cuando existan cambios privados del navegador.
 - Acciones: editar dato y reevaluar.

@@ -2,7 +2,7 @@ import { CheckCircle2, ClipboardEdit, RotateCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
-import { formatDate } from '../../lib/formatters';
+import { formatDate, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
 import type { CdsCard, PatientDetail } from '../../types';
 import {
@@ -145,17 +145,23 @@ function PatientHeader({
   onEdit: () => void;
   onRefresh: () => void;
 }) {
+  const technicalId = patient.synId || patient.id;
   return (
     <div className="patient-header">
       <div>
         <div className="breadcrumbs">
           <Link to="/patients">Pacientes</Link>
           <span>/</span>
-          <span>{patient.synId}</span>
+          <span>Ficha clínica</span>
         </div>
         <h1>{patient.name}</h1>
-        <p>
-          {patient.synId} · {patient.age} años · {formatDate(patient.birthDate)} · {patient.sex}
+        <p className="patient-demographics">
+          <span>{patient.age} años</span>
+          <span>{formatDate(patient.birthDate)}</span>
+          <span>{patient.sex}</span>
+          <span className="technical-id" title={`Patient/${patient.id}`}>
+            FHIR {shortId(technicalId)}
+          </span>
         </p>
       </div>
       <div className="header-actions">
@@ -415,7 +421,7 @@ function PatientDataDrawer({
         <div className="state-box compact-state">
           Los cambios quedan como overlay del sandbox y se usan al reevaluar CQL.
         </div>
-        <WriteStage stage={stage} detail={`Patient/${patient.id}`} />
+        <WriteStage stage={stage} detail={`FHIR ${shortId(patient.id)}`} />
       </div>
     </Drawer>
   );

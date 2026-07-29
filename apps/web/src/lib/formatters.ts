@@ -43,5 +43,5 @@ export function formatDate(date?: string | null): string {
 }
 
 export function shortId(value: string): string {
-  return value.length > 10 ? `${value.slice(0, 6)}…${value.slice(-4)}` : value;
+  return value.length > 14 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
 }

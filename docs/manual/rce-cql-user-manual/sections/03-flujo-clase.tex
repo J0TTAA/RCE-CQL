@@ -30,6 +30,25 @@
 \rceScreenshot{05-ficha-paciente.png}{Ficha clinica de un paciente sintetico.}
 \rceScreenshot{06-editar-datos.png}{Drawer para editar datos controlados del paciente.}
 
+\subsection{Lectura rapida de la ficha}
+
+En la ficha, el alumno debe mirar primero el nombre, edad, sexo y fecha de
+nacimiento. Los identificadores FHIR aparecen compactos porque son datos
+tecnicos. Sirven para pruebas por terminal o trazabilidad CDS Hooks, pero no son
+el foco de la lectura clinica.
+
+Las pestanas permiten separar los hechos clinicos:
+
+\begin{itemize}
+  \item \textbf{Condiciones}: problemas o diagnosticos.
+  \item \textbf{Observaciones}: laboratorios y signos vitales.
+  \item \textbf{Medicamentos}: indicaciones u ordenes de medicamentos.
+  \item \textbf{Encuentros}: atenciones o visitas registradas.
+\end{itemize}
+
+Cuando una regla CQL se ejecuta, el backend arma un bundle FHIR efectivo con
+estos recursos y con los cambios privados del sandbox del alumno.
+
 \subsection{Que debe explicar el docente}
 
 El punto importante no es que la card aparezca por magia, sino mostrar la cadena:

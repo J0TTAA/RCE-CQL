@@ -12,7 +12,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link, useRouter } from '../../app/router';
-import { severityLabel } from '../../lib/formatters';
+import { severityLabel, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
 import type { ClinicalRule, Diagnostic, PatientSummary, RuleTestResult } from '../../types';
 import {
@@ -468,16 +468,20 @@ function TestPanel({
         >
           {patients.map((candidate) => (
             <option key={candidate.id} value={candidate.id}>
-              {candidate.name} · {candidate.synId}
+              {candidate.name} · {candidate.age} años · FHIR{' '}
+              {shortId(candidate.synId || candidate.id)}
             </option>
           ))}
         </SelectInput>
       </Field>
       {patient ? (
         <div className="patient-mini">
-          <strong>{patient.synId}</strong>
+          <strong>{patient.name}</strong>
           <span>
             {patient.age} años · {patient.cohort}
+          </span>
+          <span className="technical-id" title={`Patient/${patient.id}`}>
+            FHIR {shortId(patient.synId || patient.id)}
           </span>
           <SeverityBadge severity={patient.cdsStatus} />
         </div>

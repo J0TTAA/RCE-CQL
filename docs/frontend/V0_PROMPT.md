@@ -135,9 +135,9 @@ WORKSPACE CQL
 - ELM usa Monaco JSON read-only y solo se habilita tras resultado mock valido.
 - Probar permite elegir paciente y muestra Aplica/No aplica, cards, recursos
   considerados, warnings y correlationId.
-- Alumno no puede Publicar ni activar. Muestra control deshabilitado con tooltip
-  "Solo docentes". Docente puede abrir dialog de publicacion que resume version,
-  canonical y artefactos Library/PlanDefinition.
+- Alumno puede publicar y activar reglas solo dentro de su sandbox. Docente,
+  despues de ingresar clave docente, puede publicar reglas compartidas del aula.
+  El dialog de publicacion resume version, alcance y artefactos Library/ELM.
 
 CARDS CDS
 - Disena cards compactas individuales, no una seccion llena de cards decorativas.

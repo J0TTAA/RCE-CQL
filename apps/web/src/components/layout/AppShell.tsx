@@ -134,8 +134,30 @@ function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
       return;
     }
     setResetting(true);
-    await resetSandbox();
-    setResetting(false);
+    try {
+      await resetSandbox();
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const switchRole = async (candidate: Role) => {
+    if (candidate === role) {
+      return;
+    }
+    if (candidate === 'teacher') {
+      const teacherPasscode = window.prompt('Clave docente');
+      if (!teacherPasscode) {
+        return;
+      }
+      try {
+        await setRole(candidate, teacherPasscode);
+      } catch (error) {
+        window.alert(error instanceof Error ? error.message : 'No se pudo activar modo docente.');
+      }
+      return;
+    }
+    await setRole(candidate);
   };
 
   return (
@@ -153,7 +175,7 @@ function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
             <button
               key={candidate}
               className={role === candidate ? 'is-selected' : ''}
-              onClick={() => setRole(candidate)}
+              onClick={() => switchRole(candidate)}
               type="button"
             >
               {roleLabel(candidate)}

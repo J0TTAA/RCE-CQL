@@ -14,7 +14,7 @@ interface RceContextValue {
   api: RceUiApi;
   session: SessionContext | null;
   role: Role;
-  setRole: (role: Role) => Promise<void>;
+  setRole: (role: Role, teacherPasscode?: string) => Promise<void>;
   services: ServicesStatus;
   refreshServices: () => Promise<void>;
   resetSandbox: () => Promise<void>;
@@ -39,8 +39,8 @@ export function RceProvider({ children }: { children: ReactNode }) {
     refreshServices();
   }, [refreshServices]);
 
-  const setRole = useCallback(async (role: Role) => {
-    const next = await api.setRole(role);
+  const setRole = useCallback(async (role: Role, teacherPasscode?: string) => {
+    const next = await api.setRole(role, teacherPasscode);
     setSession(next);
   }, []);
 

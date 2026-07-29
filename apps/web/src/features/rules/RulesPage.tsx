@@ -173,7 +173,7 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
                       <Badge tone={rule.activation ? 'success' : 'neutral'}>
                         {rule.activation ? 'Activa' : 'Inactiva'}
                       </Badge>
-                      {role === 'teacher' && rule.lifecycle === 'published' ? (
+                      {canToggleRuleActivation(role, rule) ? (
                         <Button
                           variant="ghost"
                           onClick={() => toggleActivation(rule)}
@@ -246,7 +246,7 @@ function RuleActionsDialog({
   if (!rule) {
     return null;
   }
-  const canToggleActivation = role === 'teacher' && rule.lifecycle === 'published';
+  const canToggleActivation = canToggleRuleActivation(role, rule);
   const activationLabel = rule.activation ? 'Desactivar regla' : 'Activar regla';
   const ActivationIcon = rule.activation ? PowerOff : Power;
 
@@ -286,7 +286,9 @@ function RuleActionsDialog({
             onClick={() => onToggleActivation(rule)}
             disabled={!canToggleActivation || busy}
             title={
-              !canToggleActivation ? 'Disponible solo para docentes con reglas publicadas' : undefined
+              !canToggleActivation
+                ? 'Disponible para reglas publicadas de tu sandbox o compartidas docentes'
+                : undefined
             }
           >
             <ActivationIcon size={16} aria-hidden />
@@ -313,6 +315,10 @@ function RuleActionsDialog({
       </div>
     </Modal>
   );
+}
+
+function canToggleRuleActivation(role: Role, rule: ClinicalRule): boolean {
+  return rule.lifecycle === 'published' && (role === 'teacher' || rule.scope === 'sandbox');
 }
 
 function defaultCql(name: string): string {

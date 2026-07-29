@@ -115,6 +115,31 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
         </span>
       </header>
 
+      <div className="cds-trace-teaching">
+        <h4>Que paso en esta ejecucion</h4>
+        <ol>
+          <li>
+            El RCE disparo el hook <code>{entry.hook}</code> al abrir o reevaluar la ficha.
+          </li>
+          <li>
+            Nest resolvio el paciente, el sandbox <strong>{sandboxLabel}</strong> y los cambios
+            privados de este navegador.
+          </li>
+          <li>
+            El backend preparo un request CDS Hooks con <code>hook</code>,{' '}
+            <code>hookInstance</code>, <code>context.patientId</code> y recursos FHIR.
+          </li>
+          <li>Las reglas CQL activas se evaluaron contra el bundle FHIR efectivo.</li>
+          <li>
+            La respuesta volvio como cards:{' '}
+            {entry.cardsCount === 0
+              ? 'no hubo alertas para mostrar'
+              : getCardsLabel(entry.cardsCount, entry.result)}
+            .
+          </li>
+        </ol>
+      </div>
+
       <div className="cds-trace-flow" role="list" aria-label="Flujo de ejecución CDS Hooks">
         {nodes.map((node, index) => (
           <div className="cds-trace-flow-item" key={node.title} role="listitem">

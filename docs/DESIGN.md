@@ -108,6 +108,7 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-017 | Cache corto para listado de pacientes base         | Evita llamadas N+1 a `Patient/$everything` y reduce 503 en HAPI local durante clases.                                            | El listado usa TTL breve e indices de Condition/Encounter; la ficha y la evaluacion CQL siguen leyendo datos vigentes.        |
 | ADR-018 | Observaciones pedagogicas como overlay FHIR        | Edad sola no demuestra reglas clinicas compuestas; se necesitan signos vitales y laboratorio editables sin contaminar HAPI base. | El overlay `Basic` puede guardar valores controlados y Nest los materializa como `Observation` FHIR R4 en el bundle efectivo. |
 | ADR-019 | Facade CDS Hooks sobre evaluacion existente        | El RCE debe ser invocable por clientes CDS Hooks sin duplicar el motor CQL ni el acceso FHIR.                                    | `CdsHooksModule` expone discovery y servicios estables, y delega evaluacion al mismo flujo sandbox usado por la UI.           |
+| ADR-020 | Edicion clinica guiada por allowlist FHIR          | Las reglas libres CQL necesitan variar mas que edad/presion, pero un editor FHIR crudo generaria errores de alumno y recursos invalidos. | La UI expone selects, checks y numeros validados; Nest guarda overlays `Basic` y materializa `Patient`, `Observation`, `Condition`, `MedicationRequest` y `Encounter` en el bundle efectivo del sandbox. |
 
 ## 7. Vista de contexto
 
@@ -342,10 +343,17 @@ Estrategia de pacientes:
   sandbox con los campos modificados.
 - Las lecturas posteriores aplican el overlay sobre el bundle base obtenido desde
   `Patient/$everything`.
-- La primera lista editable incluye fecha de nacimiento, presion sistolica,
-  presion diastolica y HbA1c. Las presiones se materializan como Observations
-  LOINC `8480-6` y `8462-4` con unidad UCUM `mm[Hg]`; HbA1c se materializa como
-  LOINC `4548-4` con unidad `%`.
+- La lista editable guiada incluye fecha de nacimiento, sexo administrativo,
+  presion sistolica, presion diastolica, HbA1c, glucosa en ayunas, LDL, IMC,
+  peso, talla, condicion diabetes, medicamento metformina y tipo de encuentro.
+  La UI evita texto libre cuando hay elecciones clinicas cerradas.
+- Las presiones se materializan como Observations LOINC `8480-6` y `8462-4` con
+  unidad UCUM `mm[Hg]`; HbA1c como LOINC `4548-4` con `%`; glucosa y LDL como
+  LOINC `1558-6` y `13457-7` con `mg/dL`; IMC, peso y talla como LOINC
+  `39156-5`, `29463-7` y `8302-2` con unidades UCUM.
+- La condicion diabetes se materializa como `Condition` SNOMED `44054006`;
+  metformina como `MedicationRequest` RxNorm y el encuentro pedagogico como
+  `Encounter` con clase HL7 v3 ActCode (`AMB`, `EMER`, `IMP`).
 - Estas Observations pedagogicas solo existen en el bundle efectivo del sandbox
   y en la ficha agregada; el paciente Synthea base no se sobrescribe.
 - Una edicion nunca actualiza el recurso base ni la copia de otro sandbox.

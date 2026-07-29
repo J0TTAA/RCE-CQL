@@ -4,6 +4,8 @@ export type CdsSeverity = 'info' | 'warning' | 'critical';
 export type Lifecycle = 'draft' | 'validated' | 'published' | 'disabled' | 'retired';
 export type RuleHook = 'patient-view' | 'order-select' | 'order-sign';
 export type RuleScope = 'sandbox' | 'shared';
+export type PatientGender = 'male' | 'female' | 'other' | 'unknown';
+export type DemoEncounterType = 'none' | 'ambulatory' | 'emergency' | 'inpatient';
 export type Cohort = 'niños' | 'adolescentes' | 'adultos' | 'adultos mayores';
 
 export interface ServicesStatus {
@@ -82,9 +84,18 @@ export interface PatientDetail extends PatientSummary {
   birthDate: string;
   editableClinicalData: {
     birthDate: string;
+    gender: PatientGender;
     systolicBloodPressure?: number;
     diastolicBloodPressure?: number;
     hba1c?: number;
+    fastingGlucose?: number;
+    ldlCholesterol?: number;
+    bodyMassIndex?: number;
+    bodyWeight?: number;
+    bodyHeight?: number;
+    diabetesCondition?: boolean;
+    metforminMedication?: boolean;
+    encounterType?: DemoEncounterType;
   };
   conditions: ClinicalCondition[];
   observations: ClinicalObservation[];

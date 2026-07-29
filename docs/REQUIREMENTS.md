@@ -128,7 +128,7 @@ El flujo educativo esperado es:
 | REQ-F-011 | La publicacion DEBE incluir CQL y ELM correspondientes a la misma fuente.                                                        | MUST      | Integracion      |
 | REQ-F-012 | Una version publicada DEBE ser inmutable.                                                                                        | MUST      | E2E              |
 | REQ-F-013 | Editar una regla publicada DEBE producir una version nueva.                                                                      | MUST      | E2E              |
-| REQ-F-014 | El docente DEBE poder habilitar o deshabilitar una version publicada.                                                            | MUST      | E2E              |
+| REQ-F-014 | El docente DEBE poder habilitar o deshabilitar una version compartida publicada; el alumno PUEDE habilitar/deshabilitar una regla publicada limitada a su sandbox. | MUST      | E2E              |
 | REQ-F-015 | Solo una version publicada de una misma regla PUEDE estar habilitada.                                                            | MUST      | Integracion      |
 | REQ-F-016 | El docente DEBE poder retirar una version que ya no deba utilizarse.                                                             | MUST      | E2E              |
 | REQ-F-017 | El sistema DEBE permitir listar y filtrar reglas por estado, hook, nombre y version.                                             | MUST      | API/E2E          |
@@ -180,7 +180,7 @@ El flujo educativo esperado es:
 | REQ-F-043 | El sistema DEBE registrar autor, fecha y recursos afectados al publicar una regla.                                                         | MUST      | Integracion            |
 | REQ-F-044 | El sistema DEBERIA registrar pruebas, evaluaciones y feedback con identificadores de correlacion.                                          | SHOULD    | Integracion            |
 | REQ-F-045 | El rol alumno DEBE poder crear, editar, validar y probar borradores.                                                                       | MUST      | Seguridad/E2E          |
-| REQ-F-046 | Solo el rol docente DEBE poder publicar, habilitar, deshabilitar o retirar reglas.                                                         | MUST      | Seguridad/E2E          |
+| REQ-F-046 | Solo el rol docente DEBE poder publicar, habilitar, deshabilitar o retirar reglas compartidas; el alumno PUEDE publicar y activar reglas privadas de su sandbox. | MUST      | Seguridad/E2E          |
 | REQ-F-047 | El sistema DEBE exponer endpoints separados de liveness y readiness.                                                                       | MUST      | Integracion            |
 | REQ-F-048 | Readiness DEBE comprobar HAPI y CQL Translation Service.                                                                                   | MUST      | Integracion            |
 | REQ-F-049 | Al iniciar, el sistema DEBE comprobar la compatibilidad basica del servidor FHIR y detectar si Clinical Reasoning no esta disponible.      | MUST      | Integracion            |

@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { ForbiddenException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Request, Response } from 'express';
@@ -31,16 +31,33 @@ export class ClassroomSessionService {
     return publicSession(this.ensurePayload(request, response));
   }
 
-  setRole(request: Request, response: Response, role: Role): SessionContext {
+  setRole(
+    request: Request,
+    response: Response,
+    role: Role,
+    teacherPasscode?: string,
+  ): SessionContext {
+    if (role === 'teacher') {
+      this.assertTeacherPasscode(teacherPasscode);
+    }
     const current = this.ensurePayload(request, response);
     const next: SessionPayload = { ...current, role };
     this.writeCookie(response, next);
     return publicSession(next);
   }
 
-  reset(request: Request, response: Response, role?: Role): SessionContext {
+  reset(
+    request: Request,
+    response: Response,
+    role?: Role,
+    teacherPasscode?: string,
+  ): SessionContext {
     const current = this.readSessionCookie(request);
-    const next = this.createPayload(role ?? current?.role ?? 'student');
+    const nextRole = role ?? current?.role ?? 'student';
+    if (nextRole === 'teacher' && current?.role !== 'teacher') {
+      this.assertTeacherPasscode(teacherPasscode);
+    }
+    const next = this.createPayload(nextRole);
     this.writeCookie(response, next);
     return publicSession(next);
   }
@@ -155,6 +172,13 @@ export class ClassroomSessionService {
     return createHmac('sha256', this.config.get('ANONYMOUS_SESSION_SECRET', { infer: true }))
       .update(payloadPart)
       .digest('base64url');
+  }
+
+  private assertTeacherPasscode(teacherPasscode: string | undefined): void {
+    const expected = this.config.get('CLASSROOM_TEACHER_PASSCODE', { infer: true });
+    if (!teacherPasscode || !safeEqual(teacherPasscode, expected)) {
+      throw new ForbiddenException('Clave docente incorrecta.');
+    }
   }
 }
 

@@ -47,6 +47,7 @@ describe('ClassroomSessionService', () => {
       testRequest(sessionCookie(firstResponse)),
       roleResponse.response,
       'teacher',
+      'docente-rce-cql',
     );
     const reloaded = service.resolve(
       testRequest(sessionCookie(roleResponse)),
@@ -67,6 +68,7 @@ describe('ClassroomSessionService', () => {
       testRequest(sessionCookie(firstResponse)),
       roleResponse.response,
       'teacher',
+      'docente-rce-cql',
     );
     const resetResponse = testResponse();
 
@@ -75,6 +77,23 @@ describe('ClassroomSessionService', () => {
     assert.equal(teacher.role, 'teacher');
     assert.equal(reset.role, 'teacher');
     assert.notEqual(reset.sandboxId, first.sandboxId);
+  });
+
+  it('rejects teacher role without the teacher passcode', () => {
+    const service = new ClassroomSessionService(testConfig());
+    const firstResponse = testResponse();
+    service.resolve(testRequest(), firstResponse.response);
+
+    assert.throws(
+      () =>
+        service.setRole(
+          testRequest(sessionCookie(firstResponse)),
+          testResponse().response,
+          'teacher',
+          'incorrecta',
+        ),
+      /Clave docente incorrecta/,
+    );
   });
 });
 

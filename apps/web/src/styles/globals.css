@@ -577,6 +577,15 @@ dd {
   text-align: center;
 }
 
+.success-state {
+  min-height: 44px;
+  border-style: solid;
+  border-color: #9ed4c8;
+  background: #e8f4f3;
+  color: var(--color-interactive);
+  font-weight: 800;
+}
+
 .state-error {
   border-color: #e3b6bb;
   background: #fff4f4;
@@ -1003,6 +1012,35 @@ dd {
   gap: 12px;
 }
 
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 10px 12px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.checkbox-field input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--color-interactive);
+}
+
+.spin-icon {
+  animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .write-stages {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1100,8 +1138,20 @@ dd {
   color: var(--color-warning);
 }
 
-.elm-viewer {
+.elm-ready {
+  display: grid;
+  gap: 10px;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.elm-viewer,
+.elm-ready {
   height: 430px;
+}
+
+.elm-viewer,
+.elm-json-viewer {
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -1326,6 +1376,33 @@ dd {
 .cds-trace-result-none {
   background: var(--color-surface-muted);
   color: var(--color-muted);
+}
+
+.cds-trace-teaching {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-canvas);
+  padding: 12px;
+}
+
+.cds-trace-teaching h4 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.cds-trace-teaching ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cds-trace-teaching code {
+  color: var(--color-text);
 }
 
 .cds-trace-flow {

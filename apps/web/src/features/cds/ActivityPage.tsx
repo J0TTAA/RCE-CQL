@@ -49,7 +49,6 @@ export function ActivityPage() {
           label="Cards"
           value={activity.data?.reduce((total, entry) => total + entry.cardsCount, 0) ?? 0}
         />
-        <SummaryMetric label="Promedio ms" value={averageDuration(activity.data ?? [])} />
         <SummaryMetric
           label="Críticas"
           value={activity.data?.filter((entry) => entry.maxSeverity === 'critical').length ?? 0}
@@ -122,13 +121,6 @@ function SummaryMetric({ label, value }: { label: string; value: number | string
       <strong>{value}</strong>
     </div>
   );
-}
-
-function averageDuration(entries: ActivityEntry[]): string {
-  if (entries.length === 0) {
-    return '0';
-  }
-  return `${Math.round(entries.reduce((total, entry) => total + entry.durationMs, 0) / entries.length)}`;
 }
 
 function ActivityRow({ entry, onOpen }: { entry: ActivityEntry; onOpen: () => void }) {

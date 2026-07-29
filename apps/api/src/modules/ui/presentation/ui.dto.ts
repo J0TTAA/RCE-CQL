@@ -10,10 +10,17 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import type { RuleHook, Severity } from '../application/ui.service';
+import type {
+  DemoEncounterType,
+  PatientGender,
+  RuleHook,
+  Severity,
+} from '../application/ui.service';
 
 const hooks: RuleHook[] = ['patient-view', 'order-select', 'order-sign'];
 const severities: Severity[] = ['info', 'warning', 'critical'];
+const patientGenders: PatientGender[] = ['male', 'female', 'other', 'unknown'];
+const encounterTypes: DemoEncounterType[] = ['none', 'ambulatory', 'emergency', 'inpatient'];
 
 export class RuleMetadataDto {
   @IsString()
@@ -68,6 +75,10 @@ export class UpdatePatientDto {
   birthDate?: string;
 
   @IsOptional()
+  @IsIn(patientGenders)
+  gender?: PatientGender;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber({ maxDecimalPlaces: 0 })
   @Min(40)
@@ -87,6 +98,53 @@ export class UpdatePatientDto {
   @Min(3)
   @Max(18)
   hba1c?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 0 })
+  @Min(40)
+  @Max(600)
+  fastingGlucose?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 0 })
+  @Min(20)
+  @Max(400)
+  ldlCholesterol?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(10)
+  @Max(80)
+  bodyMassIndex?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(2)
+  @Max(300)
+  bodyWeight?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({ maxDecimalPlaces: 1 })
+  @Min(40)
+  @Max(230)
+  bodyHeight?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  diabetesCondition?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  metforminMedication?: boolean;
+
+  @IsOptional()
+  @IsIn(encounterTypes)
+  encounterType?: DemoEncounterType;
 }
 
 export class RuleActivationDto {

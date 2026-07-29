@@ -15,7 +15,6 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import {
   ClassroomSessionService,
-  type Role,
   type SessionContext,
 } from '../../classroom-session/application/classroom-session.service';
 import { UiService } from '../application/ui.service';
@@ -116,25 +115,27 @@ export class UiController {
 
   @Put('rules/:id')
   @ApiOperation({ summary: 'Guardar draft de regla CQL en HAPI' })
-  saveRule(
+  async saveRule(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
     @Param('id') id: string,
     @Body() dto: SaveRuleDto,
   ) {
     const session = this.session(request, response);
+    await this.assertRuleWriteAllowed(id, session);
     return this.ui.saveRule(id, session.sandboxId, dto.cql, dto.metadata);
   }
 
   @Post('rules/:id/validate')
   @ApiOperation({ summary: 'Traducir CQL a ELM y guardar ELM en Library' })
-  validateRule(
+  async validateRule(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
     @Param('id') id: string,
     @Body() dto: ValidateRuleDto,
   ) {
     const session = this.session(request, response);
+    await this.assertRuleWriteAllowed(id, session);
     return this.ui.validateRule(id, session.sandboxId, dto.cql);
   }
 
@@ -152,26 +153,30 @@ export class UiController {
 
   @Post('rules/:id/publish')
   @ApiOperation({ summary: 'Publicar y activar regla para el aula' })
-  publishRule(
+  async publishRule(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
     @Param('id') id: string,
   ) {
     const session = this.session(request, response);
-    assertTeacher(session.role);
-    return this.ui.publishRule(id, session.sandboxId);
+    await this.assertRuleWriteAllowed(id, session);
+    return this.ui.publishRule(
+      id,
+      session.sandboxId,
+      session.role === 'teacher' ? 'shared' : 'sandbox',
+    );
   }
 
   @Patch('rules/:id/activation')
   @ApiOperation({ summary: 'Activar o desactivar una regla publicada' })
-  setRuleActivation(
+  async setRuleActivation(
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
     @Param('id') id: string,
     @Body() dto: RuleActivationDto,
   ) {
     const session = this.session(request, response);
-    assertTeacher(session.role);
+    await this.assertRuleWriteAllowed(id, session);
     return this.ui.setRuleActivation(id, session.sandboxId, dto.enabled);
   }
 
@@ -189,10 +194,11 @@ export class UiController {
   private session(request: Request, response: Response): SessionContext {
     return this.sessions.resolve(request, response);
   }
-}
 
-function assertTeacher(role: Role | undefined): void {
-  if (role !== 'teacher') {
-    throw new ForbiddenException('Solo el rol docente puede publicar o activar reglas.');
+  private async assertRuleWriteAllowed(id: string, session: SessionContext): Promise<void> {
+    const rule = await this.ui.getRule(id, session.sandboxId);
+    if (session.role !== 'teacher' && rule.scope !== 'sandbox') {
+      throw new ForbiddenException('Solo el rol docente puede modificar reglas compartidas.');
+    }
   }
 }

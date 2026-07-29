@@ -454,12 +454,14 @@ visual puede inventar datos clinicos ni consultar HAPI directamente.
 clean -> dirty -> saving -> clean
 dirty -> validating -> validated | invalid
 validated + source change -> dirty + stale ELM
-validated + teacher -> publishing -> published
+validated + publish -> publishing -> published
 ```
 
 - No mostrar validacion exitosa mientras la fuente este dirty.
 - Deshabilitar acciones incompatibles durante requests.
 - No reintentar publicaciones automaticamente.
+- Publicar desde alumno genera alcance sandbox; publicar desde docente con clave
+  genera alcance compartido.
 - Confirmar salida de una regla dirty.
 
 ### 9.2 Cambio clinico

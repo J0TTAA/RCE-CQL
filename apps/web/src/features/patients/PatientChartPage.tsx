@@ -4,7 +4,7 @@ import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
 import { formatDate, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
-import type { CdsCard, PatientDetail } from '../../types';
+import type { CdsCard, DemoEncounterType, PatientDetail } from '../../types';
 import {
   AsyncState,
   Badge,
@@ -12,6 +12,7 @@ import {
   Drawer,
   Field,
   Panel,
+  SelectInput,
   SeverityBadge,
   TextInput,
 } from '../../components/ui/primitives';
@@ -23,23 +24,56 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
   const { api } = useRce();
   const [tab, setTab] = useState<PatientTab>('resumen');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [patientDetail, setPatientDetail] = useState<PatientDetail | null>(null);
+  const [visibleCards, setVisibleCards] = useState<CdsCard[] | null>(null);
+  const [refreshingCards, setRefreshingCards] = useState(false);
   const patient = useAsync(() => api.getPatient(patientId), [patientId]);
-  const cards = useAsync(() => api.getPatientCards(patientId), [patientId, patient.data?.cdsCount]);
+  const cards = useAsync(() => api.getPatientCards(patientId), [patientId]);
 
-  const refreshAll = () => {
-    patient.reload();
-    cards.reload();
+  useEffect(() => {
+    if (patient.data) {
+      setPatientDetail(patient.data);
+    }
+  }, [patient.data]);
+
+  useEffect(() => {
+    if (cards.data) {
+      setVisibleCards(cards.data);
+    }
+  }, [cards.data]);
+
+  const displayedPatient = patientDetail ?? patient.data;
+  const displayedCards = visibleCards ?? cards.data ?? [];
+
+  const refreshCards = async () => {
+    setRefreshingCards(true);
+    try {
+      const nextCards = await api.getPatientCards(patientId);
+      setVisibleCards(nextCards);
+      setPatientDetail((current) =>
+        current
+          ? {
+              ...current,
+              cdsCount: nextCards.length,
+              cdsStatus: maxCardSeverity(nextCards),
+            }
+          : current,
+      );
+    } finally {
+      setRefreshingCards(false);
+    }
   };
 
   return (
     <section className="page">
-      <AsyncState loading={patient.loading} error={patient.error}>
-        {patient.data ? (
+      <AsyncState loading={patient.loading && !displayedPatient} error={patient.error}>
+        {displayedPatient ? (
           <>
             <PatientHeader
-              patient={patient.data}
+              patient={displayedPatient}
               onEdit={() => setDrawerOpen(true)}
-              onRefresh={refreshAll}
+              onRefresh={refreshCards}
+              refreshing={refreshingCards}
             />
             <div className="chart-grid">
               <Panel className="chart-main">
@@ -67,13 +101,13 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                     onClick={() => setTab('cds')}
                     type="button"
                   >
-                    CDS ({cards.data?.length ?? 0})
+                    CDS ({displayedCards.length})
                   </button>
                 </div>
-                {tab === 'resumen' ? <SummaryTab patient={patient.data} /> : null}
+                {tab === 'resumen' ? <SummaryTab patient={displayedPatient} /> : null}
                 {tab === 'condiciones' ? (
                   <ResourceTable
-                    rows={patient.data.conditions.map((item) => [
+                    rows={displayedPatient.conditions.map((item) => [
                       item.display,
                       item.code,
                       item.clinicalStatus,
@@ -84,7 +118,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                 ) : null}
                 {tab === 'observaciones' ? (
                   <ResourceTable
-                    rows={patient.data.observations.map((item) => [
+                    rows={displayedPatient.observations.map((item) => [
                       item.display,
                       `${item.value} ${item.unit}`,
                       item.interpretation,
@@ -95,7 +129,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                 ) : null}
                 {tab === 'medicamentos' ? (
                   <ResourceTable
-                    rows={patient.data.medications.map((item) => [
+                    rows={displayedPatient.medications.map((item) => [
                       item.display,
                       item.dose,
                       item.route,
@@ -106,7 +140,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                 ) : null}
                 {tab === 'encuentros' ? (
                   <ResourceTable
-                    rows={patient.data.encounters.map((item) => [
+                    rows={displayedPatient.encounters.map((item) => [
                       item.type,
                       item.reason,
                       formatDate(item.date),
@@ -115,19 +149,22 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                     headers={['Tipo', 'Motivo', 'Fecha', 'Estado']}
                   />
                 ) : null}
-                {tab === 'cds' ? <CdsRail cards={cards.data ?? []} embedded /> : null}
+                {tab === 'cds' ? <CdsRail cards={displayedCards} embedded /> : null}
               </Panel>
               <aside className="chart-rail">
-                <AsyncState loading={cards.loading} error={cards.error}>
-                  <CdsRail cards={cards.data ?? []} />
+                <AsyncState loading={cards.loading && !visibleCards} error={cards.error}>
+                  <CdsRail cards={displayedCards} />
                 </AsyncState>
               </aside>
             </div>
             <PatientDataDrawer
-              patient={patient.data}
+              patient={displayedPatient}
               open={drawerOpen}
               onClose={() => setDrawerOpen(false)}
-              onUpdated={refreshAll}
+              onUpdated={(result) => {
+                setPatientDetail(result.patient);
+                setVisibleCards(result.cards);
+              }}
             />
           </>
         ) : null}
@@ -140,10 +177,12 @@ function PatientHeader({
   patient,
   onEdit,
   onRefresh,
+  refreshing,
 }: {
   patient: PatientDetail;
   onEdit: () => void;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
+  refreshing: boolean;
 }) {
   const technicalId = patient.synId || patient.id;
   return (
@@ -167,9 +206,9 @@ function PatientHeader({
       <div className="header-actions">
         <Badge tone="info">Datos sintéticos</Badge>
         {patient.sandboxTouched ? <Badge tone="interactive">Mi sandbox</Badge> : null}
-        <Button onClick={onRefresh}>
-          <RotateCw size={15} aria-hidden />
-          Reevaluar
+        <Button onClick={onRefresh} disabled={refreshing}>
+          <RotateCw className={refreshing ? 'spin-icon' : undefined} size={15} aria-hidden />
+          {refreshing ? 'Reevaluando' : 'Reevaluar'}
         </Button>
         <Button variant="primary" onClick={onEdit}>
           <ClipboardEdit size={15} aria-hidden />
@@ -319,10 +358,11 @@ function PatientDataDrawer({
   patient: PatientDetail;
   open: boolean;
   onClose: () => void;
-  onUpdated: () => void;
+  onUpdated: (result: { patient: PatientDetail; cards: CdsCard[] }) => void;
 }) {
   const { api } = useRce();
   const [birthDate, setBirthDate] = useState(patient.editableClinicalData.birthDate);
+  const [gender, setGender] = useState(patient.editableClinicalData.gender);
   const [systolicBloodPressure, setSystolicBloodPressure] = useState(
     numericInput(patient.editableClinicalData.systolicBloodPressure),
   );
@@ -330,15 +370,48 @@ function PatientDataDrawer({
     numericInput(patient.editableClinicalData.diastolicBloodPressure),
   );
   const [hba1c, setHba1c] = useState(numericInput(patient.editableClinicalData.hba1c));
+  const [fastingGlucose, setFastingGlucose] = useState(
+    numericInput(patient.editableClinicalData.fastingGlucose),
+  );
+  const [ldlCholesterol, setLdlCholesterol] = useState(
+    numericInput(patient.editableClinicalData.ldlCholesterol),
+  );
+  const [bodyMassIndex, setBodyMassIndex] = useState(
+    numericInput(patient.editableClinicalData.bodyMassIndex),
+  );
+  const [bodyWeight, setBodyWeight] = useState(
+    numericInput(patient.editableClinicalData.bodyWeight),
+  );
+  const [bodyHeight, setBodyHeight] = useState(
+    numericInput(patient.editableClinicalData.bodyHeight),
+  );
+  const [diabetesCondition, setDiabetesCondition] = useState(
+    Boolean(patient.editableClinicalData.diabetesCondition),
+  );
+  const [metforminMedication, setMetforminMedication] = useState(
+    Boolean(patient.editableClinicalData.metforminMedication),
+  );
+  const [encounterType, setEncounterType] = useState<DemoEncounterType>(
+    patient.editableClinicalData.encounterType ?? 'none',
+  );
   const [stage, setStage] = useState<'idle' | 'validating' | 'saving' | 'reevaluating' | 'updated'>(
     'idle',
   );
 
   useEffect(() => {
     setBirthDate(patient.editableClinicalData.birthDate);
+    setGender(patient.editableClinicalData.gender);
     setSystolicBloodPressure(numericInput(patient.editableClinicalData.systolicBloodPressure));
     setDiastolicBloodPressure(numericInput(patient.editableClinicalData.diastolicBloodPressure));
     setHba1c(numericInput(patient.editableClinicalData.hba1c));
+    setFastingGlucose(numericInput(patient.editableClinicalData.fastingGlucose));
+    setLdlCholesterol(numericInput(patient.editableClinicalData.ldlCholesterol));
+    setBodyMassIndex(numericInput(patient.editableClinicalData.bodyMassIndex));
+    setBodyWeight(numericInput(patient.editableClinicalData.bodyWeight));
+    setBodyHeight(numericInput(patient.editableClinicalData.bodyHeight));
+    setDiabetesCondition(Boolean(patient.editableClinicalData.diabetesCondition));
+    setMetforminMedication(Boolean(patient.editableClinicalData.metforminMedication));
+    setEncounterType(patient.editableClinicalData.encounterType ?? 'none');
     setStage('idle');
   }, [patient.editableClinicalData, open]);
 
@@ -346,17 +419,26 @@ function PatientDataDrawer({
     setStage('validating');
     await new Promise((resolve) => window.setTimeout(resolve, 280));
     setStage('saving');
-    await api.updatePatient({
+    const result = await api.updatePatient({
       patientId: patient.id,
       birthDate,
+      gender,
       systolicBloodPressure: optionalNumber(systolicBloodPressure),
       diastolicBloodPressure: optionalNumber(diastolicBloodPressure),
       hba1c: optionalNumber(hba1c),
+      fastingGlucose: optionalNumber(fastingGlucose),
+      ldlCholesterol: optionalNumber(ldlCholesterol),
+      bodyMassIndex: optionalNumber(bodyMassIndex),
+      bodyWeight: optionalNumber(bodyWeight),
+      bodyHeight: optionalNumber(bodyHeight),
+      diabetesCondition,
+      metforminMedication,
+      encounterType,
     });
     setStage('reevaluating');
     await new Promise((resolve) => window.setTimeout(resolve, 360));
     setStage('updated');
-    onUpdated();
+    onUpdated(result);
   };
 
   return (
@@ -384,6 +466,19 @@ function PatientDataDrawer({
             value={birthDate}
             onChange={(event) => setBirthDate(event.target.value)}
           />
+        </Field>
+        <Field label="Sexo administrativo">
+          <SelectInput
+            value={gender}
+            onChange={(event) =>
+              setGender(event.target.value as PatientDetail['editableClinicalData']['gender'])
+            }
+          >
+            <option value="male">Masculino</option>
+            <option value="female">Femenino</option>
+            <option value="other">Otro</option>
+            <option value="unknown">Desconocido</option>
+          </SelectInput>
         </Field>
         <Field label="Presión sistólica">
           <TextInput
@@ -418,6 +513,90 @@ function PatientDataDrawer({
             onChange={(event) => setHba1c(event.target.value)}
           />
         </Field>
+        <Field label="Glucosa en ayunas">
+          <TextInput
+            type="number"
+            inputMode="numeric"
+            min={40}
+            max={600}
+            step={1}
+            value={fastingGlucose}
+            onChange={(event) => setFastingGlucose(event.target.value)}
+          />
+        </Field>
+        <Field label="LDL">
+          <TextInput
+            type="number"
+            inputMode="numeric"
+            min={20}
+            max={400}
+            step={1}
+            value={ldlCholesterol}
+            onChange={(event) => setLdlCholesterol(event.target.value)}
+          />
+        </Field>
+        <Field label="IMC">
+          <TextInput
+            type="number"
+            inputMode="decimal"
+            min={10}
+            max={80}
+            step={0.1}
+            value={bodyMassIndex}
+            onChange={(event) => setBodyMassIndex(event.target.value)}
+          />
+        </Field>
+        <Field label="Peso">
+          <TextInput
+            type="number"
+            inputMode="decimal"
+            min={2}
+            max={300}
+            step={0.1}
+            value={bodyWeight}
+            onChange={(event) => setBodyWeight(event.target.value)}
+          />
+        </Field>
+        <Field label="Talla">
+          <TextInput
+            type="number"
+            inputMode="decimal"
+            min={40}
+            max={230}
+            step={0.1}
+            value={bodyHeight}
+            onChange={(event) => setBodyHeight(event.target.value)}
+          />
+        </Field>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={diabetesCondition}
+            onChange={(event) => setDiabetesCondition(event.target.checked)}
+          />
+          <span>Condicion activa: diabetes mellitus</span>
+        </label>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={metforminMedication}
+            onChange={(event) => setMetforminMedication(event.target.checked)}
+          />
+          <span>Medicamento activo: metformina</span>
+        </label>
+        <Field label="Encuentro pedagogico">
+          <SelectInput
+            value={encounterType}
+            onChange={(event) =>
+              setEncounterType(event.target.value as DemoEncounterType)
+            }
+          >
+            <option value="none">Sin encuentro generado</option>
+            <option value="ambulatory">Ambulatorio</option>
+            <option value="emergency">Urgencia</option>
+            <option value="inpatient">Hospitalizacion</option>
+          </SelectInput>
+        </Field>
         <div className="state-box compact-state">
           Los cambios quedan como overlay del sandbox y se usan al reevaluar CQL.
         </div>
@@ -437,6 +616,19 @@ function optionalNumber(value: string): number | undefined {
   }
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function maxCardSeverity(cards: CdsCard[]): PatientDetail['cdsStatus'] {
+  if (cards.some((card) => card.severity === 'critical')) {
+    return 'critical';
+  }
+  if (cards.some((card) => card.severity === 'warning')) {
+    return 'warning';
+  }
+  if (cards.some((card) => card.severity === 'info')) {
+    return 'info';
+  }
+  return 'none';
 }
 
 function WriteStage({ stage, detail }: { stage: string; detail?: string }) {

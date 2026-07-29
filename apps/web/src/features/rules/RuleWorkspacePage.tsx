@@ -99,7 +99,14 @@ export function RuleWorkspacePage({
     );
   }, [diagnostics]);
 
-  const canPublish = role === 'teacher' && rule?.lifecycle === 'validated' && !dirty;
+  const canPublish =
+    rule?.lifecycle === 'validated' && !dirty && (role === 'teacher' || rule.scope === 'sandbox');
+  const canWriteRule = Boolean(rule && (role === 'teacher' || rule.scope === 'sandbox'));
+  const expressionOptions = useMemo(
+    () => extractBooleanExpressionCandidates(cql, metadata?.expression),
+    [cql, metadata?.expression],
+  );
+  const publishScopeLabel = role === 'teacher' ? 'Compartida' : 'Mi sandbox';
   const selectedPatientSummary = useMemo(
     () => patients.data?.find((patient) => patient.id === selectedPatient),
     [patients.data, selectedPatient],
@@ -115,6 +122,9 @@ export function RuleWorkspacePage({
     if (!rule || !metadata) {
       return;
     }
+    if (!canWriteRule) {
+      return;
+    }
     setBusy('saving');
     try {
       const saved = await api.saveRule(rule.id, cql, metadata);
@@ -127,6 +137,9 @@ export function RuleWorkspacePage({
 
   const validate = async () => {
     if (!rule) {
+      return;
+    }
+    if (!canWriteRule) {
       return;
     }
     setBusy('validating');
@@ -170,6 +183,9 @@ export function RuleWorkspacePage({
 
   const publish = async () => {
     if (!rule) {
+      return;
+    }
+    if (!canPublish) {
       return;
     }
     setBusy('publishing');
@@ -219,11 +235,19 @@ export function RuleWorkspacePage({
                 </div>
               </div>
               <div className="rule-actions">
-                <Button onClick={save} disabled={!dirty || Boolean(busy)}>
+                <Button
+                  onClick={save}
+                  disabled={!dirty || Boolean(busy) || !canWriteRule}
+                  title={!canWriteRule ? 'Regla compartida de solo lectura para alumnos' : undefined}
+                >
                   <Save size={15} aria-hidden />
                   Guardar
                 </Button>
-                <Button onClick={validate} disabled={Boolean(busy)}>
+                <Button
+                  onClick={validate}
+                  disabled={Boolean(busy) || !canWriteRule}
+                  title={!canWriteRule ? 'Regla compartida de solo lectura para alumnos' : undefined}
+                >
                   <Check size={15} aria-hidden />
                   Validar
                 </Button>
@@ -239,7 +263,7 @@ export function RuleWorkspacePage({
                   variant="primary"
                   onClick={() => setPublishOpen(true)}
                   disabled={!canPublish}
-                  title={role === 'student' ? 'Solo docentes' : undefined}
+                  title={!canPublish ? 'Valida y guarda la regla antes de publicar' : undefined}
                 >
                   <Send size={15} aria-hidden />
                   Publicar
@@ -267,6 +291,7 @@ export function RuleWorkspacePage({
                     automaticLayout: true,
                     tabSize: 2,
                     ariaLabel: 'Editor de código CQL',
+                    readOnly: !canWriteRule,
                   }}
                 />
               </Panel>
@@ -295,7 +320,11 @@ export function RuleWorkspacePage({
                   </button>
                 </div>
                 {tab === 'metadata' ? (
-                  <MetadataForm metadata={metadata} onChange={setMetadata} />
+                  <MetadataForm
+                    metadata={metadata}
+                    expressionOptions={expressionOptions}
+                    onChange={setMetadata}
+                  />
                 ) : null}
                 {tab === 'test' ? (
                   <TestPanel
@@ -365,7 +394,7 @@ export function RuleWorkspacePage({
                 </div>
                 <div>
                   <dt>Alcance</dt>
-                  <dd>Compartida</dd>
+                  <dd>{publishScopeLabel}</dd>
                 </div>
               </dl>
             </Modal>
@@ -378,13 +407,16 @@ export function RuleWorkspacePage({
 
 function MetadataForm({
   metadata,
+  expressionOptions,
   onChange,
 }: {
   metadata: ClinicalRule['metadata'];
+  expressionOptions: string[];
   onChange: (metadata: ClinicalRule['metadata']) => void;
 }) {
   const update = (field: keyof ClinicalRule['metadata'], value: string) =>
     onChange({ ...metadata, [field]: value });
+  const options = expressionOptions.length > 0 ? expressionOptions : [metadata.expression];
   return (
     <div className="metadata-form">
       <Field label="Título">
@@ -410,10 +442,16 @@ function MetadataForm({
         </SelectInput>
       </Field>
       <Field label="Expresión booleana">
-        <TextInput
+        <SelectInput
           value={metadata.expression}
           onChange={(event) => update('expression', event.target.value)}
-        />
+        >
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </SelectInput>
       </Field>
       <Field label="Summary">
         <TextInput
@@ -533,22 +571,43 @@ function ElmPanel({ elm, dirty }: { elm: string | null; dirty: boolean }) {
     return <div className="state-box">Valida la regla para consultar ELM.</div>;
   }
   return (
-    <div className="elm-viewer">
-      <Editor
-        height="100%"
-        language="json"
-        theme="vs"
-        value={elm}
-        options={{
-          readOnly: true,
-          minimap: { enabled: false },
-          fontSize: 12,
-          lineNumbers: 'on',
-          automaticLayout: true,
-          scrollBeyondLastLine: false,
-          ariaLabel: 'ELM JSON de solo lectura',
-        }}
-      />
+    <div className="elm-ready">
+      <div className="state-box success-state">
+        ELM validado. La regla esta lista para publicar.
+      </div>
+      <div className="elm-json-viewer">
+        <Editor
+          height="100%"
+          language="json"
+          theme="vs"
+          value={elm}
+          options={{
+            readOnly: true,
+            minimap: { enabled: false },
+            fontSize: 12,
+            lineNumbers: 'on',
+            automaticLayout: true,
+            scrollBeyondLastLine: false,
+            ariaLabel: 'ELM JSON de solo lectura',
+          }}
+        />
+      </div>
     </div>
   );
+}
+
+function extractBooleanExpressionCandidates(cqlText: string, currentExpression?: string): string[] {
+  const candidates = new Set<string>();
+  const definePattern = /^\s*define\s+(?:"([^"]+)"|([A-Za-z][A-Za-z0-9_]*))\s*:/gm;
+  let match: RegExpExecArray | null;
+  while ((match = definePattern.exec(cqlText)) !== null) {
+    const name = match[1] ?? match[2];
+    if (name) {
+      candidates.add(name);
+    }
+  }
+  if (currentExpression) {
+    candidates.add(currentExpression);
+  }
+  return [...candidates];
 }

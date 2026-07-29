@@ -22,7 +22,7 @@ export class ClassroomSessionController {
     @Res({ passthrough: true }) response: Response,
     @Body() dto: SessionResetDto,
   ) {
-    return this.sessions.reset(request, response, dto.role);
+    return this.sessions.reset(request, response, dto.role, dto.teacherPasscode);
   }
 
   @Patch('role')
@@ -32,7 +32,7 @@ export class ClassroomSessionController {
     @Res({ passthrough: true }) response: Response,
     @Body() dto: SessionRoleDto,
   ) {
-    return this.sessions.setRole(request, response, dto.role);
+    return this.sessions.setRole(request, response, dto.role, dto.teacherPasscode);
   }
 
   @Post('reset')
@@ -42,6 +42,6 @@ export class ClassroomSessionController {
     @Res({ passthrough: true }) response: Response,
     @Body() dto: SessionResetDto,
   ) {
-    return this.sessions.reset(request, response, dto.role);
+    return this.sessions.reset(request, response, dto.role, dto.teacherPasscode);
   }
 }

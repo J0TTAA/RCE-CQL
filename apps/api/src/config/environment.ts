@@ -16,6 +16,7 @@ export interface EnvironmentVariables {
   ANONYMOUS_SESSION_COOKIE_SAMESITE: 'Lax' | 'Strict' | 'None';
   ANONYMOUS_SESSION_TTL_HOURS: number;
   CLASSROOM_DEFAULT_ID: string;
+  CLASSROOM_TEACHER_PASSCODE: string;
 }
 
 const environmentSchema = Joi.object<EnvironmentVariables>({
@@ -46,6 +47,7 @@ const environmentSchema = Joi.object<EnvironmentVariables>({
   CLASSROOM_DEFAULT_ID: Joi.string()
     .pattern(/^[A-Za-z0-9_-]+$/)
     .default('demo-aula'),
+  CLASSROOM_TEACHER_PASSCODE: Joi.string().min(4).default('docente-rce-cql'),
 }).unknown(true);
 
 export function validateEnvironment(config: Record<string, unknown>): EnvironmentVariables {

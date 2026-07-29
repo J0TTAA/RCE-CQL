@@ -43,9 +43,18 @@ export interface ActivityFilters {
 export interface PatientUpdateInput {
   patientId: string;
   birthDate?: string;
+  gender?: PatientDetail['editableClinicalData']['gender'];
   systolicBloodPressure?: number;
   diastolicBloodPressure?: number;
   hba1c?: number;
+  fastingGlucose?: number;
+  ldlCholesterol?: number;
+  bodyMassIndex?: number;
+  bodyWeight?: number;
+  bodyHeight?: number;
+  diabetesCondition?: boolean;
+  metforminMedication?: boolean;
+  encounterType?: PatientDetail['editableClinicalData']['encounterType'];
 }
 
 export interface PatientUpdateResult {
@@ -56,7 +65,7 @@ export interface PatientUpdateResult {
 
 export interface RceUiApi {
   getSession(): Promise<SessionContext>;
-  setRole(role: SessionContext['role']): Promise<SessionContext>;
+  setRole(role: SessionContext['role'], teacherPasscode?: string): Promise<SessionContext>;
   resetSandbox(): Promise<SessionContext>;
   getServicesStatus(): Promise<ServicesStatus>;
   listPatients(filters?: PatientFilters): Promise<PatientSummary[]>;
@@ -98,10 +107,13 @@ class HttpRceApi implements RceUiApi {
     }
   }
 
-  async setRole(role: SessionContext['role']): Promise<SessionContext> {
+  async setRole(
+    role: SessionContext['role'],
+    teacherPasscode?: string,
+  ): Promise<SessionContext> {
     const session = await this.request<SessionContext>('/ui/session/role', {
       method: 'PATCH',
-      body: JSON.stringify({ role }),
+      body: JSON.stringify({ role, teacherPasscode }),
       skipSession: true,
     });
     this.session = session;
@@ -151,9 +163,18 @@ class HttpRceApi implements RceUiApi {
       method: 'PATCH',
       body: JSON.stringify({
         birthDate: input.birthDate,
+        gender: input.gender,
         systolicBloodPressure: input.systolicBloodPressure,
         diastolicBloodPressure: input.diastolicBloodPressure,
         hba1c: input.hba1c,
+        fastingGlucose: input.fastingGlucose,
+        ldlCholesterol: input.ldlCholesterol,
+        bodyMassIndex: input.bodyMassIndex,
+        bodyWeight: input.bodyWeight,
+        bodyHeight: input.bodyHeight,
+        diabetesCondition: input.diabetesCondition,
+        metforminMedication: input.metforminMedication,
+        encounterType: input.encounterType,
       }),
     });
   }

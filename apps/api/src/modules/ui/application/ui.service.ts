@@ -21,17 +21,31 @@ const OVERLAY_CODE = 'patient-overlay';
 const EXT_BASE = 'https://rce-cql.local/fhir/StructureDefinition';
 const LOINC_SYSTEM = 'http://loinc.org';
 const UCUM_SYSTEM = 'http://unitsofmeasure.org';
+const SNOMED_SYSTEM = 'http://snomed.info/sct';
+const RXNORM_SYSTEM = 'http://www.nlm.nih.gov/research/umls/rxnorm';
+const ACT_CODE_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-ActCode';
 
 export type Severity = 'info' | 'warning' | 'critical';
 export type Lifecycle = 'draft' | 'validated' | 'published' | 'disabled' | 'retired';
 export type RuleHook = 'patient-view' | 'order-select' | 'order-sign';
 export type RuleScope = 'sandbox' | 'shared';
+export type PatientGender = 'male' | 'female' | 'other' | 'unknown';
+export type DemoEncounterType = 'none' | 'ambulatory' | 'emergency' | 'inpatient';
 
 export interface EditableClinicalData {
   birthDate: string;
+  gender: PatientGender;
   systolicBloodPressure?: number;
   diastolicBloodPressure?: number;
   hba1c?: number;
+  fastingGlucose?: number;
+  ldlCholesterol?: number;
+  bodyMassIndex?: number;
+  bodyWeight?: number;
+  bodyHeight?: number;
+  diabetesCondition?: boolean;
+  metforminMedication?: boolean;
+  encounterType?: DemoEncounterType;
 }
 
 export interface RuleMetadata {
@@ -154,20 +168,46 @@ export interface ActivityEntry {
 
 interface PatientOverlay {
   birthDate?: string;
+  gender?: PatientGender;
   observations?: ObservationOverlay;
+  conditions?: ConditionOverlay;
+  medications?: MedicationOverlay;
+  encounterType?: DemoEncounterType;
 }
 
 interface ObservationOverlay {
   systolicBloodPressure?: number;
   diastolicBloodPressure?: number;
   hba1c?: number;
+  fastingGlucose?: number;
+  ldlCholesterol?: number;
+  bodyMassIndex?: number;
+  bodyWeight?: number;
+  bodyHeight?: number;
+}
+
+interface ConditionOverlay {
+  diabetes?: boolean;
+}
+
+interface MedicationOverlay {
+  metformin?: boolean;
 }
 
 export interface PatientClinicalUpdate {
   birthDate?: string;
+  gender?: PatientGender;
   systolicBloodPressure?: number;
   diastolicBloodPressure?: number;
   hba1c?: number;
+  fastingGlucose?: number;
+  ldlCholesterol?: number;
+  bodyMassIndex?: number;
+  bodyWeight?: number;
+  bodyHeight?: number;
+  diabetesCondition?: boolean;
+  metforminMedication?: boolean;
+  encounterType?: DemoEncounterType;
 }
 
 interface PatientClinicalSummary {
@@ -249,7 +289,7 @@ export class UiService {
       hook: 'patient-view',
       persistActivity: false,
     });
-    return this.patientBundleToDetail(patient, bundle, cards.cards, Boolean(overlay.birthDate));
+    return this.patientBundleToDetail(patient, bundle, cards.cards, hasPatientOverlay(overlay));
   }
 
   async updatePatientClinicalData(
@@ -426,13 +466,17 @@ export class UiService {
     return { valid: true, diagnostics: [], elm };
   }
 
-  async publishRule(id: string, sandboxId: string): Promise<ClinicalRule> {
+  async publishRule(
+    id: string,
+    sandboxId: string,
+    scope: RuleScope = 'sandbox',
+  ): Promise<ClinicalRule> {
     const current = await this.getRule(id, sandboxId);
     const next = {
       ...current,
       lifecycle: 'published' as Lifecycle,
       activation: true,
-      scope: 'shared' as RuleScope,
+      scope,
       modified: today(),
     };
     const saved = await this.fhir.update('Library', id, this.ruleToLibrary(next, sandboxId));
@@ -537,7 +581,11 @@ export class UiService {
   ): Promise<PatientSummary> {
     const patientId = String(patient.id ?? '');
     const overlay = await this.getPatientOverlay(patientId, sandboxId);
-    const merged = overlay.birthDate ? { ...patient, birthDate: overlay.birthDate } : patient;
+    const merged = {
+      ...patient,
+      ...(overlay.birthDate ? { birthDate: overlay.birthDate } : {}),
+      ...(overlay.gender ? { gender: overlay.gender } : {}),
+    };
     return {
       id: String(merged.id ?? ''),
       synId: patientIdentifier(merged),
@@ -619,7 +667,16 @@ export class UiService {
         patient.birthDate = overlay.birthDate;
       }
     }
+    if (overlay.gender) {
+      const patient = firstResourceOfType(bundle, 'Patient');
+      if (patient) {
+        patient.gender = overlay.gender;
+      }
+    }
     applyObservationOverlay(bundle, patientId, overlay.observations);
+    applyConditionOverlay(bundle, patientId, overlay.conditions);
+    applyMedicationOverlay(bundle, patientId, overlay.medications);
+    applyEncounterOverlay(bundle, patientId, overlay.encounterType);
     return bundle;
   }
 
@@ -633,9 +690,15 @@ export class UiService {
     }
     return {
       birthDate: extensionValueString(basic, 'patient-birthDate'),
+      gender: normalizeGender(extensionValueString(basic, 'patient-gender')),
       observations: observationOverlayFromJson(
         extensionValueString(basic, 'patient-observations-json'),
       ),
+      conditions: conditionOverlayFromJson(extensionValueString(basic, 'patient-conditions-json')),
+      medications: medicationOverlayFromJson(
+        extensionValueString(basic, 'patient-medications-json'),
+      ),
+      encounterType: normalizeEncounterType(extensionValueString(basic, 'patient-encounter-type')),
     };
   }
 
@@ -645,6 +708,9 @@ export class UiService {
     overlay: PatientOverlay,
   ): Promise<void> {
     const observations = normalizeObservationOverlay(overlay.observations);
+    const conditions = normalizeConditionOverlay(overlay.conditions);
+    const medications = normalizeMedicationOverlay(overlay.medications);
+    const encounterType = normalizeEncounterType(overlay.encounterType);
     await this.fhir.update('Basic', overlayId(patientId, sandboxId), {
       resourceType: 'Basic',
       id: overlayId(patientId, sandboxId),
@@ -656,6 +722,9 @@ export class UiService {
         ...(overlay.birthDate
           ? [{ url: `${EXT_BASE}/patient-birthDate`, valueDate: overlay.birthDate }]
           : []),
+        ...(overlay.gender
+          ? [{ url: `${EXT_BASE}/patient-gender`, valueCode: overlay.gender }]
+          : []),
         ...(hasObservationOverlay(observations)
           ? [
               {
@@ -663,6 +732,25 @@ export class UiService {
                 valueString: JSON.stringify(observations),
               },
             ]
+          : []),
+        ...(hasConditionOverlay(conditions)
+          ? [
+              {
+                url: `${EXT_BASE}/patient-conditions-json`,
+                valueString: JSON.stringify(conditions),
+              },
+            ]
+          : []),
+        ...(hasMedicationOverlay(medications)
+          ? [
+              {
+                url: `${EXT_BASE}/patient-medications-json`,
+                valueString: JSON.stringify(medications),
+              },
+            ]
+          : []),
+        ...(encounterType && encounterType !== 'none'
+          ? [{ url: `${EXT_BASE}/patient-encounter-type`, valueCode: encounterType }]
           : []),
       ],
     });
@@ -738,6 +826,7 @@ export class UiService {
       birthDate,
       editableClinicalData: {
         birthDate,
+        gender: normalizeGender(stringField(patient, 'gender')) ?? 'unknown',
         systolicBloodPressure: observationNumberValue(bundle, 'systolic-blood-pressure', '8480-6'),
         diastolicBloodPressure: observationNumberValue(
           bundle,
@@ -745,6 +834,19 @@ export class UiService {
           '8462-4',
         ),
         hba1c: observationNumberValue(bundle, 'hba1c', '4548-4'),
+        fastingGlucose: observationNumberValue(bundle, 'fasting-glucose', '1558-6'),
+        ldlCholesterol: observationNumberValue(bundle, 'ldl-cholesterol', '13457-7'),
+        bodyMassIndex: observationNumberValue(bundle, 'body-mass-index', '39156-5'),
+        bodyWeight: observationNumberValue(bundle, 'body-weight', '29463-7'),
+        bodyHeight: observationNumberValue(bundle, 'body-height', '8302-2'),
+        diabetesCondition: hasClinicalCoding(bundle, 'Condition', SNOMED_SYSTEM, '44054006'),
+        metforminMedication: hasClinicalCoding(
+          bundle,
+          'MedicationRequest',
+          RXNORM_SYSTEM,
+          '860975',
+        ),
+        encounterType: encounterTypeFromBundle(bundle),
       },
       conditions,
       observations,
@@ -1104,11 +1206,71 @@ function applyObservationOverlay(
           category: 'laboratory',
         })
       : null,
+    normalized.fastingGlucose !== undefined
+      ? quantityObservation({
+          id: observationId('fasting-glucose'),
+          patientId,
+          code: '1558-6',
+          display: 'Glucose [Mass/volume] in Serum or Plasma --fasting',
+          value: normalized.fastingGlucose,
+          unit: 'mg/dL',
+          unitCode: 'mg/dL',
+          category: 'laboratory',
+        })
+      : null,
+    normalized.ldlCholesterol !== undefined
+      ? quantityObservation({
+          id: observationId('ldl-cholesterol'),
+          patientId,
+          code: '13457-7',
+          display: 'Cholesterol in LDL [Mass/volume] in Serum or Plasma',
+          value: normalized.ldlCholesterol,
+          unit: 'mg/dL',
+          unitCode: 'mg/dL',
+          category: 'laboratory',
+        })
+      : null,
+    normalized.bodyMassIndex !== undefined
+      ? quantityObservation({
+          id: observationId('body-mass-index'),
+          patientId,
+          code: '39156-5',
+          display: 'Body mass index (BMI) [Ratio]',
+          value: normalized.bodyMassIndex,
+          unit: 'kg/m2',
+          unitCode: 'kg/m2',
+          category: 'vital-signs',
+        })
+      : null,
+    normalized.bodyWeight !== undefined
+      ? quantityObservation({
+          id: observationId('body-weight'),
+          patientId,
+          code: '29463-7',
+          display: 'Body weight',
+          value: normalized.bodyWeight,
+          unit: 'kg',
+          unitCode: 'kg',
+          category: 'vital-signs',
+        })
+      : null,
+    normalized.bodyHeight !== undefined
+      ? quantityObservation({
+          id: observationId('body-height'),
+          patientId,
+          code: '8302-2',
+          display: 'Body height',
+          value: normalized.bodyHeight,
+          unit: 'cm',
+          unitCode: 'cm',
+          category: 'vital-signs',
+        })
+      : null,
   ].filter((resource): resource is FhirResource => Boolean(resource));
   const overlayIds = new Set(generated.map((resource) => resource.id));
   bundle.entry = [
-    ...(bundle.entry ?? []).filter((entry) => !overlayIds.has(entry.resource?.id)),
     ...generated.map((resource) => ({ resource })),
+    ...(bundle.entry ?? []).filter((entry) => !overlayIds.has(entry.resource?.id)),
   ];
 }
 
@@ -1152,6 +1314,149 @@ function quantityObservation(input: {
       code: input.unitCode,
     },
   };
+}
+
+function applyConditionOverlay(
+  bundle: FhirBundle,
+  patientId: string,
+  conditions: ConditionOverlay | undefined,
+): void {
+  const normalized = normalizeConditionOverlay(conditions);
+  const generatedIds = new Set([conditionId('diabetes')]);
+  const generated = normalized.diabetes
+    ? [
+        {
+          resourceType: 'Condition',
+          id: conditionId('diabetes'),
+          meta: { tag: [{ system: SANDBOX_TAG_SYSTEM, code: 'bundle-overlay' }] },
+          clinicalStatus: {
+            coding: [
+              {
+                system: 'http://terminology.hl7.org/CodeSystem/condition-clinical',
+                code: 'active',
+                display: 'Active',
+              },
+            ],
+          },
+          verificationStatus: {
+            coding: [
+              {
+                system: 'http://terminology.hl7.org/CodeSystem/condition-ver-status',
+                code: 'confirmed',
+                display: 'Confirmed',
+              },
+            ],
+          },
+          category: [
+            {
+              coding: [
+                {
+                  system: 'http://terminology.hl7.org/CodeSystem/condition-category',
+                  code: 'problem-list-item',
+                  display: 'Problem List Item',
+                },
+              ],
+            },
+          ],
+          code: {
+            coding: [{ system: SNOMED_SYSTEM, code: '44054006', display: 'Diabetes mellitus' }],
+            text: 'Diabetes mellitus',
+          },
+          subject: { reference: `Patient/${patientId}` },
+          onsetDateTime: new Date().toISOString(),
+        } satisfies FhirResource,
+      ]
+    : [];
+  bundle.entry = [
+    ...generated.map((resource) => ({ resource })),
+    ...(bundle.entry ?? []).filter(
+      (entry) => !(entry.resource?.id && generatedIds.has(entry.resource.id)),
+    ),
+  ];
+}
+
+function applyMedicationOverlay(
+  bundle: FhirBundle,
+  patientId: string,
+  medications: MedicationOverlay | undefined,
+): void {
+  const normalized = normalizeMedicationOverlay(medications);
+  const generatedIds = new Set([medicationRequestId('metformin')]);
+  const generated = normalized.metformin
+    ? [
+        {
+          resourceType: 'MedicationRequest',
+          id: medicationRequestId('metformin'),
+          meta: { tag: [{ system: SANDBOX_TAG_SYSTEM, code: 'bundle-overlay' }] },
+          status: 'active',
+          intent: 'order',
+          medicationCodeableConcept: {
+            coding: [
+              {
+                system: RXNORM_SYSTEM,
+                code: '860975',
+                display: 'metformin hydrochloride 500 MG Oral Tablet',
+              },
+            ],
+            text: 'Metformin 500 mg oral tablet',
+          },
+          subject: { reference: `Patient/${patientId}` },
+          authoredOn: new Date().toISOString(),
+          dosageInstruction: [{ text: '500 mg por via oral cada 12 horas' }],
+        } satisfies FhirResource,
+      ]
+    : [];
+  bundle.entry = [
+    ...generated.map((resource) => ({ resource })),
+    ...(bundle.entry ?? []).filter(
+      (entry) => !(entry.resource?.id && generatedIds.has(entry.resource.id)),
+    ),
+  ];
+}
+
+function applyEncounterOverlay(
+  bundle: FhirBundle,
+  patientId: string,
+  encounterType: DemoEncounterType | undefined,
+): void {
+  const normalized = normalizeEncounterType(encounterType);
+  const generatedIds = new Set([encounterId('demo')]);
+  const definition = normalized ? encounterDefinition(normalized) : null;
+  const generated = definition
+    ? [
+        {
+          resourceType: 'Encounter',
+          id: encounterId('demo'),
+          meta: { tag: [{ system: SANDBOX_TAG_SYSTEM, code: 'bundle-overlay' }] },
+          status: 'finished',
+          class: {
+            system: ACT_CODE_SYSTEM,
+            code: definition.classCode,
+            display: definition.classDisplay,
+          },
+          type: [
+            {
+              coding: [
+                {
+                  system: SNOMED_SYSTEM,
+                  code: definition.typeCode,
+                  display: definition.typeDisplay,
+                },
+              ],
+              text: definition.typeDisplay,
+            },
+          ],
+          subject: { reference: `Patient/${patientId}` },
+          period: { start: new Date().toISOString(), end: new Date().toISOString() },
+        } satisfies FhirResource,
+      ]
+    : [];
+  bundle.entry = [
+    ...generated.map((resource) => ({ resource })),
+    ...(bundle.entry ?? []).filter(
+      (entry) => !(entry.resource?.id && generatedIds.has(entry.resource.id)),
+    ),
+  ];
 }
 
 function objectField(resource: unknown, field: string): FhirResource {
@@ -1397,6 +1702,7 @@ function mergePatientOverlay(
 ): PatientOverlay {
   return {
     birthDate: input.birthDate ?? current.birthDate,
+    gender: input.gender ?? current.gender,
     observations: normalizeObservationOverlay({
       ...current.observations,
       systolicBloodPressure:
@@ -1404,12 +1710,33 @@ function mergePatientOverlay(
       diastolicBloodPressure:
         input.diastolicBloodPressure ?? current.observations?.diastolicBloodPressure,
       hba1c: input.hba1c ?? current.observations?.hba1c,
+      fastingGlucose: input.fastingGlucose ?? current.observations?.fastingGlucose,
+      ldlCholesterol: input.ldlCholesterol ?? current.observations?.ldlCholesterol,
+      bodyMassIndex: input.bodyMassIndex ?? current.observations?.bodyMassIndex,
+      bodyWeight: input.bodyWeight ?? current.observations?.bodyWeight,
+      bodyHeight: input.bodyHeight ?? current.observations?.bodyHeight,
     }),
+    conditions: normalizeConditionOverlay({
+      ...current.conditions,
+      diabetes: input.diabetesCondition ?? current.conditions?.diabetes,
+    }),
+    medications: normalizeMedicationOverlay({
+      ...current.medications,
+      metformin: input.metforminMedication ?? current.medications?.metformin,
+    }),
+    encounterType: input.encounterType ?? current.encounterType,
   };
 }
 
 function hasPatientOverlay(overlay: PatientOverlay): boolean {
-  return Boolean(overlay.birthDate) || hasObservationOverlay(overlay.observations);
+  return (
+    Boolean(overlay.birthDate) ||
+    Boolean(overlay.gender) ||
+    hasObservationOverlay(overlay.observations) ||
+    hasConditionOverlay(overlay.conditions) ||
+    hasMedicationOverlay(overlay.medications) ||
+    Boolean(normalizeEncounterType(overlay.encounterType))
+  );
 }
 
 function observationOverlayFromJson(value: string): ObservationOverlay {
@@ -1422,6 +1749,11 @@ function observationOverlayFromJson(value: string): ObservationOverlay {
       systolicBloodPressure: numberField(payload, 'systolicBloodPressure'),
       diastolicBloodPressure: numberField(payload, 'diastolicBloodPressure'),
       hba1c: numberField(payload, 'hba1c'),
+      fastingGlucose: numberField(payload, 'fastingGlucose'),
+      ldlCholesterol: numberField(payload, 'ldlCholesterol'),
+      bodyMassIndex: numberField(payload, 'bodyMassIndex'),
+      bodyWeight: numberField(payload, 'bodyWeight'),
+      bodyHeight: numberField(payload, 'bodyHeight'),
     });
   } catch {
     return {};
@@ -1439,11 +1771,81 @@ function normalizeObservationOverlay(
       ? { diastolicBloodPressure: observations.diastolicBloodPressure }
       : {}),
     ...(validNumber(observations?.hba1c) ? { hba1c: observations.hba1c } : {}),
+    ...(validNumber(observations?.fastingGlucose)
+      ? { fastingGlucose: observations.fastingGlucose }
+      : {}),
+    ...(validNumber(observations?.ldlCholesterol)
+      ? { ldlCholesterol: observations.ldlCholesterol }
+      : {}),
+    ...(validNumber(observations?.bodyMassIndex)
+      ? { bodyMassIndex: observations.bodyMassIndex }
+      : {}),
+    ...(validNumber(observations?.bodyWeight) ? { bodyWeight: observations.bodyWeight } : {}),
+    ...(validNumber(observations?.bodyHeight) ? { bodyHeight: observations.bodyHeight } : {}),
   };
 }
 
 function hasObservationOverlay(observations: ObservationOverlay | undefined): boolean {
   return Object.keys(normalizeObservationOverlay(observations)).length > 0;
+}
+
+function conditionOverlayFromJson(value: string): ConditionOverlay {
+  if (!value) {
+    return {};
+  }
+  try {
+    const payload = JSON.parse(value) as Record<string, unknown>;
+    return normalizeConditionOverlay({ diabetes: booleanField(payload, 'diabetes') });
+  } catch {
+    return {};
+  }
+}
+
+function normalizeConditionOverlay(conditions: ConditionOverlay | undefined): ConditionOverlay {
+  return conditions?.diabetes ? { diabetes: true } : {};
+}
+
+function hasConditionOverlay(conditions: ConditionOverlay | undefined): boolean {
+  return Object.keys(normalizeConditionOverlay(conditions)).length > 0;
+}
+
+function medicationOverlayFromJson(value: string): MedicationOverlay {
+  if (!value) {
+    return {};
+  }
+  try {
+    const payload = JSON.parse(value) as Record<string, unknown>;
+    return normalizeMedicationOverlay({ metformin: booleanField(payload, 'metformin') });
+  } catch {
+    return {};
+  }
+}
+
+function normalizeMedicationOverlay(medications: MedicationOverlay | undefined): MedicationOverlay {
+  return medications?.metformin ? { metformin: true } : {};
+}
+
+function hasMedicationOverlay(medications: MedicationOverlay | undefined): boolean {
+  return Object.keys(normalizeMedicationOverlay(medications)).length > 0;
+}
+
+function normalizeGender(value: unknown): PatientGender | undefined {
+  return ['male', 'female', 'other', 'unknown'].includes(String(value))
+    ? (String(value) as PatientGender)
+    : undefined;
+}
+
+function normalizeEncounterType(value: unknown): DemoEncounterType | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value || 'none';
+  if (normalized === 'none') {
+    return undefined;
+  }
+  return ['ambulatory', 'emergency', 'inpatient'].includes(normalized)
+    ? (normalized as DemoEncounterType)
+    : undefined;
 }
 
 function validNumber(value: unknown): value is number {
@@ -1453,6 +1855,11 @@ function validNumber(value: unknown): value is number {
 function numberField(resource: Record<string, unknown>, field: string): number | undefined {
   const value = resource[field];
   return validNumber(value) ? value : undefined;
+}
+
+function booleanField(resource: Record<string, unknown>, field: string): boolean | undefined {
+  const value = resource[field];
+  return typeof value === 'boolean' ? value : undefined;
 }
 
 function observationNumberValue(
@@ -1467,8 +1874,30 @@ function observationNumberValue(
   return quantityNumber(match);
 }
 
+function hasClinicalCoding(
+  bundle: FhirBundle,
+  resourceType: string,
+  system: string,
+  code: string,
+): boolean {
+  return resourcesOfType(bundle, resourceType).some((resource) =>
+    resourceType === 'MedicationRequest'
+      ? hasCodingInField(resource, 'medicationCodeableConcept', system, code)
+      : hasCoding(resource, system, code),
+  );
+}
+
 function hasCoding(resource: FhirResource, system: string, code: string): boolean {
-  const codingValue = objectField(resource, 'code').coding;
+  return hasCodingInField(resource, 'code', system, code);
+}
+
+function hasCodingInField(
+  resource: FhirResource,
+  field: string,
+  system: string,
+  code: string,
+): boolean {
+  const codingValue = objectField(resource, field).coding;
   const codings = Array.isArray(codingValue) ? codingValue : [];
   return codings.some(
     (coding) =>
@@ -1485,8 +1914,74 @@ function quantityNumber(resource: FhirResource | undefined): number | undefined 
   return validNumber(value) ? value : undefined;
 }
 
+function encounterTypeFromBundle(bundle: FhirBundle): DemoEncounterType {
+  const overlay = resourcesOfType(bundle, 'Encounter').find(
+    (encounter) => encounter.id === encounterId('demo'),
+  );
+  const classCode = stringField(objectField(overlay ?? {}, 'class'), 'code');
+  if (classCode === 'EMER') {
+    return 'emergency';
+  }
+  if (classCode === 'IMP') {
+    return 'inpatient';
+  }
+  if (classCode === 'AMB') {
+    return 'ambulatory';
+  }
+  return 'none';
+}
+
+function encounterDefinition(type: DemoEncounterType): {
+  classCode: string;
+  classDisplay: string;
+  typeCode: string;
+  typeDisplay: string;
+} | null {
+  const definitions: Record<
+    Exclude<DemoEncounterType, 'none'>,
+    {
+      classCode: string;
+      classDisplay: string;
+      typeCode: string;
+      typeDisplay: string;
+    }
+  > = {
+    ambulatory: {
+      classCode: 'AMB',
+      classDisplay: 'ambulatory',
+      typeCode: '185349003',
+      typeDisplay: 'Encounter for check up',
+    },
+    emergency: {
+      classCode: 'EMER',
+      classDisplay: 'emergency',
+      typeCode: '50849002',
+      typeDisplay: 'Emergency room admission',
+    },
+    inpatient: {
+      classCode: 'IMP',
+      classDisplay: 'inpatient encounter',
+      typeCode: '32485007',
+      typeDisplay: 'Hospital admission',
+    },
+  };
+  return type === 'none' ? null : definitions[type];
+}
+
 function observationId(kind: string): string {
   return `rce-demo-${kind}`;
+}
+
+function conditionId(kind: string): string {
+  return `rce-demo-condition-${kind}`;
+}
+
+function medicationRequestId(kind: string): string {
+  return `rce-demo-medication-${kind}`;
+}
+
+function encounterId(kind: string): string {
+  return `rce-demo-encounter-${kind}`;
 }
 
 function overlayId(patientId: string, sandboxId: string): string {

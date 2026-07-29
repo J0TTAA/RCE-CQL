@@ -73,15 +73,15 @@ HAPI o al traductor.
 
 ## 5. Gate FE-P3 - Integracion Nest
 
-| ID          | Entregable                                              | Dependencias        | Requisitos                      | Estado  |
-| ----------- | ------------------------------------------------------- | ------------------- | ------------------------------- | ------- |
-| FE-TASK-3.1 | Generar cliente tipado desde OpenAPI estable.           | Backend routes, 1.5 | FE-REQ-050                      | BLOCKED |
-| FE-TASK-3.2 | Implementar adapter HTTP de pacientes.                  | 3.1, 2.1 a 2.3      | REQ-F-025 a 031                 | REVIEW  |
-| FE-TASK-3.3 | Implementar adapter HTTP de reglas y traduccion.        | 3.1, 2.4 a 2.8      | REQ-F-001 a 024                 | REVIEW  |
-| FE-TASK-3.4 | Implementar adapter HTTP de cards/sugerencias.          | 3.1, 2.9, 2.10      | REQ-F-034 a 041                 | REVIEW  |
-| FE-TASK-3.5 | Sustituir fixtures por cliente HTTP sin cambiar UI.     | 3.2 a 3.4           | FE-REQ-049, 050                 | REVIEW  |
-| FE-TASK-3.6 | Propagar error comun y correlationId a la UI.           | 3.1 a 3.5           | REQ-I-006                       | REVIEW  |
-| FE-TASK-3.7 | Integrar endpoints reales de sesion y reset de sandbox. | 3.1, 1.7            | REQ-F-051, REQ-F-054, REQ-I-007 | REVIEW  |
+| ID          | Entregable                                                         | Dependencias        | Requisitos                      | Estado  |
+| ----------- | ------------------------------------------------------------------ | ------------------- | ------------------------------- | ------- |
+| FE-TASK-3.1 | Generar cliente tipado desde OpenAPI estable.                      | Backend routes, 1.5 | FE-REQ-050                      | BLOCKED |
+| FE-TASK-3.2 | Implementar adapter HTTP de pacientes.                             | 3.1, 2.1 a 2.3      | REQ-F-025 a 031                 | REVIEW  |
+| FE-TASK-3.3 | Implementar adapter HTTP de reglas y traduccion.                   | 3.1, 2.4 a 2.8      | REQ-F-001 a 024                 | REVIEW  |
+| FE-TASK-3.4 | Implementar adapter HTTP de cards/sugerencias.                     | 3.1, 2.9, 2.10      | REQ-F-034 a 041                 | REVIEW  |
+| FE-TASK-3.5 | Sustituir fixtures por cliente HTTP sin cambiar UI.                | 3.2 a 3.4           | FE-REQ-049, 050                 | REVIEW  |
+| FE-TASK-3.6 | Propagar error comun a la UI y correlationId solo para depuracion. | 3.1 a 3.5           | REQ-I-006                       | REVIEW  |
+| FE-TASK-3.7 | Integrar endpoints reales de sesion y reset de sandbox.            | 3.1, 1.7            | REQ-F-051, REQ-F-054, REQ-I-007 | REVIEW  |
 
 ## 6. Gate FE-P4 - Verificacion visual
 

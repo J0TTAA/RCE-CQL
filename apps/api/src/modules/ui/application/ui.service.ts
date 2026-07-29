@@ -24,6 +24,11 @@ const UCUM_SYSTEM = 'http://unitsofmeasure.org';
 const SNOMED_SYSTEM = 'http://snomed.info/sct';
 const RXNORM_SYSTEM = 'http://www.nlm.nih.gov/research/umls/rxnorm';
 const ACT_CODE_SYSTEM = 'http://terminology.hl7.org/CodeSystem/v3-ActCode';
+const INITIAL_RULE_VERSION = '0.1.0';
+const FIRST_PUBLISHED_RULE_VERSION = '1.0.0';
+const RULE_VERSION_PATTERN = /^[0-9]+(\.[0-9]+){0,2}(-[A-Za-z0-9.-]+)?$/;
+const CQL_LIBRARY_DECLARATION_PATTERN =
+  /^([ \t]*library[ \t]+)[A-Za-z][A-Za-z0-9_]*(?:[ \t]+version[ \t]+'[^']*')?([ \t]*)$/m;
 
 export type Severity = 'info' | 'warning' | 'critical';
 export type Lifecycle = 'draft' | 'validated' | 'published' | 'disabled' | 'retired';
@@ -77,6 +82,8 @@ export interface RuleMetadata {
   detail: string;
   indicator: Severity;
 }
+
+type RuleMetadataInput = Omit<RuleMetadata, 'version'> & { version?: string };
 
 export interface ClinicalRule {
   id: string;
@@ -432,23 +439,26 @@ export class UiService {
 
   async createRule(
     sandboxId: string,
-    metadata: RuleMetadata,
+    metadata: RuleMetadataInput,
     cqlText: string,
   ): Promise<ClinicalRule> {
     const id = `rce-rule-${hash(`${sandboxId}:${metadata.name}:${Date.now()}`).slice(0, 24)}`;
+    const version = INITIAL_RULE_VERSION;
+    const versionedMetadata = metadataWithVersion(metadata, version);
+    const versionedCql = cqlWithLibraryVersion(cqlText, metadata.name, version);
     const library = this.ruleToLibrary(
       {
         id,
-        title: metadata.title,
-        cqlName: metadata.name,
-        version: metadata.version,
+        title: versionedMetadata.title,
+        cqlName: versionedMetadata.name,
+        version,
         lifecycle: 'draft',
-        hook: metadata.hook,
+        hook: versionedMetadata.hook,
         activation: false,
         modified: today(),
         scope: 'sandbox',
-        cql: cqlText,
-        metadata,
+        cql: versionedCql,
+        metadata: versionedMetadata,
       },
       sandboxId,
     );
@@ -475,21 +485,33 @@ export class UiService {
     id: string,
     sandboxId: string,
     cqlText: string,
-    metadata: RuleMetadata,
+    metadata: RuleMetadataInput,
   ): Promise<ClinicalRule> {
     const current = await this.getRule(id, sandboxId);
+    const isEditingPublishedVersion = current.lifecycle === 'published';
+    const version = isEditingPublishedVersion
+      ? nextPatchRuleVersion(current.version)
+      : normalizeRuleVersion(current.version);
+    const nextId = isEditingPublishedVersion
+      ? `rce-rule-${hash(`${sandboxId}:${metadata.name}:${version}:${Date.now()}`).slice(0, 24)}`
+      : id;
+    const versionedMetadata = metadataWithVersion(metadata, version);
+    const versionedCql = cqlWithLibraryVersion(cqlText, versionedMetadata.name, version);
     const next = {
       ...current,
-      cql: cqlText,
-      metadata,
-      title: metadata.title,
-      cqlName: metadata.name,
-      version: metadata.version,
-      hook: metadata.hook,
+      id: nextId,
+      cql: versionedCql,
+      metadata: versionedMetadata,
+      title: versionedMetadata.title,
+      cqlName: versionedMetadata.name,
+      version,
+      hook: versionedMetadata.hook,
+      activation: isEditingPublishedVersion ? false : current.activation,
+      scope: isEditingPublishedVersion ? 'sandbox' : current.scope,
       lifecycle: 'draft' as Lifecycle,
       modified: today(),
     };
-    const saved = await this.fhir.update('Library', id, this.ruleToLibrary(next, sandboxId));
+    const saved = await this.fhir.update('Library', nextId, this.ruleToLibrary(next, sandboxId));
     return this.libraryToRule(saved, sandboxId) ?? next;
   }
 
@@ -499,8 +521,15 @@ export class UiService {
     cqlText: string,
   ): Promise<{ valid: boolean; diagnostics: unknown[]; elm?: string }> {
     const current = await this.getRule(id, sandboxId);
+    if (current.lifecycle === 'published') {
+      throw new UnprocessableEntityException(
+        'Edita y guarda una nueva version antes de validar una regla publicada.',
+      );
+    }
+    const version = normalizeRuleVersion(current.version);
+    const versionedCql = cqlWithLibraryVersion(cqlText, current.cqlName, version);
     const translation = await this.translator.translate({
-      cql: cqlText,
+      cql: versionedCql,
       options: {
         annotations: true,
         locators: true,
@@ -512,7 +541,9 @@ export class UiService {
     const elm = JSON.stringify(translation.elm, null, 2);
     const next = {
       ...current,
-      cql: cqlText,
+      cql: versionedCql,
+      version,
+      metadata: metadataWithVersion(current.metadata, version),
       lifecycle: 'validated' as Lifecycle,
       modified: today(),
     };
@@ -527,14 +558,34 @@ export class UiService {
     scope: RuleScope = 'sandbox',
   ): Promise<ClinicalRule> {
     const current = await this.getRule(id, sandboxId);
+    if (current.lifecycle !== 'validated') {
+      throw new UnprocessableEntityException('La regla debe estar validada antes de publicarse.');
+    }
+    const version = publishedRuleVersion(current.version);
+    const versionedMetadata = metadataWithVersion(current.metadata, version);
+    const versionedCql = cqlWithLibraryVersion(current.cql, current.cqlName, version);
+    const translation = await this.translator.translate({
+      cql: versionedCql,
+      options: {
+        annotations: true,
+        locators: true,
+        resultTypes: true,
+        detailedErrors: true,
+        strict: true,
+      },
+    });
+    const elm = JSON.stringify(translation.elm, null, 2);
     const next = {
       ...current,
+      cql: versionedCql,
+      metadata: versionedMetadata,
+      version,
       lifecycle: 'published' as Lifecycle,
       activation: true,
       scope,
       modified: today(),
     };
-    const saved = await this.fhir.update('Library', id, this.ruleToLibrary(next, sandboxId));
+    const saved = await this.fhir.update('Library', id, this.ruleToLibrary(next, sandboxId, elm));
     return this.libraryToRule(saved, sandboxId) ?? next;
   }
 
@@ -1023,7 +1074,7 @@ export class UiService {
     const metadata: RuleMetadata = {
       title: stringField(resource, 'title') || stringField(resource, 'name') || 'Regla CQL',
       name: stringField(resource, 'name') || String(resource.id ?? ''),
-      version: stringField(resource, 'version') || '0.1.0',
+      version: normalizeRuleVersion(stringField(resource, 'version')),
       hook: (extensionValueString(resource, 'rule-hook') as RuleHook) || 'patient-view',
       expression: extensionValueString(resource, 'rule-expression') || 'Aplica',
       summary:
@@ -1070,9 +1121,9 @@ export class UiService {
           { system: 'http://terminology.hl7.org/CodeSystem/library-type', code: 'logic-library' },
         ],
       },
-      name: rule.metadata.name,
-      title: rule.metadata.title,
-      version: rule.metadata.version,
+      name: rule.cqlName,
+      title: rule.title,
+      version: rule.version,
       date: new Date().toISOString(),
       extension: [
         { url: `${EXT_BASE}/rule-hook`, valueCode: rule.metadata.hook },
@@ -2704,6 +2755,52 @@ function today(): string {
 
 function hash(value: string): string {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function metadataWithVersion(metadata: RuleMetadataInput, version: string): RuleMetadata {
+  return {
+    title: metadata.title,
+    name: metadata.name,
+    version,
+    hook: metadata.hook,
+    expression: metadata.expression,
+    summary: metadata.summary,
+    detail: metadata.detail,
+    indicator: metadata.indicator,
+  };
+}
+
+function normalizeRuleVersion(value?: string): string {
+  if (!value || !RULE_VERSION_PATTERN.test(value)) {
+    return INITIAL_RULE_VERSION;
+  }
+  const [core = INITIAL_RULE_VERSION] = value.split('-');
+  const [major = '0', minor = '0', patch = '0'] = core.split('.');
+  return `${Number(major)}.${Number(minor)}.${Number(patch)}`;
+}
+
+function nextPatchRuleVersion(value?: string): string {
+  const parts = normalizeRuleVersion(value).split('.').map(Number);
+  const major = parts[0] ?? 0;
+  const minor = parts[1] ?? 0;
+  const patch = parts[2] ?? 0;
+  return `${major}.${minor}.${patch + 1}`;
+}
+
+function publishedRuleVersion(value?: string): string {
+  const normalized = normalizeRuleVersion(value);
+  return normalized === INITIAL_RULE_VERSION ? FIRST_PUBLISHED_RULE_VERSION : normalized;
+}
+
+function cqlWithLibraryVersion(cqlText: string, name: string, version: string): string {
+  const header = `library ${name} version '${version}'`;
+  if (!cqlText.trim()) {
+    return `${header}\n`;
+  }
+  if (CQL_LIBRARY_DECLARATION_PATTERN.test(cqlText)) {
+    return cqlText.replace(CQL_LIBRARY_DECLARATION_PATTERN, `$1${name} version '${version}'$2`);
+  }
+  return `${header}\n\n${cqlText}`;
 }
 
 function assertDate(value: string): void {

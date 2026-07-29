@@ -118,6 +118,12 @@ export function RuleWorkspacePage({
     setElm(null);
   };
 
+  const updateMetadata = (next: ClinicalRule['metadata']) => {
+    setMetadata(next);
+    setDirty(true);
+    setElm(null);
+  };
+
   const save = async () => {
     if (!rule || !metadata) {
       return;
@@ -129,7 +135,13 @@ export function RuleWorkspacePage({
     try {
       const saved = await api.saveRule(rule.id, cql, metadata);
       setRule(saved);
+      setMetadata(saved.metadata);
+      setCql(saved.cql);
+      setElm(null);
       setDirty(false);
+      if (saved.id !== rule.id) {
+        router.navigate(`/rules/${saved.id}`, { replace: true });
+      }
     } finally {
       setBusy(null);
     }
@@ -144,11 +156,24 @@ export function RuleWorkspacePage({
     }
     setBusy('validating');
     try {
-      const result = await api.validateRule(rule.id, cql);
+      let targetRule = rule;
+      let targetCql = cql;
+      if (dirty && metadata) {
+        const saved = await api.saveRule(rule.id, cql, metadata);
+        targetRule = saved;
+        targetCql = saved.cql;
+        setRule(saved);
+        setMetadata(saved.metadata);
+        setCql(saved.cql);
+        if (saved.id !== rule.id) {
+          router.navigate(`/rules/${saved.id}`, { replace: true });
+        }
+      }
+      const result = await api.validateRule(targetRule.id, targetCql);
       setDiagnostics(result.diagnostics);
       setElm(result.elm ?? null);
       if (result.valid) {
-        setRule({ ...rule, lifecycle: 'validated' });
+        setRule({ ...targetRule, cql: targetCql, lifecycle: 'validated' });
         setDirty(false);
         setTab('elm');
       }
@@ -192,6 +217,10 @@ export function RuleWorkspacePage({
     try {
       const next = await api.publishRule(rule.id);
       setRule(next);
+      setMetadata(next.metadata);
+      setCql(next.cql);
+      setElm(null);
+      setDirty(false);
       setPublishOpen(false);
     } finally {
       setBusy(null);
@@ -222,7 +251,7 @@ export function RuleWorkspacePage({
                 <h1>{rule.title}</h1>
                 <div className="rule-meta-line">
                   <code>{rule.cqlName}</code>
-                  <span>v{rule.version}</span>
+                  <span>Version automatica v{rule.version}</span>
                   <LifecycleBadge lifecycle={rule.lifecycle} />
                   {dirty ? (
                     <Badge tone="warning">Sin guardar</Badge>
@@ -238,7 +267,9 @@ export function RuleWorkspacePage({
                 <Button
                   onClick={save}
                   disabled={!dirty || Boolean(busy) || !canWriteRule}
-                  title={!canWriteRule ? 'Regla compartida de solo lectura para alumnos' : undefined}
+                  title={
+                    !canWriteRule ? 'Regla compartida de solo lectura para alumnos' : undefined
+                  }
                 >
                   <Save size={15} aria-hidden />
                   Guardar
@@ -246,7 +277,9 @@ export function RuleWorkspacePage({
                 <Button
                   onClick={validate}
                   disabled={Boolean(busy) || !canWriteRule}
-                  title={!canWriteRule ? 'Regla compartida de solo lectura para alumnos' : undefined}
+                  title={
+                    !canWriteRule ? 'Regla compartida de solo lectura para alumnos' : undefined
+                  }
                 >
                   <Check size={15} aria-hidden />
                   Validar
@@ -323,7 +356,7 @@ export function RuleWorkspacePage({
                   <MetadataForm
                     metadata={metadata}
                     expressionOptions={expressionOptions}
-                    onChange={setMetadata}
+                    onChange={updateMetadata}
                   />
                 ) : null}
                 {tab === 'test' ? (
@@ -389,8 +422,8 @@ export function RuleWorkspacePage({
                   <dd>Guardado en Library</dd>
                 </div>
                 <div>
-                  <dt>Versión</dt>
-                  <dd>{metadata.version}</dd>
+                  <dt>Version automatica</dt>
+                  <dd>El backend asignara la siguiente version al publicar.</dd>
                 </div>
                 <div>
                   <dt>Alcance</dt>
@@ -428,12 +461,13 @@ function MetadataForm({
       <Field label="Nombre CQL">
         <TextInput value={metadata.name} onChange={(event) => update('name', event.target.value)} />
       </Field>
-      <Field label="Versión">
-        <TextInput
-          value={metadata.version}
-          onChange={(event) => update('version', event.target.value)}
-        />
-      </Field>
+      <div className="version-readonly" aria-label="Version automatica">
+        <span>Version automatica</span>
+        <strong>v{metadata.version}</strong>
+        <small>
+          El backend la actualiza al publicar para mantener CQL, ELM y Library alineados.
+        </small>
+      </div>
       <Field label="Hook">
         <SelectInput value={metadata.hook} onChange={(event) => update('hook', event.target.value)}>
           <option value="patient-view">patient-view</option>
@@ -535,11 +569,7 @@ function TestPanel({
           </Badge>
           <dl>
             <div>
-              <dt>CorrelationId</dt>
-              <dd>{result.correlationId}</dd>
-            </div>
-            <div>
-              <dt>Recursos</dt>
+              <dt>Datos HL7 FHIR usados</dt>
               <dd>{result.consideredResources.join(', ') || 'Sin recursos'}</dd>
             </div>
           </dl>

@@ -165,20 +165,20 @@ Drawer de edicion:
 
 Tabla con filtros persistentes en la URL:
 
-| Columna    | Contenido                                     |
-| ---------- | --------------------------------------------- |
-| Regla      | Titulo + nombre CQL                           |
-| Version    | Semver                                        |
-| Estado     | Lifecycle con icono y texto                   |
-| Hook       | `patient-view`, `order-select` u `order-sign` |
-| Activacion | Switch solo para Docente y published          |
-| Modificada | Fecha y autor sintetico                       |
-| Alcance    | Mi sandbox o compartida                       |
+| Columna    | Contenido                                                                    |
+| ---------- | ---------------------------------------------------------------------------- |
+| Regla      | Titulo + nombre CQL                                                          |
+| Version    | Version automatica calculada al publicar                                     |
+| Estado     | Lifecycle con icono y texto                                                  |
+| Hook       | `patient-view`, `order-select` u `order-sign`                                |
+| Activacion | Switch solo para Docente y published                                         |
+| Modificada | Fecha y autor sintetico                                                      |
+| Alcance    | Mi sandbox o compartida                                                      |
 | Acciones   | Menu con abrir, probar, activar/desactivar y acciones futuras deshabilitadas |
 
-El boton `Nueva regla` es el unico CTA primario de la pagina.
-En el MVP, duplicar version y retirar se muestran como pendientes mientras no
-existan endpoints de backend para esas transiciones.
+El boton `Nueva regla` es el unico CTA primario de la pagina. La accion de
+versionado se muestra como informacion: el backend calcula la version al
+publicar y el alumno no la escribe manualmente.
 
 ### 5.4 Workspace de regla
 
@@ -186,7 +186,7 @@ Desktop:
 
 ```text
 +--------------------------------------------------------------------------+
-| Breadcrumb / titulo / version / lifecycle       Guardar Validar Probar...|
+| Breadcrumb / titulo / version automatica        Guardar Validar Probar...|
 +----------------------------------------------+---------------------------+
 | Monaco CQL                                   | Metadata / Test           |
 |                                              |                           |
@@ -218,15 +218,14 @@ Diagnosticos:
 - Resumen del fixture seleccionado.
 - Boton `Ejecutar prueba` con estado loading que no redimensiona el panel.
 - Resultado `Aplica` o `No aplica` con icono y texto.
-- Tabs de resultado: Cards, Recursos considerados, Advertencias.
-- CorrelationId visible como metadata copiable, no como headline.
+- Tabs de resultado: Cards, recursos HL7 FHIR considerados y advertencias.
+- Identificadores tecnicos disponibles solo para depuracion; no son contenido principal de clase.
 
 ### 5.6 Actividad CDS
 
 - Tabla cronologica, no feed de cards.
-- Columnas: fecha, paciente, hook, reglas evaluadas, cards, duracion, estado y
-  correlationId.
-- Drawer de detalle con `CdsExecutionTrace`, cards emitidas y advertencias.
+- Columnas: fecha, paciente, momento CDS Hooks, reglas evaluadas, cards y estado.
+- Drawer de detalle con `CdsExecutionTrace` pedagogico, cards emitidas y advertencias.
 - Filtros por hook, severidad y resultado.
 
 ## 6. Sistema visual
@@ -346,17 +345,17 @@ src/
 
 ### 7.3 Componentes de reglas
 
-| Componente          | Responsabilidad                             |
-| ------------------- | ------------------------------------------- |
-| `RulesTable`        | Catalogo, filtros y acciones.               |
-| `RuleStatusBadge`   | Lifecycle accesible con icono/texto.        |
-| `RuleWorkspace`     | Composicion de toolbar, editor e inspector. |
-| `CqlEditor`         | Wrapper de Monaco y markers externos.       |
-| `RuleMetadataForm`  | Metadata fuera del codigo.                  |
-| `DiagnosticsPanel`  | Lista y navegacion a markers.               |
-| `ElmViewer`         | Monaco JSON read-only.                      |
-| `RuleTestPanel`     | Paciente, ejecucion CQL y resultado.        |
-| `PublishRuleDialog` | Confirmacion de version y canonical.        |
+| Componente          | Responsabilidad                               |
+| ------------------- | --------------------------------------------- |
+| `RulesTable`        | Catalogo, filtros y acciones.                 |
+| `RuleStatusBadge`   | Lifecycle accesible con icono/texto.          |
+| `RuleWorkspace`     | Composicion de toolbar, editor e inspector.   |
+| `CqlEditor`         | Wrapper de Monaco y markers externos.         |
+| `RuleMetadataForm`  | Metadata fuera del codigo.                    |
+| `DiagnosticsPanel`  | Lista y navegacion a markers.                 |
+| `ElmViewer`         | Monaco JSON read-only.                        |
+| `RuleTestPanel`     | Paciente, ejecucion CQL y resultado.          |
+| `PublishRuleDialog` | Confirmacion de alcance y version automatica. |
 
 ### 7.4 Componentes de pacientes/CDS
 
@@ -418,7 +417,7 @@ interface RuleTestResult {
   cards: UiCdsCard[];
   warnings: string[];
   evaluatedResources: Array<{ type: string; id: string }>;
-  correlationId: string;
+  correlationId?: string; // solo depuracion
 }
 ```
 

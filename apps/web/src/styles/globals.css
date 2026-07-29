@@ -1203,6 +1203,30 @@ dd {
   gap: 11px;
 }
 
+.version-readonly {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+  padding: 10px 12px;
+}
+
+.version-readonly span {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.version-readonly strong {
+  font-size: 20px;
+}
+
+.version-readonly small {
+  color: var(--color-muted);
+  line-height: 1.35;
+}
+
 .patient-mini {
   display: flex;
   min-width: 0;
@@ -1337,7 +1361,7 @@ dd {
 
 .activity-row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 72px 72px auto;
+  grid-template-columns: 40px minmax(0, 1fr) 72px auto;
   align-items: center;
   gap: 12px;
   border: 1px solid var(--color-border);
@@ -1389,24 +1413,6 @@ dd {
 .activity-detail {
   display: grid;
   gap: 13px;
-}
-
-.activity-correlation {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-canvas);
-  padding: 10px 12px;
-}
-
-.activity-correlation span {
-  color: var(--color-muted);
-  font-size: 12px;
-  font-weight: 800;
 }
 
 .cds-trace {

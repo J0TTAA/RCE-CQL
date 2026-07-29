@@ -82,30 +82,30 @@ No incluye:
 
 | ID         | Requisito                                                                                                          | Prioridad | Verificacion  |
 | ---------- | ------------------------------------------------------------------------------------------------------------------ | --------- | ------------- |
-| FE-REQ-017 | Reglas DEBE usar una tabla con nombre, version, lifecycle, hook, activacion y ultima modificacion.                 | MUST      | Inspeccion    |
+| FE-REQ-017 | Reglas DEBE usar una tabla con nombre, version automatica, lifecycle, hook, activacion y ultima modificacion.      | MUST      | Inspeccion    |
 | FE-REQ-018 | La tabla DEBE filtrar por texto, lifecycle, hook y activacion.                                                     | MUST      | Demostracion  |
 | FE-REQ-019 | Los estados draft, validated, published, disabled y retired DEBEN diferenciarse con texto, icono y color.          | MUST      | Accesibilidad |
 | FE-REQ-020 | El editor DEBE usar Monaco y presentar numeros de linea.                                                           | MUST      | Demostracion  |
-| FE-REQ-021 | Metadata y codigo CQL DEBEN editarse en regiones distintas de la pantalla.                                         | MUST      | Inspeccion    |
+| FE-REQ-021 | Metadata y codigo CQL DEBEN editarse en regiones distintas; la version se muestra como lectura automatica.         | MUST      | Inspeccion    |
 | FE-REQ-022 | La barra de acciones DEBE incluir Guardar, Validar, Probar, Ver ELM y Publicar.                                    | MUST      | Demostracion  |
 | FE-REQ-023 | Los diagnosticos DEBEN mostrar severidad, mensaje, linea y columna.                                                | MUST      | Demostracion  |
 | FE-REQ-024 | Activar un diagnostico DEBE enfocar su ubicacion en Monaco.                                                        | MUST      | Demostracion  |
 | FE-REQ-025 | Cambiar CQL DEBE marcar el borrador como no guardado y volver obsoleto el ELM previo.                              | MUST      | Demostracion  |
 | FE-REQ-026 | Ver ELM DEBE usar un visor JSON de solo lectura.                                                                   | MUST      | Demostracion  |
 | FE-REQ-027 | Probar DEBE permitir seleccionar paciente y mostrar aplica/no aplica, cards, advertencias y recursos considerados. | MUST      | Demostracion  |
-| FE-REQ-028 | Publicar y activar DEBEN estar disponibles solo en el rol Docente simulado.                                        | MUST      | Demostracion  |
+| FE-REQ-028 | El alumno PUEDE publicar y activar reglas de su sandbox; el docente PUEDE publicar reglas compartidas.             | MUST      | Demostracion  |
 | FE-REQ-029 | La maqueta NO DEBE interpretar, traducir ni ejecutar CQL localmente.                                               | MUST      | Revision      |
 
 ### 4.4 Cards CDS
 
-| ID         | Requisito                                                                                                   | Prioridad | Verificacion  |
-| ---------- | ----------------------------------------------------------------------------------------------------------- | --------- | ------------- |
-| FE-REQ-030 | Las cards DEBEN distinguir info, warning y critical sin depender solo del color.                            | MUST      | Accesibilidad |
-| FE-REQ-031 | Cada card DEBE mostrar resumen, detalle, fuente y regla/version.                                            | MUST      | Inspeccion    |
-| FE-REQ-032 | Una sugerencia DEBE mostrar los recursos que crearia, actualizaria o eliminaria.                            | MUST      | Demostracion  |
-| FE-REQ-033 | Aplicar una sugerencia DEBE abrir confirmacion explicita.                                                   | MUST      | Demostracion  |
-| FE-REQ-034 | El estado sin recomendaciones DEBE ser sobrio y no parecer un error.                                        | MUST      | Inspeccion    |
-| FE-REQ-035 | La actividad CDS DEBE listar evaluaciones del backend por fecha, paciente, hook, resultado y correlationId. | SHOULD    | Demostracion  |
+| ID         | Requisito                                                                                                               | Prioridad | Verificacion  |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------- | --------- | ------------- |
+| FE-REQ-030 | Las cards DEBEN distinguir info, warning y critical sin depender solo del color.                                        | MUST      | Accesibilidad |
+| FE-REQ-031 | Cada card DEBE mostrar resumen, detalle, fuente y regla/version.                                                        | MUST      | Inspeccion    |
+| FE-REQ-032 | Una sugerencia DEBE mostrar los recursos que crearia, actualizaria o eliminaria.                                        | MUST      | Demostracion  |
+| FE-REQ-033 | Aplicar una sugerencia DEBE abrir confirmacion explicita.                                                               | MUST      | Demostracion  |
+| FE-REQ-034 | El estado sin recomendaciones DEBE ser sobrio y no parecer un error.                                                    | MUST      | Inspeccion    |
+| FE-REQ-035 | La actividad CDS DEBE listar evaluaciones por fecha, paciente, momento CDS Hooks, reglas, cards y resultado pedagogico. | SHOULD    | Demostracion  |
 
 ## 5. Requisitos visuales y de interaccion
 

@@ -113,25 +113,25 @@ El flujo educativo esperado es:
 
 ### 9.1 Autoria y gestion de reglas
 
-| ID        | Requisito                                                                                                                        | Prioridad | Verificacion     |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------------- |
-| REQ-F-001 | El sistema DEBE permitir crear un borrador de regla.                                                                             | MUST      | E2E              |
-| REQ-F-002 | El sistema DEBE permitir editar CQL dentro del RCE mediante un editor de codigo.                                                 | MUST      | Demostracion     |
-| REQ-F-003 | El sistema DEBE guardar el CQL y la metadata de un borrador en HAPI FHIR.                                                        | MUST      | Integracion      |
-| REQ-F-004 | El sistema DEBE capturar nombre, titulo, version, hook, expresion de condicion, resumen, detalle e indicador de una regla.       | MUST      | E2E              |
-| REQ-F-005 | El sistema DEBE enviar el CQL a CQL Translation Service para validarlo y obtener ELM JSON.                                       | MUST      | Contrato         |
-| REQ-F-006 | El sistema DEBE devolver los diagnosticos de CQL con severidad, mensaje, linea y columna cuando esa informacion este disponible. | MUST      | Contrato/E2E     |
-| REQ-F-007 | El sistema DEBE permitir visualizar el ultimo ELM vigente de un borrador validado.                                               | MUST      | E2E              |
-| REQ-F-008 | El sistema DEBE resolver `include` CQL por nombre y version desde artefactos autorizados.                                        | MUST      | Integracion      |
-| REQ-F-009 | El sistema DEBE comprobar que la expresion configurada exista en ELM y produzca un Boolean antes de publicar.                    | MUST      | Unit/Integracion |
-| REQ-F-010 | El sistema DEBE publicar una regla como Library FHIR con CQL, ELM y metadata de ejecucion.                                       | MUST      | Integracion      |
-| REQ-F-011 | La publicacion DEBE incluir CQL y ELM correspondientes a la misma fuente.                                                        | MUST      | Integracion      |
-| REQ-F-012 | Una version publicada DEBE ser inmutable.                                                                                        | MUST      | E2E              |
-| REQ-F-013 | Editar una regla publicada DEBE producir una version nueva.                                                                      | MUST      | E2E              |
-| REQ-F-014 | El docente DEBE poder habilitar o deshabilitar una version compartida publicada; el alumno PUEDE habilitar/deshabilitar una regla publicada limitada a su sandbox. | MUST      | E2E              |
-| REQ-F-015 | Solo una version publicada de una misma regla PUEDE estar habilitada.                                                            | MUST      | Integracion      |
-| REQ-F-016 | El docente DEBE poder retirar una version que ya no deba utilizarse.                                                             | MUST      | E2E              |
-| REQ-F-017 | El sistema DEBE permitir listar y filtrar reglas por estado, hook, nombre y version.                                             | MUST      | API/E2E          |
+| ID        | Requisito                                                                                                                                                                      | Prioridad | Verificacion     |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ---------------- |
+| REQ-F-001 | El sistema DEBE permitir crear un borrador de regla.                                                                                                                           | MUST      | E2E              |
+| REQ-F-002 | El sistema DEBE permitir editar CQL dentro del RCE mediante un editor de codigo.                                                                                               | MUST      | Demostracion     |
+| REQ-F-003 | El sistema DEBE guardar el CQL y la metadata de un borrador en HAPI FHIR.                                                                                                      | MUST      | Integracion      |
+| REQ-F-004 | El sistema DEBE capturar nombre, titulo, hook, expresion de condicion, resumen, detalle e indicador de una regla; la version DEBE ser asignada automaticamente por el backend. | MUST      | E2E              |
+| REQ-F-005 | El sistema DEBE enviar el CQL a CQL Translation Service para validarlo y obtener ELM JSON.                                                                                     | MUST      | Contrato         |
+| REQ-F-006 | El sistema DEBE devolver los diagnosticos de CQL con severidad, mensaje, linea y columna cuando esa informacion este disponible.                                               | MUST      | Contrato/E2E     |
+| REQ-F-007 | El sistema DEBE permitir visualizar el ultimo ELM vigente de un borrador validado.                                                                                             | MUST      | E2E              |
+| REQ-F-008 | El sistema DEBE resolver `include` CQL por nombre y version desde artefactos autorizados.                                                                                      | MUST      | Integracion      |
+| REQ-F-009 | El sistema DEBE comprobar que la expresion configurada exista en ELM y produzca un Boolean antes de publicar.                                                                  | MUST      | Unit/Integracion |
+| REQ-F-010 | El sistema DEBE publicar una regla como Library FHIR con CQL, ELM y metadata de ejecucion.                                                                                     | MUST      | Integracion      |
+| REQ-F-011 | La publicacion DEBE incluir CQL y ELM correspondientes a la misma fuente.                                                                                                      | MUST      | Integracion      |
+| REQ-F-012 | Una version publicada DEBE ser inmutable.                                                                                                                                      | MUST      | E2E              |
+| REQ-F-013 | Editar una regla publicada DEBE producir una version nueva.                                                                                                                    | MUST      | E2E              |
+| REQ-F-014 | El docente DEBE poder habilitar o deshabilitar una version compartida publicada; el alumno PUEDE habilitar/deshabilitar una regla publicada limitada a su sandbox.             | MUST      | E2E              |
+| REQ-F-015 | Solo una version publicada de una misma regla PUEDE estar habilitada.                                                                                                          | MUST      | Integracion      |
+| REQ-F-016 | El docente DEBE poder retirar una version que ya no deba utilizarse.                                                                                                           | MUST      | E2E              |
+| REQ-F-017 | El sistema DEBE permitir listar y filtrar reglas por estado, hook, nombre y version.                                                                                           | MUST      | API/E2E          |
 
 ### 9.2 Prueba y evaluacion
 
@@ -175,21 +175,22 @@ El flujo educativo esperado es:
 
 ### 9.5 Auditoria, operacion y acceso
 
-| ID        | Requisito                                                                                                                                  | Prioridad | Verificacion           |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ---------------------- |
-| REQ-F-043 | El sistema DEBE registrar autor, fecha y recursos afectados al publicar una regla.                                                         | MUST      | Integracion            |
-| REQ-F-044 | El sistema DEBERIA registrar pruebas, evaluaciones y feedback con identificadores de correlacion.                                          | SHOULD    | Integracion            |
-| REQ-F-045 | El rol alumno DEBE poder crear, editar, validar y probar borradores.                                                                       | MUST      | Seguridad/E2E          |
+| ID        | Requisito                                                                                                                                                        | Prioridad | Verificacion           |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ---------------------- |
+| REQ-F-043 | El sistema DEBE registrar autor, fecha y recursos afectados al publicar una regla.                                                                               | MUST      | Integracion            |
+| REQ-F-044 | El sistema DEBERIA registrar pruebas, evaluaciones y feedback con identificadores de correlacion.                                                                | SHOULD    | Integracion            |
+| REQ-F-045 | El rol alumno DEBE poder crear, editar, validar y probar borradores.                                                                                             | MUST      | Seguridad/E2E          |
 | REQ-F-046 | Solo el rol docente DEBE poder publicar, habilitar, deshabilitar o retirar reglas compartidas; el alumno PUEDE publicar y activar reglas privadas de su sandbox. | MUST      | Seguridad/E2E          |
-| REQ-F-047 | El sistema DEBE exponer endpoints separados de liveness y readiness.                                                                       | MUST      | Integracion            |
-| REQ-F-048 | Readiness DEBE comprobar HAPI y CQL Translation Service.                                                                                   | MUST      | Integracion            |
-| REQ-F-049 | Al iniciar, el sistema DEBE comprobar la compatibilidad basica del servidor FHIR y detectar si Clinical Reasoning no esta disponible.      | MUST      | Integracion            |
-| REQ-F-050 | La URL y autenticacion de HAPI DEBEN poder configurarse sin recompilar la aplicacion.                                                      | MUST      | Inspeccion/Integracion |
-| REQ-F-051 | En modo aula anonimo, el sistema DEBE crear automaticamente una sesion anonima y un sandbox cuando un navegador ingrese sin cookie valida. | MUST      | E2E                    |
-| REQ-F-052 | El sistema DEBE asociar reglas, pruebas, cambios clinicos, cards y auditoria al sandbox activo de la solicitud.                            | MUST      | Integracion/E2E        |
-| REQ-F-053 | El sistema DEBE impedir que una solicitud de un sandbox lea o modifique artefactos privados de otro sandbox.                               | MUST      | Seguridad/E2E          |
-| REQ-F-054 | El sistema DEBE permitir reiniciar el sandbox anonimo del navegador sin afectar otros sandboxes.                                           | SHOULD    | E2E                    |
-| REQ-F-055 | Las operaciones compartidas de docente DEBEN poder separarse de las operaciones limitadas al sandbox.                                      | SHOULD    | Seguridad/E2E          |
+| REQ-F-047 | El sistema DEBE exponer endpoints separados de liveness y readiness.                                                                                             | MUST      | Integracion            |
+| REQ-F-048 | Readiness DEBE comprobar HAPI y CQL Translation Service.                                                                                                         | MUST      | Integracion            |
+| REQ-F-049 | Al iniciar, el sistema DEBE comprobar la compatibilidad basica del servidor FHIR y detectar si Clinical Reasoning no esta disponible.                            | MUST      | Integracion            |
+| REQ-F-050 | La URL y autenticacion de HAPI DEBEN poder configurarse sin recompilar la aplicacion.                                                                            | MUST      | Inspeccion/Integracion |
+| REQ-F-051 | En modo aula anonimo, el sistema DEBE crear automaticamente una sesion anonima y un sandbox cuando un navegador ingrese sin cookie valida.                       | MUST      | E2E                    |
+| REQ-F-052 | El sistema DEBE asociar reglas, pruebas, cambios clinicos, cards y auditoria al sandbox activo de la solicitud.                                                  | MUST      | Integracion/E2E        |
+| REQ-F-053 | El sistema DEBE impedir que una solicitud de un sandbox lea o modifique artefactos privados de otro sandbox.                                                     | MUST      | Seguridad/E2E          |
+| REQ-F-054 | El sistema DEBE permitir reiniciar el sandbox anonimo del navegador sin afectar otros sandboxes.                                                                 | SHOULD    | E2E                    |
+| REQ-F-055 | Las operaciones compartidas de docente DEBEN poder separarse de las operaciones limitadas al sandbox.                                                            | SHOULD    | Seguridad/E2E          |
+| REQ-F-056 | La trazabilidad visible de CDS Hooks DEBE explicarse en pasos pedagogicos centrados en CQL y HL7 FHIR, evitando IDs tecnicos como contenido principal.           | SHOULD    | E2E/Revision           |
 
 ## 10. Requisitos de interfaces externas
 

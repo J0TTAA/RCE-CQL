@@ -109,14 +109,14 @@ FICHA CLINICA
 PANTALLA REGLAS
 - Tabla, no grid de cards.
 - Filtros por texto, lifecycle, hook y activacion.
-- Columnas: regla/nombre CQL, version, lifecycle, hook, activacion, modificada,
-  alcance y acciones.
+- Columnas: regla/nombre CQL, version automatica, lifecycle, hook, activacion,
+  modificada, alcance y acciones.
 - Diferencia draft, validated, published, disabled y retired usando icono, texto
   y color, nunca solo color.
 - Boton primario unico "Nueva regla".
 
 WORKSPACE CQL
-- Header compacto con titulo, nombre CQL, version, lifecycle y estado dirty.
+- Header compacto con titulo, nombre CQL, version automatica, lifecycle y estado dirty.
 - Toolbar estable con Guardar, Validar, Probar, Ver ELM y Publicar.
 - Usa icono+texto para comandos y tooltips en icon buttons.
 - Desktop: Monaco a la izquierda, inspector de 320-380px a la derecha y panel
@@ -125,8 +125,8 @@ WORKSPACE CQL
 - Monaco debe tener numeros de linea, minimap discreto, fuente monoespaciada,
   alto minimo 420px y label accesible que identifique el editor CQL.
 - Usa un fixture CQL legible llamado AdultRiskAssessment version 0.1.0.
-- Metadata: titulo, nombre, version, hook, expresion booleana, summary, detail e
-  indicator.
+- Metadata: titulo, nombre, hook, expresion booleana, summary, detail e indicator.
+  La version se muestra como lectura y la calcula el backend al publicar.
 - Diagnostics muestra Error/Warning/Info, mensaje y "Ln x, Col y". Al hacer
   click debe enfocar/revelar esa posicion en Monaco usando markers externos.
 - Incluye un fixture valido y otro invalido. Validar consulta MockRceUiApi; no
@@ -134,10 +134,10 @@ WORKSPACE CQL
 - Cambiar el codigo marca dirty y vuelve stale el ELM anterior.
 - ELM usa Monaco JSON read-only y solo se habilita tras resultado mock valido.
 - Probar permite elegir paciente y muestra Aplica/No aplica, cards, recursos
-  considerados, warnings y correlationId.
+  HL7 FHIR considerados y warnings. CorrelationId queda solo para depuracion.
 - Alumno puede publicar y activar reglas solo dentro de su sandbox. Docente,
   despues de ingresar clave docente, puede publicar reglas compartidas del aula.
-  El dialog de publicacion resume version, alcance y artefactos Library/ELM.
+  El dialog de publicacion resume alcance, version automatica y artefactos Library/ELM.
 
 CARDS CDS
 - Disena cards compactas individuales, no una seccion llena de cards decorativas.
@@ -149,10 +149,11 @@ CARDS CDS
 - Incluye estado vacio "Sin recomendaciones activas" sobrio, no celebratorio.
 
 ACTIVIDAD CDS
-- Tabla cronologica con fecha, paciente, hook, reglas, cards, duracion, estado y
-  correlationId.
+- Tabla cronologica con fecha, paciente, momento CDS Hooks, reglas, cards y
+  estado.
 - Filtros por hook, severidad y resultado.
-- Click en fila abre drawer con cards emitidas, recursos y warnings.
+- Click en fila abre drawer con paso a paso pedagogico, cards emitidas, recursos
+  HL7 FHIR y warnings.
 
 MOCKS E INTERACCIONES
 - MockRceUiApi retorna Promises con latencia determinista corta.

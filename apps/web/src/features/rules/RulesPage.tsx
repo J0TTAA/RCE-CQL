@@ -143,7 +143,7 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
             <thead>
               <tr>
                 <th>Regla</th>
-                <th>Versión</th>
+                <th>Version automatica</th>
                 <th>Estado</th>
                 <th>Hook</th>
                 <th>Activación</th>
@@ -297,11 +297,11 @@ function RuleActionsDialog({
               <small>Controla si participa en las cards CDS.</small>
             </span>
           </button>
-          <button type="button" disabled title="Pendiente de endpoint backend">
+          <button type="button" disabled title="El backend calcula la version al publicar">
             <Copy size={16} aria-hidden />
             <span>
-              <strong>Duplicar version</strong>
-              <small>Pendiente para una siguiente iteracion.</small>
+              <strong>Version automatica</strong>
+              <small>Se calcula al publicar, no se escribe a mano.</small>
             </span>
           </button>
           <button type="button" disabled title="Pendiente de endpoint backend">

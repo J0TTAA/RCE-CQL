@@ -2,7 +2,6 @@ import { Activity, ClipboardList, ExternalLink, Filter, RotateCw } from 'lucide-
 import { useMemo, useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
-import { shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
 import type { ActivityEntry, CdsSeverity, RuleHook } from '../../types';
 import {
@@ -35,7 +34,7 @@ export function ActivityPage() {
       <div className="page-header">
         <div>
           <h1>Actividad CDS</h1>
-          <p>Ejecuciones de hooks y reglas dentro del sandbox</p>
+          <p>Como las reglas CQL usan datos HL7 FHIR para producir cards.</p>
         </div>
         <Button onClick={activity.reload}>
           <RotateCw size={15} aria-hidden />
@@ -44,13 +43,13 @@ export function ActivityPage() {
       </div>
 
       <Panel className="activity-summary">
-        <SummaryMetric label="Ejecuciones" value={activity.data?.length ?? 0} />
+        <SummaryMetric label="Evaluaciones" value={activity.data?.length ?? 0} />
         <SummaryMetric
-          label="Cards"
+          label="Cards CDS"
           value={activity.data?.reduce((total, entry) => total + entry.cardsCount, 0) ?? 0}
         />
         <SummaryMetric
-          label="Críticas"
+          label="Cards criticas"
           value={activity.data?.filter((entry) => entry.maxSeverity === 'critical').length ?? 0}
         />
       </Panel>
@@ -138,8 +137,8 @@ function ActivityRow({ entry, onOpen }: { entry: ActivityEntry; onOpen: () => vo
           </Badge>
         </div>
         <div className="activity-meta">
-          <span>{entry.date}</span>
-          <code>{entry.hook}</code>
+          <span>{formatDateTime(entry.date)}</span>
+          <span>{hookLabel(entry.hook)}</span>
           <span>{entry.rules.join(', ')}</span>
         </div>
       </div>
@@ -147,13 +146,9 @@ function ActivityRow({ entry, onOpen }: { entry: ActivityEntry; onOpen: () => vo
         <strong>{entry.cardsCount}</strong>
         <span>cards</span>
       </div>
-      <div className="activity-stats">
-        <strong>{entry.durationMs}</strong>
-        <span>ms</span>
-      </div>
       <Button onClick={onOpen}>
         <ClipboardList size={15} aria-hidden />
-        Detalle
+        Paso a paso
       </Button>
     </article>
   );
@@ -171,7 +166,7 @@ function ActivityDrawer({
   return (
     <Drawer
       open={Boolean(entry)}
-      title="Trazabilidad CDS Hooks"
+      title="Paso a paso CDS Hooks"
       className="drawer-wide"
       onClose={onClose}
     >
@@ -201,13 +196,28 @@ function ActivityDrawer({
               </footer>
             </article>
           ))}
-
-          <div className="activity-correlation">
-            <span>CorrelationId</span>
-            <code>{shortId(entry.correlationId)}</code>
-          </div>
         </div>
       ) : null}
     </Drawer>
   );
+}
+
+function hookLabel(hook: RuleHook): string {
+  const labels: Record<RuleHook, string> = {
+    'patient-view': 'Vista de paciente',
+    'order-select': 'Seleccion de orden',
+    'order-sign': 'Firma de orden',
+  };
+  return `${labels[hook]} (${hook})`;
+}
+
+function formatDateTime(value: string): string {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat('es-CL', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(parsed);
 }

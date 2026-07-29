@@ -4,18 +4,15 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleSlash,
-  Clock,
   Database,
   FileCode2,
-  Hash,
   ShieldCheck,
   UserRound,
   Zap,
   type LucideIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { shortId } from '../../lib/formatters';
-import type { ActivityEntry, CdsSeverity } from '../../types';
+import type { ActivityEntry, CdsSeverity, RuleHook } from '../../types';
 
 type TraceVariant = 'default' | 'critical' | 'warning' | 'info' | 'none' | 'error';
 
@@ -39,10 +36,10 @@ const resultLabel: Record<ActivityEntry['result'], string> = {
 };
 
 const severityText: Record<CdsSeverity | 'none', string> = {
-  critical: 'Crítica',
+  critical: 'Critica',
   warning: 'Advertencia',
   info: 'Informativa',
-  none: 'Sin recomendación',
+  none: 'Sin recomendacion',
 };
 
 export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProps) {
@@ -53,34 +50,41 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
   const nodes: TraceNodeModel[] = [
     {
       icon: Zap,
-      title: 'Hook disparado',
-      value: entry.hook,
-      detail: <code>{shortId(entry.correlationId)}</code>,
+      title: 'Momento CDS Hooks',
+      value: hookLabel(entry.hook),
+      detail: 'El RCE pidio ayuda clinica en este punto.',
       variant: 'default',
     },
     {
       icon: UserRound,
       title: 'Paciente',
-      value: `Patient/${shortId(entry.patientId)}`,
-      detail: entry.patientName || 'Paciente FHIR',
+      value: entry.patientName || 'Paciente FHIR',
+      detail: 'Ficha clinica seleccionada para la evaluacion.',
       variant: 'default',
     },
     {
       icon: ShieldCheck,
       title: 'Sandbox',
       value: sandboxLabel,
-      detail: 'Aislado por navegador',
+      detail: 'Usa solo los cambios de este navegador.',
+      variant: 'default',
+    },
+    {
+      icon: Database,
+      title: 'Datos HL7 FHIR',
+      value: resourceTypes.join(', ') || 'Sin datos reportados',
+      detail: `${entry.consideredResources.length} recursos considerados`,
       variant: 'default',
     },
     {
       icon: FileCode2,
-      title: 'Reglas evaluadas',
+      title: 'Reglas CQL',
       value: `${entry.rules.length} ${entry.rules.length === 1 ? 'regla' : 'reglas'}`,
       detail:
         entry.rules.length > 0 ? (
           <>
             {entry.rules.slice(0, 2).join(', ')}
-            {extraRules > 0 ? <span className="cds-trace-muted"> +{extraRules} más</span> : null}
+            {extraRules > 0 ? <span className="cds-trace-muted"> +{extraRules} mas</span> : null}
           </>
         ) : (
           'Sin reglas activas'
@@ -88,15 +92,8 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
       variant: 'default',
     },
     {
-      icon: Database,
-      title: 'Recursos FHIR',
-      value: resourceTypes.join(', ') || 'Sin recursos',
-      detail: `${entry.consideredResources.length} recursos`,
-      variant: 'default',
-    },
-    {
       icon: ResultIcon,
-      title: 'Resultado',
+      title: 'Card CDS',
       value: getCardsLabel(entry.cardsCount, entry.result),
       detail: severityText[entry.maxSeverity],
       variant: resultVariant,
@@ -104,11 +101,11 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
   ];
 
   return (
-    <section className="cds-trace" aria-label="Trazabilidad CDS Hooks">
+    <section className="cds-trace" aria-label="Paso a paso CDS Hooks">
       <header className="cds-trace-header">
         <div>
-          <h3>Trazabilidad CDS Hooks</h3>
-          <p>Ejecución de soporte a decisiones clínicas</p>
+          <h3>Paso a paso CDS Hooks</h3>
+          <p>De datos HL7 FHIR a reglas CQL y cards educativas.</p>
         </div>
         <span className={`cds-trace-result cds-trace-result-${resultVariant}`}>
           {resultLabel[entry.result]}
@@ -116,31 +113,27 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
       </header>
 
       <div className="cds-trace-teaching">
-        <h4>Que paso en esta ejecucion</h4>
+        <h4>Lectura para la clase</h4>
         <ol>
           <li>
-            El RCE disparo el hook <code>{entry.hook}</code> al abrir o reevaluar la ficha.
+            El alumno abre o reevalua una ficha. Ese momento del flujo se representa con CDS Hooks.
           </li>
           <li>
-            Nest resolvio el paciente, el sandbox <strong>{sandboxLabel}</strong> y los cambios
-            privados de este navegador.
+            El backend toma el paciente y el sandbox del navegador, asi cada alumno prueba sin
+            afectar a otros.
           </li>
           <li>
-            El backend preparo un request CDS Hooks con <code>hook</code>,{' '}
-            <code>hookInstance</code>, <code>context.patientId</code> y recursos FHIR.
+            Los datos clinicos se leen como recursos HL7 FHIR, por ejemplo Patient, Observation o
+            Condition.
           </li>
-          <li>Las reglas CQL activas se evaluaron contra el bundle FHIR efectivo.</li>
+          <li>Cada regla CQL activa se ejecuta sobre esos datos y responde verdadero o falso.</li>
           <li>
-            La respuesta volvio como cards:{' '}
-            {entry.cardsCount === 0
-              ? 'no hubo alertas para mostrar'
-              : getCardsLabel(entry.cardsCount, entry.result)}
-            .
+            Si una regla devuelve verdadero, el RCE muestra una card CDS con la recomendacion.
           </li>
         </ol>
       </div>
 
-      <div className="cds-trace-flow" role="list" aria-label="Flujo de ejecución CDS Hooks">
+      <div className="cds-trace-flow" role="list" aria-label="Flujo educativo CDS Hooks">
         {nodes.map((node, index) => (
           <div className="cds-trace-flow-item" key={node.title} role="listitem">
             <TraceNode node={node} />
@@ -149,27 +142,19 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
         ))}
       </div>
 
-      <dl className="cds-trace-details" aria-label="Detalles técnicos de la ejecución">
-        <TraceDetail label="Fecha / hora">
+      <dl className="cds-trace-details" aria-label="Resumen educativo de la ejecucion">
+        <TraceDetail label="Cuando">
           <Calendar size={12} aria-hidden />
           {formatDateTime(entry.date)}
         </TraceDetail>
-        <TraceDetail label="Duración">
-          <Clock size={12} aria-hidden />
-          {entry.durationMs} ms
-        </TraceDetail>
-        <TraceDetail label="Correlation ID">
-          <Hash size={12} aria-hidden />
-          <code>{entry.correlationId}</code>
-        </TraceDetail>
-        <TraceDetail label="Hook">{entry.hook}</TraceDetail>
+        <TraceDetail label="Momento clinico">{hookLabel(entry.hook)}</TraceDetail>
+        <TraceDetail label="Paciente">{entry.patientName || entry.patientId}</TraceDetail>
         <TraceDetail label="Sandbox">{sandboxLabel}</TraceDetail>
-        <TraceList label="Reglas evaluadas" values={entry.rules} empty="Sin reglas activas" />
+        <TraceList label="Reglas CQL evaluadas" values={entry.rules} empty="Sin reglas activas" />
         <TraceList
-          label="Recursos considerados"
-          values={entry.consideredResources}
-          empty="Sin recursos registrados"
-          code
+          label="Tipos de recursos HL7 FHIR"
+          values={resourceTypes}
+          empty="Sin recursos reportados"
         />
       </dl>
 
@@ -178,7 +163,7 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
           <>
             <p>
               <AlertTriangle size={14} aria-hidden />
-              Advertencias
+              Notas de evaluacion
             </p>
             <ul>
               {entry.warnings.map((warning) => (
@@ -187,7 +172,9 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
             </ul>
           </>
         ) : (
-          <p className="cds-trace-no-warnings">Sin advertencias del motor.</p>
+          <p className="cds-trace-no-warnings">
+            La evaluacion termino sin errores. Si no hubo cards, la condicion CQL devolvio falso.
+          </p>
         )}
       </div>
     </section>
@@ -227,17 +214,7 @@ function TraceDetail({ label, children }: { label: string; children: ReactNode }
   );
 }
 
-function TraceList({
-  label,
-  values,
-  empty,
-  code = false,
-}: {
-  label: string;
-  values: string[];
-  empty: string;
-  code?: boolean;
-}) {
+function TraceList({ label, values, empty }: { label: string; values: string[]; empty: string }) {
   return (
     <div className="cds-trace-detail cds-trace-detail-list">
       <dt>{label}</dt>
@@ -247,7 +224,7 @@ function TraceList({
         ) : (
           <ul>
             {values.map((value) => (
-              <li key={value}>{code ? <code>{value}</code> : value}</li>
+              <li key={value}>{value}</li>
             ))}
           </ul>
         )}
@@ -282,12 +259,21 @@ function getResultIcon(result: ActivityEntry['result'], cardsCount: number): Luc
 
 function getCardsLabel(cardsCount: number, result: ActivityEntry['result']): string {
   if (result === 'error') {
-    return 'Error de evaluación';
+    return 'Error de evaluacion';
   }
   if (cardsCount === 0) {
     return 'Sin cards';
   }
   return cardsCount === 1 ? '1 card' : `${cardsCount} cards`;
+}
+
+function hookLabel(hook: RuleHook): string {
+  const labels: Record<RuleHook, string> = {
+    'patient-view': 'Vista de paciente',
+    'order-select': 'Seleccion de orden',
+    'order-sign': 'Firma de orden',
+  };
+  return `${labels[hook]} (${hook})`;
 }
 
 function formatDateTime(value: string): string {

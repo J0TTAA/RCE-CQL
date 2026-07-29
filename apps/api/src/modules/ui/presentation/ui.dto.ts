@@ -41,8 +41,9 @@ export class RuleMetadataDto {
   @Matches(/^[A-Za-z][A-Za-z0-9_]*$/)
   name!: string;
 
+  @IsOptional()
   @Matches(/^[0-9]+(\.[0-9]+){0,2}(-[A-Za-z0-9.-]+)?$/)
-  version!: string;
+  version?: string;
 
   @IsIn(hooks)
   hook!: RuleHook;

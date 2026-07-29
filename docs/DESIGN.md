@@ -109,6 +109,7 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-018 | Observaciones pedagogicas como overlay FHIR        | Edad sola no demuestra reglas clinicas compuestas; se necesitan signos vitales y laboratorio editables sin contaminar HAPI base.         | El overlay `Basic` puede guardar valores controlados y Nest los materializa como `Observation` FHIR R4 en el bundle efectivo.                                                                                                                                                 |
 | ADR-019 | Facade CDS Hooks sobre evaluacion existente        | El RCE debe ser invocable por clientes CDS Hooks sin duplicar el motor CQL ni el acceso FHIR.                                            | `CdsHooksModule` expone discovery y servicios estables, y delega evaluacion al mismo flujo sandbox usado por la UI.                                                                                                                                                           |
 | ADR-020 | Edicion clinica guiada por allowlist FHIR          | Las reglas libres CQL necesitan variar mas que edad/presion, pero un editor FHIR crudo generaria errores de alumno y recursos invalidos. | La UI expone selects, checks y numeros validados; Nest guarda overlays `Basic` y materializa `Patient`, `Observation`, `Condition`, `MedicationRequest`, `AllergyIntolerance`, `Encounter`, `Procedure`, `Immunization` y `ServiceRequest` en el bundle efectivo del sandbox. |
+| ADR-021 | Versionado automatico de reglas                    | El objetivo docente es escribir y probar CQL, no enseñar semver manual ni generar errores por versiones mal tipeadas.                    | Nest asigna la version inicial y calcula la siguiente version al publicar; el frontend solo muestra la version como lectura y explica cuando cambia.                                                                                                                          |
 
 ## 7. Vista de contexto
 
@@ -244,7 +245,9 @@ docente requieren rol docente efectivo o configuracion institucional.
 Responsabilidades:
 
 - Crear y actualizar borradores.
-- Validar invariantes de nombre, version y lifecycle.
+- Validar invariantes de nombre y lifecycle.
+- Asignar version inicial y calcular la siguiente version publicada sin input
+  manual del usuario.
 - Aplicar `SessionContext` para listar, crear y evaluar solo reglas del sandbox
   activo, salvo consultas compartidas de docente.
 - Listar reglas y versiones.
@@ -782,6 +785,11 @@ La reevaluacion inicial es sincrona. FHIR Subscriptions se reserva para escritur
 7. CdsHooksModule transforma recomendaciones a cards.
 8. Se ordenan cards por indicator.
 9. Se responde `200`, incluso cuando el arreglo esta vacio.
+
+La UI de actividad muestra este flujo como explicacion pedagogica: momento
+clinico, datos HL7 FHIR usados, reglas CQL evaluadas y cards resultantes. Los
+identificadores de correlacion y duraciones quedan disponibles para depuracion,
+pero no son el contenido principal para el alumno.
 
 ### 12.6 Aplicar sugerencia
 

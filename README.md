@@ -28,11 +28,12 @@ Versiones candidatas y estado de verificacion:
 1. [docs/REQUIREMENTS.md](./docs/REQUIREMENTS.md): que debe cumplir el sistema.
 2. [docs/DESIGN.md](./docs/DESIGN.md): arquitectura y decisiones tecnicas.
 3. [docs/TASKS.md](./docs/TASKS.md): orden de implementacion y gates.
-4. [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md): comandos de desarrollo local.
-5. [docs/SYNTHETIC_DATA.md](./docs/SYNTHETIC_DATA.md): poblacion Synthea local.
-6. [docs/AGE_RULE_DEMO.md](./docs/AGE_RULE_DEMO.md): demo de regla por edad.
-7. [docs/CLINICAL_RULE_DEMO.md](./docs/CLINICAL_RULE_DEMO.md): demos clinicas.
-8. [docs/CDS_HOOKS_STANDARD.md](./docs/CDS_HOOKS_STANDARD.md): API CDS Hooks.
+4. [docs/TECHNICAL_OVERVIEW.md](./docs/TECHNICAL_OVERVIEW.md): flujo CQL a ELM, HAPI, evaluacion y arquitectura actual.
+5. [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md): comandos de desarrollo local.
+6. [docs/SYNTHETIC_DATA.md](./docs/SYNTHETIC_DATA.md): poblacion Synthea local.
+7. [docs/AGE_RULE_DEMO.md](./docs/AGE_RULE_DEMO.md): demo de regla por edad.
+8. [docs/CLINICAL_RULE_DEMO.md](./docs/CLINICAL_RULE_DEMO.md): demos clinicas.
+9. [docs/CDS_HOOKS_STANDARD.md](./docs/CDS_HOOKS_STANDARD.md): API CDS Hooks.
 
 Validar coherencia SDD:
 

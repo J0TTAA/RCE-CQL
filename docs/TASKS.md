@@ -288,7 +288,7 @@ Objetivo: demostrar cumplimiento, reproducibilidad y preparacion para clase.
 | TASK-8.8  | Documentar escenarios docentes y pasos de demostracion.                  | 6.13, 8.4, 8.10       | AC-004, AC-005, AC-011                                     | M      | TODO   |
 | TASK-8.9  | Ejecutar ensayo de entrega desde un entorno limpio.                      | 8.4 a 8.8             | AC-010                                                     | M      | TODO   |
 | TASK-8.10 | Ejecutar prueba multiusuario con dos navegadores y 10 sesiones anonimas. | 7.1, 3.12, 5.13, 6.14 | AC-011, REQ-NF-027                                         | M      | TODO   |
-| TASK-8.11 | Reemplazar base Alpine tras SIGSEGV de npm y verificar build limpio de API/web. | 8.7 | REQ-NF-024, REQ-NF-025 | S | IN_PROGRESS |
+| TASK-8.11 | Mitigar SIGSEGV de Maglev en builds y verificar build limpio de API/web. | 8.7 | REQ-NF-024, REQ-NF-025 | S | IN_PROGRESS |
 
 Evidencia parcial de TASK-8.7: `docs/evidence/M5/runs/20260914T000000Z/summary.md`. Incluye `compose.deploy.yaml` para RCE con imagenes publicadas y `compose.hapi.yaml` para HAPI/PostgreSQL administrados por el proyecto. Permanece en `REVIEW` hasta ejecutar `docker compose config`, build y smoke test en un entorno con Docker real.
 

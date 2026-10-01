@@ -1,4 +1,5 @@
-FROM node:24.18.0-bookworm-slim AS dependencies
+FROM node:24.21.0-alpine AS dependencies
+ENV NODE_OPTIONS=--jitless
 WORKDIR /workspace
 
 COPY package.json package-lock.json ./
@@ -9,14 +10,15 @@ FROM dependencies AS build
 COPY apps/api apps/api
 RUN npm run build --workspace @rce-cql/api
 
-FROM node:24.18.0-bookworm-slim AS production-dependencies
+FROM node:24.21.0-alpine AS production-dependencies
+ENV NODE_OPTIONS=--jitless
 WORKDIR /workspace
 
 COPY package.json package-lock.json ./
 COPY apps/api/package.json apps/api/package.json
 RUN npm ci --omit=dev
 
-FROM node:24.18.0-bookworm-slim AS runtime
+FROM node:24.21.0-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 

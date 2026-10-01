@@ -6,9 +6,11 @@ IN_PROGRESS
 
 ## Problema
 
-En el host Fedora, las etapas `npm ci` de la imagen `node:24.18.0-alpine`
-terminan con codigo 139. La imagen de API no se actualiza y la etapa web se
-cancela cuando Compose detiene el build paralelo.
+En el host Fedora, varias instalaciones `npm ci` simultaneas con Node 24.18.0
+terminan con `SIGSEGV` (139). Hay un reporte upstream de Node/V8 Maglev que
+reproduce este fallo con CPU contention en Linux, incluso en glibc; por lo tanto
+no depende de `--omit=dev` ni de Alpine. BuildKit lanza en paralelo las etapas
+de dependencias de API, dependencias de produccion y web.
 
 ## Objetivo
 
@@ -17,8 +19,10 @@ de Node ni el comportamiento del runtime.
 
 ## Cambio aprobado
 
-Usar `node:24.18.0-bookworm-slim` en las etapas de build y runtime de ambos
-Dockerfiles. No se cambia el lockfile ni se reemplaza npm.
+Fijar Node `24.21.0` y pasar `NODE_OPTIONS=--jitless` solo en las etapas de
+build que ejecutan npm. La opcion evita Maglev durante instalaciones y
+compilacion; no se copia a las etapas runtime. Mantener Alpine, no cambiar el
+lockfile y no reemplazar npm.
 
 ## Aceptacion
 
@@ -26,6 +30,8 @@ Dockerfiles. No se cambia el lockfile ni se reemplaza npm.
 - Los builds de API y web concluyen y Compose recrea ambos servicios.
 - Validacion SDD pasa.
 - La nueva version muestra el flujo de ordenes CDS en la ficha del paciente.
+
+Referencia primaria del fallo: https://github.com/nodejs/node/issues/64841
 
 ## Evidencia
 

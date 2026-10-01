@@ -1,4 +1,5 @@
-FROM node:24.18.0-bookworm-slim AS build
+FROM node:24.21.0-alpine AS build
+ENV NODE_OPTIONS=--jitless
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -8,7 +9,7 @@ RUN npm ci --workspace @rce-cql/web --include-workspace-root
 COPY apps/web apps/web
 RUN npm run build --workspace @rce-cql/web
 
-FROM node:24.18.0-bookworm-slim AS runtime
+FROM node:24.21.0-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 

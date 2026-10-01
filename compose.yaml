@@ -93,6 +93,7 @@ services:
       ANONYMOUS_SESSION_TTL_HOURS: ${ANONYMOUS_SESSION_TTL_HOURS:-8}
       CLASSROOM_DEFAULT_ID: ${CLASSROOM_DEFAULT_ID:-demo-aula}
       CLASSROOM_TEACHER_PASSCODE: ${CLASSROOM_TEACHER_PASSCODE:?Set CLASSROOM_TEACHER_PASSCODE in .env before starting Docker}
+      NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-}
     depends_on:
       hapi:
         condition: service_healthy

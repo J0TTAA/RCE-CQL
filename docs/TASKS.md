@@ -201,14 +201,27 @@ Objetivo: ejecutar reglas y exponer soporte de decisiones estandar.
 | TASK-5.5  | Implementar mapper RuleEvaluationResult a CDS Card.                    | 5.2, 3.5      | REQ-F-021, REQ-F-034 a REQ-F-037                      | M      | REVIEW |
 | TASK-5.6  | Implementar CDS Services Discovery.                                    | 5.4           | REQ-F-032, REQ-I-004                                  | M      | REVIEW |
 | TASK-5.7  | Implementar `rce-patient-view`.                                        | 5.4 a 5.6     | REQ-F-033, REQ-F-034, REQ-F-035, REQ-F-036, REQ-F-037 | L      | REVIEW |
-| TASK-5.8  | Implementar `rce-order-select` y `rce-order-sign`.                     | 5.7           | REQ-F-033 a REQ-F-037                                 | L      | REVIEW |
+| TASK-5.8  | Completar `rce-order-select` y `rce-order-sign` con ordenes FHIR, formulario y confirmacion sandbox. | 5.7 | REQ-F-033 a REQ-F-037, REQ-F-039, REQ-F-052, REQ-F-053 | L | REVIEW |
 | TASK-5.9  | Implementar prefetch y allowlist de fhirServer.                        | 5.7, 2.5      | REQ-NF-011, REQ-I-004                                 | M      | TODO   |
 | TASK-5.10 | Implementar aislamiento, concurrencia limitada y orden de cards.       | 5.4, 5.5      | REQ-F-024, REQ-F-037, REQ-NF-006                      | M      | REVIEW |
 | TASK-5.11 | Implementar feedback CDS y AuditEvent.                                 | 5.6, 3.11     | REQ-F-041, REQ-F-044                                  | M      | TODO   |
 | TASK-5.12 | Crear contract/e2e tests CDS Hooks.                                    | 5.6 a 5.11    | AC-004, AC-006, AC-007                                | L      | TODO   |
 | TASK-5.13 | Filtrar evaluacion CDS por sandbox y reglas compartidas.               | 5.4, 3.12     | REQ-F-052, REQ-F-053, REQ-NF-027                      | M      | REVIEW |
+| TASK-5.14 | Verificar regla CQL compuesta con cuatro hechos FHIR y matriz positiva/negativa. | 5.1 a 5.7 | REQ-F-020 a REQ-F-024, REQ-F-034 a REQ-F-037 | M | REVIEW |
 
 Gate `M3`: `patient-view` produce cards dinamicas desde CQL ejecutado en HAPI.
+
+Evidencia parcial de TASK-5.8:
+`docs/evidence/M3/runs/20260915T190015Z/summary.md`. Incluye pruebas del motor
+CQL instalado, aislamiento por sandbox, confirmacion idempotente y revision UI
+en escritorio/movil. Permanece en `REVIEW` hasta ejecutar el smoke contra HAPI
+y CQL Translation Service reales.
+
+Evidencia parcial de TASK-5.14:
+`docs/evidence/M3/runs/20260916T054508Z/summary.md`. La traduccion real y la
+matriz del motor pasaron. Los tres endpoints CDS Hooks pasaron con NestJS real y
+un repositorio FHIR temporal; la repeticion contra HAPI queda pendiente por no
+existir una API local levantada en el entorno Windows.
 
 ## 11. WBS 6 - Pacientes y experiencia educativa
 
@@ -271,10 +284,12 @@ Objetivo: demostrar cumplimiento, reproducibilidad y preparacion para clase.
 | TASK-8.4  | Automatizar AC-001 a AC-011 end-to-end.                                  | 8.1 a 8.3             | AC-001 a AC-011                                            | L      | TODO   |
 | TASK-8.5  | Ejecutar pruebas p95 y documentar resultados/limites.                    | 8.3, 6.13             | REQ-NF-004, REQ-NF-005, REQ-NF-006, REQ-NF-007, REQ-NF-027 | M      | TODO   |
 | TASK-8.6  | Ejecutar revision de seguridad y privacidad sintetica.                   | WBS 7, 8.3            | REQ-NF-008 a REQ-NF-012, REQ-NF-028, REQ-NF-029            | M      | TODO   |
-| TASK-8.7  | Fijar imagenes, variables de ejemplo y runbook Compose.                  | 8.3, 8.6              | REQ-NF-024, REQ-NF-025, REQ-NF-028                         | M      | TODO   |
+| TASK-8.7  | Fijar imagenes, variables de ejemplo y runbook Compose.                  | 8.3, 8.6              | REQ-NF-024, REQ-NF-025, REQ-NF-028                         | M      | REVIEW |
 | TASK-8.8  | Documentar escenarios docentes y pasos de demostracion.                  | 6.13, 8.4, 8.10       | AC-004, AC-005, AC-011                                     | M      | TODO   |
 | TASK-8.9  | Ejecutar ensayo de entrega desde un entorno limpio.                      | 8.4 a 8.8             | AC-010                                                     | M      | TODO   |
 | TASK-8.10 | Ejecutar prueba multiusuario con dos navegadores y 10 sesiones anonimas. | 7.1, 3.12, 5.13, 6.14 | AC-011, REQ-NF-027                                         | M      | TODO   |
+
+Evidencia parcial de TASK-8.7: `docs/evidence/M5/runs/20260914T000000Z/summary.md`. Incluye `compose.deploy.yaml` para RCE con imagenes publicadas y `compose.hapi.yaml` para HAPI/PostgreSQL administrados por el proyecto. Permanece en `REVIEW` hasta ejecutar `docker compose config`, build y smoke test en un entorno con Docker real.
 
 Gate `M5`: todos los criterios AC-001 a AC-011 pasan y la demo se levanta desde cero.
 

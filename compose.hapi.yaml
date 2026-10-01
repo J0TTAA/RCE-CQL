@@ -1,0 +1,70 @@
+name: rce-cql
+
+services:
+  postgres:
+    image: postgres:18.4
+    environment:
+      POSTGRES_DB: ${HAPI_DB_NAME:-hapi}
+      POSTGRES_USER: ${HAPI_DB_USER:-hapi}
+      POSTGRES_PASSWORD: ${HAPI_DB_PASSWORD:?Set HAPI_DB_PASSWORD before starting managed HAPI}
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${HAPI_DB_USER:-hapi} -d ${HAPI_DB_NAME:-hapi}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - hapi-postgres-data:/var/lib/postgresql
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+  hapi:
+    image: hapiproject/hapi:v8.10.0-3
+    environment:
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/config/application-local.yaml
+      HAPI_DB_NAME: ${HAPI_DB_NAME:-hapi}
+      HAPI_DB_USER: ${HAPI_DB_USER:-hapi}
+      HAPI_DB_PASSWORD: ${HAPI_DB_PASSWORD:?Set HAPI_DB_PASSWORD before starting managed HAPI}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'java', '-cp', '/app', 'HealthCheck']
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 90s
+    ports:
+      - '${HAPI_BIND_ADDRESS:-127.0.0.1}:${HAPI_PORT:-8080}:8080'
+    volumes:
+      - ./infra/hapi/application-local.yaml:/app/config/application-local.yaml:ro
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+  synthea-seed:
+    build:
+      context: .
+      dockerfile: infra/synthea/Dockerfile
+    profiles: ['seed-data']
+    environment:
+      HAPI_BASE_URL: http://hapi:8080/fhir
+      SYNTHEA_REFERENCE_DATE: ${SYNTHEA_REFERENCE_DATE:-20260726}
+      SYNTHEA_CHILD_COUNT: ${SYNTHEA_CHILD_COUNT:-6}
+      SYNTHEA_ADOLESCENT_COUNT: ${SYNTHEA_ADOLESCENT_COUNT:-4}
+      SYNTHEA_ADULT_COUNT: ${SYNTHEA_ADULT_COUNT:-12}
+      SYNTHEA_OLDER_ADULT_COUNT: ${SYNTHEA_OLDER_ADULT_COUNT:-8}
+    depends_on:
+      hapi:
+        condition: service_healthy
+    networks:
+      - rce-cql
+    restart: 'no'
+
+
+volumes:
+  hapi-postgres-data:
+
+networks:
+  rce-cql:
+    driver: bridge

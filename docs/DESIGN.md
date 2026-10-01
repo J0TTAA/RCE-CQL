@@ -110,6 +110,32 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-019 | Facade CDS Hooks sobre evaluacion existente        | El RCE debe ser invocable por clientes CDS Hooks sin duplicar el motor CQL ni el acceso FHIR.                                            | `CdsHooksModule` expone discovery y servicios estables, y delega evaluacion al mismo flujo sandbox usado por la UI.                                                                                                                                                           |
 | ADR-020 | Edicion clinica guiada por allowlist FHIR          | Las reglas libres CQL necesitan variar mas que edad/presion, pero un editor FHIR crudo generaria errores de alumno y recursos invalidos. | La UI expone selects, checks y numeros validados; Nest guarda overlays `Basic` y materializa `Patient`, `Observation`, `Condition`, `MedicationRequest`, `AllergyIntolerance`, `Encounter`, `Procedure`, `Immunization` y `ServiceRequest` en el bundle efectivo del sandbox. |
 | ADR-021 | Versionado automatico de reglas                    | El objetivo docente es escribir y probar CQL, no enseñar semver manual ni generar errores por versiones mal tipeadas.                    | Nest asigna la version inicial y calcula la siguiente version al publicar; el frontend solo muestra la version como lectura y explica cuando cambia.                                                                                                                          |
+| ADR-022 | CI/CD con imagenes versionadas                  | El servidor o nube no siempre debe compilar codigo fuente para desplegar el RCE.                                                          | GitHub Actions valida SDD/codigo/builds y publica `api`/`web` en GHCR con tags por commit o release; `compose.deploy.yaml` consume imagenes exactas contra HAPI externo.                                                                                                      |
+| ADR-023 | HAPI administrado como overlay de despliegue | El RCE debe poder operar contra un HAPI existente o levantar un HAPI propio en la misma instancia o en otra VM. | `compose.hapi.yaml` define HAPI/PostgreSQL y seed opcional; se combina con `compose.deploy.yaml` para usar imagenes publicadas o se ejecuta solo en una VM FHIR separada. |
+
+### ADR-024 - Flujo de ordenes educativo
+
+`order-select` y `order-sign` consumen `context.draftOrders` (Bundle R4) y,
+para seleccion, `context.selections`. Las ordenes soportadas son
+`MedicationRequest` y `ServiceRequest`; Nest valida identidad, estado, sujeto
+y referencias seleccionadas antes de entregarlas al engine existente.
+Las ordenes del contexto prevalecen sobre recursos con la misma identidad.
+Los parametros CQL `DraftOrders` (lista de referencias) y `Selections`
+permiten distinguir las ordenes pendientes de los antecedentes del paciente.
+
+La ficha incorpora un formulario de medicamentos, examenes y procedimientos
+con catalogo servido por Nest. Agregar una orden dispara `order-select`;
+revisar para firmar dispara `order-sign`. La confirmacion posterior es
+explicita y se limita al sandbox. Una revision se almacena como `Basic`
+etiquetado por sandbox, con ordenes en borrador, resultado y caducidad.
+Confirmar reevalua con datos vigentes; si cambian reglas/cards o hay errores,
+se exige revisar nuevamente. La confirmacion actualiza el mismo `Basic`,
+por lo que reenviarla no duplica ordenes. Las ordenes confirmadas se
+materializan como recursos R4 activos en el bundle efectivo; no se altera
+el paciente base ni se envia una receta a una farmacia.
+
+Documentacion y escenarios: [Guia de hooks](./CDS_HOOKS_WORKFLOWS.md).
+Alcance: REQ-F-033, REQ-F-039, REQ-F-052, REQ-F-053; TASK-5.8.
 
 ## 7. Vista de contexto
 
@@ -914,7 +940,7 @@ synthea-seed (job opcional)
 ### 15.2 Perfil con HAPI externo
 
 - Se omiten HAPI y PostgreSQL locales.
-- `FHIR_BASE_URL` y autenticacion apuntan al servidor externo.
+- `HAPI_BASE_URL` y `HAPI_AUTH_BEARER_TOKEN` apuntan al servidor externo.
 - Startup capability check decide si probar/ejecutar esta disponible.
 - La traduccion CQL sigue disponible aunque la evaluacion de reglas este degradada.
 - En modo aula contra HAPI institucional, los pacientes reales no se editan
@@ -924,32 +950,88 @@ synthea-seed (job opcional)
 ### 15.3 Variables
 
 ```text
+COMPOSE_PROFILES
+API_BIND_ADDRESS
+WEB_BIND_ADDRESS
+API_PORT
+WEB_PORT
+RCE_API_IMAGE
+RCE_WEB_IMAGE
 NODE_ENV
 PORT
+API_PREFIX
 CORS_ORIGINS
-CANONICAL_BASE_URL
-FHIR_BASE_URL
-FHIR_AUTH_MODE
-FHIR_AUTH_TOKEN
+HAPI_BASE_URL
+HAPI_AUTH_BEARER_TOKEN
 CQL_TRANSLATOR_BASE_URL
-CQL_SOURCE_MAX_BYTES
-CQL_TRANSLATION_TIMEOUT_MS
-CQL_EVALUATION_TIMEOUT_MS
-AUTH_ENABLED
-JWT_ISSUER
-JWT_AUDIENCE
+DEPENDENCY_TIMEOUT_MS
+NODE_EXTRA_CA_CERTS
 ANONYMOUS_CLASSROOM_ENABLED
 ANONYMOUS_SESSION_SECRET
 ANONYMOUS_SESSION_COOKIE_NAME
+ANONYMOUS_SESSION_COOKIE_SECURE
+ANONYMOUS_SESSION_COOKIE_SAMESITE
 ANONYMOUS_SESSION_TTL_HOURS
 CLASSROOM_DEFAULT_ID
-CLASSROOM_MAX_SESSIONS
-SANDBOX_RETENTION_HOURS
-LOG_LEVEL
+CLASSROOM_TEACHER_PASSCODE
+SYNTHEA_REFERENCE_DATE
+SYNTHEA_CHILD_COUNT
+SYNTHEA_ADOLESCENT_COUNT
+SYNTHEA_ADULT_COUNT
+SYNTHEA_OLDER_ADULT_COUNT
 ```
 
 Ningun secreto se versionara en el repositorio.
 
+### 15.4 CI/CD y entrega versionada
+
+El repositorio mantiene dos rutas de entrega:
+
+- `compose.yaml`: despliegue local o servidor que compila desde el codigo fuente.
+- `compose.deploy.yaml`: despliegue VM/nube que consume imagenes `api` y `web`
+  ya publicadas por CI/CD.
+- `compose.hapi.yaml`: overlay opcional para levantar HAPI/PostgreSQL administrados
+  por este proyecto en la misma instancia o en una VM FHIR separada.
+
+GitHub Actions ejecuta:
+
+- validacion SDD;
+- instalacion reproducible con `npm ci`;
+- lint, format check, typecheck, tests y builds de API/web;
+- build de imagenes Docker sin publicar;
+- publicacion opcional de imagenes a GHCR con tags `sha-<commit>` y `<version>`
+  cuando se empuja un tag `v*.*.*`.
+
+El despliegue productivo debe fijar `RCE_API_IMAGE` y `RCE_WEB_IMAGE` con tags
+exactos. No se usa `latest` como referencia de entrega reproducible.
+
+En VM, Compose y un reverse proxy publican una sola URL hacia `web`; `api`, HAPI,
+traductor y PostgreSQL quedan privados. En nube gestionada, se usan las mismas
+imagenes y variables, pero los secretos se cargan desde el mecanismo nativo del
+proveedor. En ambos casos `api` debe alcanzar `HAPI_BASE_URL` y el navegador no
+debe conectarse directamente a HAPI ni al traductor.
+
+### 15.5 HAPI administrado por el proyecto
+
+Cuando no existe un HAPI institucional listo, el despliegue puede incorporar
+HAPI y PostgreSQL sin cambiar el codigo de NestJS. El backend sigue usando solo
+`HAPI_BASE_URL`; la diferencia es donde vive ese endpoint.
+
+| Topologia | Componentes | Uso esperado | Consideraciones |
+| --------- | ----------- | ------------ | --------------- |
+| Misma VM/instancia | `compose.deploy.yaml` + `compose.hapi.yaml` | Clase autocontenida o demo con datos sinteticos. | `HAPI_BASE_URL=http://hapi:8080/fhir`; HAPI y PostgreSQL quedan en la red Docker privada. |
+| Otra VM/instancia | `compose.hapi.yaml` en VM FHIR y `compose.deploy.yaml` en VM RCE | Separar datos/volumenes o compartir HAPI con mas servicios. | `HAPI_BASE_URL` apunta a IP/DNS privado; exponer HAPI solo por red privada, VPN o proxy autorizado. |
+
+`compose.hapi.yaml` usa `hapiproject/hapi:v8.10.0-3`, `postgres:18.4`, volumen
+`hapi-postgres-data` y la misma configuracion FHIR R4/Clinical Reasoning usada
+en desarrollo. El job `synthea-seed` se mantiene opcional y solo debe usarse para
+poblar HAPI con datos sinteticos autorizados.
+
+Si se usa PostgreSQL gestionado por un proveedor cloud, se requiere una
+configuracion HAPI especifica para esa base externa. Esa variante no modifica
+los contratos del RCE, pero debe tratarse como cambio de operacion y validar
+`/metadata`, `Library`, lectura de pacientes, escritura de overlays y evaluacion
+CQL antes de una clase.
 ## 16. Realizacion de atributos de calidad
 
 | Atributo          | Tacticas de diseno                                                                                   |

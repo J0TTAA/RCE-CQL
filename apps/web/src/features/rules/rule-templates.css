@@ -1,0 +1,9 @@
+.rule-template-picker {
+  display: grid;
+  gap: 20px;
+  max-width: 720px;
+  padding: 20px 0;
+}
+.rule-template-picker .header-actions {
+  justify-content: flex-end;
+}

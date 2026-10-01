@@ -8,7 +8,8 @@ import {
   Power,
   PowerOff,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import './rule-templates.css';
 import { useRce } from '../../app/app-context';
 import { Link, useRouter } from '../../app/router';
 import { lifecycleLabel } from '../../lib/formatters';
@@ -23,12 +24,16 @@ import {
   Modal,
   SelectInput,
   TextInput,
+  Field,
 } from '../../components/ui/primitives';
 
 export function RulesPage({ createMode = false }: { createMode?: boolean }) {
   const router = useRouter();
   const { api, role } = useRce();
   const [creating, setCreating] = useState(false);
+  const [templateId, setTemplateId] = useState('age');
+  const [createError, setCreateError] = useState('');
+  const templates = useAsync(() => api.getRuleTemplates(), [api]);
   const [query, setQuery] = useState('');
   const [lifecycle, setLifecycle] = useState<Lifecycle | 'all'>('all');
   const [hook, setHook] = useState<RuleHook | 'all'>('all');
@@ -51,31 +56,67 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
     }
   };
 
-  useEffect(() => {
-    if (createMode) {
-      const name = `AgeRule${Date.now().toString().slice(-6)}`;
+  const createRule = async () => {
+    const template = templates.data?.find((item) => item.id === templateId);
+    if (template && !creating) {
+      const name = `Regla${Date.now().toString()}`;
       setCreating(true);
-      api
-        .createRule(defaultCql(name), {
-          title: 'Nueva regla por edad',
+      setCreateError('');
+      try {
+        const rule = await api.createRule(template.cql, {
+          title: template.label,
           name,
           version: '0.1.0',
-          hook: 'patient-view',
+          hook: template.hook,
           expression: 'Aplica',
-          summary: 'Paciente cumple criterio de edad',
-          detail: 'La regla CQL evaluada indica que el paciente cumple el criterio configurado.',
+          summary: template.summary,
+          detail: template.detail,
           indicator: 'info',
-        })
-        .then((rule) => router.navigate(`/rules/${rule.id}`, { replace: true }))
-        .finally(() => setCreating(false));
+        });
+        router.navigate(`/rules/${rule.id}`, { replace: true });
+      } catch (error) {
+        setCreateError(error instanceof Error ? error.message : 'No se pudo crear la regla.');
+      } finally {
+        setCreating(false);
+      }
     }
-  }, [api, createMode, router]);
+  };
 
   if (createMode) {
     return (
       <section className="page">
-        <div className="state-box">
-          {creating ? 'Creando regla en HAPI...' : 'Preparando regla...'}
+        <h1>Nueva regla CQL</h1>
+        <div className="rule-template-picker">
+          <Field label="Punto de partida">
+            <SelectInput
+              value={templateId}
+              disabled={creating || templates.loading}
+              onChange={(event) => setTemplateId(event.target.value)}
+            >
+              {(templates.data ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </SelectInput>
+          </Field>
+          <div className="header-actions">
+            <Button onClick={() => router.navigate('/rules')} disabled={creating}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void createRule()}
+              disabled={creating || !templates.data?.length}
+            >
+              {creating ? 'Creando regla...' : 'Crear regla'}
+            </Button>
+          </div>
+          {createError || templates.error ? (
+            <p className="state-error" role="alert">
+              {createError || templates.error}
+            </p>
+          ) : null}
         </div>
       </section>
     );
@@ -319,16 +360,4 @@ function RuleActionsDialog({
 
 function canToggleRuleActivation(role: Role, rule: ClinicalRule): boolean {
   return rule.lifecycle === 'published' && (role === 'teacher' || rule.scope === 'sandbox');
-}
-
-function defaultCql(name: string): string {
-  return `library ${name} version '0.1.0'
-
-using FHIR version '4.0.1'
-
-context Patient
-
-define "Aplica":
-  AgeInYears() >= 18
-`;
 }

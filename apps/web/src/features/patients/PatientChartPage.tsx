@@ -4,6 +4,7 @@ import { useRce } from '../../app/app-context';
 import { Link } from '../../app/router';
 import { formatAge, formatDate, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
+import { OrdersPanel } from './OrdersPanel';
 import type {
   CdsCard,
   DemoEncounterType,
@@ -87,6 +88,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
             <PatientHeader
               patient={displayedPatient}
               onEdit={() => setDrawerOpen(true)}
+              onOrder={() => setTab('ordenes')}
               onRefresh={refreshCards}
               refreshing={refreshingCards}
             />
@@ -112,7 +114,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                       onClick={() => setTab(item)}
                       type="button"
                     >
-                      {item}
+                      {item === 'ordenes' ? 'Órdenes CDS' : item}
                     </button>
                   ))}
                   <button
@@ -200,6 +202,16 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                     headers={['Vacuna', 'Estado', 'Fecha']}
                   />
                 ) : null}
+                <div hidden={tab !== 'ordenes'}>
+                  <OrdersPanel
+                    key={patientId}
+                    patientId={patientId}
+                    onConfirmed={async () => {
+                      setPatientDetail(await api.getPatient(patientId));
+                      await refreshCards();
+                    }}
+                  />
+                </div>
                 {tab === 'ordenes' ? (
                   <ResourceTable
                     rows={displayedPatient.serviceRequests.map((item) => [
@@ -239,11 +251,13 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
 function PatientHeader({
   patient,
   onEdit,
+  onOrder,
   onRefresh,
   refreshing,
 }: {
   patient: PatientDetail;
   onEdit: () => void;
+  onOrder: () => void;
   onRefresh: () => Promise<void>;
   refreshing: boolean;
 }) {
@@ -267,6 +281,10 @@ function PatientHeader({
         </p>
       </div>
       <div className="header-actions">
+        <Button onClick={onOrder}>
+          <Plus size={15} aria-hidden />
+          Recetar / indicar
+        </Button>
         <Badge tone="info">Datos sintéticos</Badge>
         {patient.sandboxTouched ? <Badge tone="interactive">Mi sandbox</Badge> : null}
         <Button onClick={onRefresh} disabled={refreshing}>

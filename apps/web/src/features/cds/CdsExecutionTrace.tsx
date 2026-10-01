@@ -116,15 +116,21 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
         <h4>Lectura para la clase</h4>
         <ol>
           <li>
-            El alumno abre o reevalua una ficha. Ese momento del flujo se representa con CDS Hooks.
+            {entry.hook === 'order-select'
+              ? 'El alumno selecciona una receta, examen o procedimiento. El RCE consulta las reglas antes de confirmar esa orden.'
+              : entry.hook === 'order-sign'
+                ? 'El alumno revisa las ordenes antes de firmarlas. Las reglas consideran los detalles de las ordenes pendientes.'
+                : 'El alumno abre o reevalua la ficha del paciente.'}
           </li>
           <li>
             El backend toma el paciente y el sandbox del navegador, asi cada alumno prueba sin
             afectar a otros.
           </li>
           <li>
-            Los datos clinicos se leen como recursos HL7 FHIR, por ejemplo Patient, Observation o
-            Condition.
+            Se consultan los datos HL7 FHIR del paciente.{' '}
+            {entry.hook === 'patient-view'
+              ? 'Las reglas usan los antecedentes que necesitan.'
+              : 'Se incluyen las recetas y solicitudes pendientes, aunque todavia no esten confirmadas.'}
           </li>
           <li>Cada regla CQL activa se ejecuta sobre esos datos y responde verdadero o falso.</li>
           <li>
@@ -173,7 +179,9 @@ export function CdsExecutionTrace({ entry, sandboxLabel }: CdsExecutionTraceProp
           </>
         ) : (
           <p className="cds-trace-no-warnings">
-            La evaluacion termino sin errores. Si no hubo cards, la condicion CQL devolvio falso.
+            {entry.rules.length === 0
+              ? 'No habia reglas activas para este momento del flujo.'
+              : 'La evaluacion termino sin errores. Si no hubo cards, ninguna regla evaluada cumplio su condicion.'}
           </p>
         )}
       </div>

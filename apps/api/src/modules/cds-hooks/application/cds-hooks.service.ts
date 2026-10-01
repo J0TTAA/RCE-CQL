@@ -7,6 +7,7 @@ import {
 } from '../../ui/application/ui.service';
 import type { FhirResource } from '../../fhir/application/fhir-gateway.port';
 import type { CdsFeedbackRequestDto, CdsHookRequestDto } from '../presentation/cds-hooks.dto';
+import { orderContext } from './order-context';
 
 export interface CdsServiceDefinition {
   hook: RuleHook;
@@ -59,7 +60,7 @@ const SERVICE_DEFINITIONS: CdsServiceDefinition[] = [
       patient: 'Patient/{{context.patientId}}',
     },
     usageRequirements:
-      'El MVP evalua reglas contra el bundle del paciente y recursos FHIR enviados por prefetch.',
+      'FHIR R4: MedicationRequest y ServiceRequest. Requiere draftOrders y selections. Usa el HAPI configurado y el sandbox de la sesion.',
   },
   {
     hook: 'order-sign',
@@ -70,7 +71,7 @@ const SERVICE_DEFINITIONS: CdsServiceDefinition[] = [
       patient: 'Patient/{{context.patientId}}',
     },
     usageRequirements:
-      'El MVP evalua reglas contra el bundle del paciente y recursos FHIR enviados por prefetch.',
+      'FHIR R4: MedicationRequest y ServiceRequest. Requiere draftOrders. Evaluar no firma ni persiste las ordenes.',
   },
 ];
 
@@ -92,6 +93,11 @@ export class CdsHooksService {
     sandboxId: string,
     request: CdsHookRequestDto,
   ): Promise<CdsHooksResponse> {
+    const evaluation = await this.evaluate(serviceId, sandboxId, request);
+    return { cards: evaluation.cards.map(toCdsHooksCard) };
+  }
+
+  async evaluate(serviceId: string, sandboxId: string, request: CdsHookRequestDto) {
     const service = this.serviceFor(serviceId);
     if (request.hook !== service.hook) {
       throw new BadRequestException(
@@ -103,16 +109,40 @@ export class CdsHooksService {
     }
 
     const patientId = patientIdFromContext(request.context);
-    const evaluation = await this.ui.evaluateHook({
+    if (
+      typeof request.context.userId !== 'string' ||
+      !/^(Practitioner|PractitionerRole)\/[A-Za-z0-9.-]{1,64}$/.test(request.context.userId)
+    ) {
+      throw new BadRequestException(
+        'context.userId debe identificar un Practitioner o PractitionerRole.',
+      );
+    }
+    const orders =
+      service.hook === 'patient-view'
+        ? undefined
+        : orderContext(request.context, service.hook, patientId);
+    const prefetch = fhirResourcesFromPrefetch(request.prefetch);
+    for (const resource of prefetch) {
+      const subject = resource.subject as { reference?: string } | undefined;
+      const patient = resource.patient as { reference?: string } | undefined;
+      if (
+        (resource.resourceType === 'Patient' && resource.id !== patientId) ||
+        (subject?.reference && subject.reference !== `Patient/${patientId}`) ||
+        (patient?.reference && patient.reference !== `Patient/${patientId}`)
+      ) {
+        throw new BadRequestException('El prefetch contiene recursos de otro paciente.');
+      }
+    }
+    return this.ui.evaluateHook({
       patientId,
       sandboxId,
       hook: service.hook,
       persistActivity: true,
       correlationId: request.hookInstance,
-      additionalResources: fhirResourcesFromPrefetch(request.prefetch),
+      additionalResources: prefetch,
+      contextResources: orders?.resources,
+      parameters: orders?.parameters,
     });
-
-    return { cards: evaluation.cards.map(toCdsHooksCard) };
   }
 
   acceptFeedback(serviceId: string, request: CdsFeedbackRequestDto): CdsFeedbackResponse {
@@ -131,7 +161,7 @@ export class CdsHooksService {
 
 function patientIdFromContext(context: Record<string, unknown>): string {
   const patientId = context.patientId;
-  if (typeof patientId !== 'string' || !patientId.trim()) {
+  if (typeof patientId !== 'string' || !/^[A-Za-z0-9.-]{1,64}$/.test(patientId)) {
     throw new BadRequestException('context.patientId es requerido para este CDS Hook.');
   }
   return patientId.trim();

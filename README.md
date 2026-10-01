@@ -34,6 +34,7 @@ Versiones candidatas y estado de verificacion:
 7. [docs/AGE_RULE_DEMO.md](./docs/AGE_RULE_DEMO.md): demo de regla por edad.
 8. [docs/CLINICAL_RULE_DEMO.md](./docs/CLINICAL_RULE_DEMO.md): demos clinicas.
 9. [docs/CDS_HOOKS_STANDARD.md](./docs/CDS_HOOKS_STANDARD.md): API CDS Hooks.
+10. [docs/CDS_HOOKS_WORKFLOWS.md](./docs/CDS_HOOKS_WORKFLOWS.md): recetas, examenes y ejercicios con `order-select` y `order-sign`.
 
 Validar coherencia SDD:
 
@@ -48,8 +49,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\validate-sdd.ps1
 | `web` | `apps/web` | Siempre | `127.0.0.1:5173` |
 | `api` | `apps/api` | Siempre | `127.0.0.1:3000` |
 | `cql-translator` | `cqframework/cql-translation-service:v2.9.0` | Si no hay traductor externo | `127.0.0.1:8081` |
-| `hapi` | `hapiproject/hapi:v8.10.0-3` | Solo demo/local | `127.0.0.1:8080` |
-| `postgres` | `postgres:18.4` | Solo HAPI local | No publico |
+| `hapi` | `hapiproject/hapi:v8.10.0-3` | Demo/local o HAPI administrado por este proyecto | `127.0.0.1:8080` |
+| `postgres` | `postgres:18.4` | Persistencia del HAPI administrado por este proyecto | No publico |
 | `synthea-seed` | `infra/synthea` | Job opcional para poblar HAPI local | No publico |
 
 El navegador solo debe entrar al RCE Web. HAPI, PostgreSQL y el traductor no
@@ -61,7 +62,10 @@ deben exponerse directamente a los alumnos en un despliegue normal.
 | --- | --- | --- | --- |
 | Servidor con HAPI institucional existente | `.env.server.example` | `local-translator` | Levanta web, API y traductor; usa el HAPI externo configurado. |
 | HAPI externo y traductor externo | `.env.server.example` | vacio | Levanta solo web y API; ambos motores externos se configuran por URL. |
-| Clase con HAPI sintetico propio | `.env.example` | `local-hapi,local-translator` | Levanta web, API, traductor, HAPI y PostgreSQL locales para docencia aislada. |
+| Servidor con imagenes publicadas por CI/CD | `.env.server.example` + `compose.deploy.yaml` | `local-translator` o vacio | No compila en la VM; descarga imagenes versionadas desde un registry. |
+| RCE + HAPI propio en la misma VM/instancia | `.env.server.example` + `compose.deploy.yaml` + `compose.hapi.yaml` | `local-translator` o vacio | Levanta web, API, HAPI y PostgreSQL en la misma red Docker; ideal para una clase autocontenida. |
+| HAPI propio en otra VM/instancia | HAPI: `compose.hapi.yaml`; RCE: `compose.deploy.yaml` | Segun cada VM | Separa el repositorio FHIR del RCE; el API apunta al HAPI por IP/DNS privado. |
+| Clase con HAPI sintetico propio desde codigo fuente | `.env.example` | `local-hapi,local-translator` | Levanta web, API, traductor, HAPI y PostgreSQL locales para docencia aislada. |
 
 ## Requisitos de maquina
 
@@ -132,6 +136,13 @@ ANONYMOUS_SESSION_COOKIE_SECURE=true
 ANONYMOUS_SESSION_COOKIE_SAMESITE=Lax
 ```
 
+Si se usara `compose.deploy.yaml`, tambien definir:
+
+```text
+RCE_API_IMAGE=ghcr.io/OWNER/REPO-api:sha-COMMIT
+RCE_WEB_IMAGE=ghcr.io/OWNER/REPO-web:sha-COMMIT
+```
+
 Con `COMPOSE_PROFILES=local-translator`, Compose levanta el traductor CQL local,
 pero no levanta HAPI ni PostgreSQL.
 
@@ -144,10 +155,32 @@ CQL_TRANSLATOR_BASE_URL=https://traductor.institucion.cl
 
 ### 3. Levantar RCE contra HAPI externo
 
+Hay dos formas validas.
+
+#### Opcion A: compilar en la VM o servidor
+
+Usa el `compose.yaml` principal. Es simple cuando el servidor tiene el codigo
+fuente, Docker y permisos para compilar imagenes.
+
 ```bash
 docker compose --env-file .env up -d --build
 docker compose --env-file .env ps
 ```
+
+#### Opcion B: usar imagenes publicadas por CI/CD
+
+Usa `compose.deploy.yaml`. Es mejor para nube o VM de produccion porque el
+servidor no necesita Node.js ni compilar; solo descarga imagenes ya verificadas.
+
+```bash
+docker compose --env-file .env -f compose.deploy.yaml pull
+docker compose --env-file .env -f compose.deploy.yaml up -d
+docker compose --env-file .env -f compose.deploy.yaml ps
+```
+
+En este modo `RCE_API_IMAGE` y `RCE_WEB_IMAGE` deben apuntar a tags exactos,
+por ejemplo `sha-abc123def456` o `1.0.0`. Para entregas reproducibles no usar
+`latest`.
 
 Debe quedar arriba `web`, `api` y, si se usa el perfil local, `cql-translator`.
 No deben aparecer `hapi` ni `postgres` en este modo.
@@ -256,6 +289,112 @@ Cuando un dato no existe en HAPI, la UI muestra "Sin dato", "Sin fecha" o
 "Sin edad". Si el alumno edita un valor desde el RCE, ese cambio se guarda como
 overlay del sandbox y no modifica directamente el recurso original del HAPI
 institucional.
+
+## Cuando el RCE tambien administra HAPI
+
+A veces no existira un HAPI institucional listo, o convendra separar la demo de
+cualquier servidor real. En ese caso el proyecto puede levantar HAPI y su
+PostgreSQL. Hay dos topologias validas.
+
+| Topologia | Cuando conviene | HAPI_BASE_URL que usa la API |
+| --- | --- | --- |
+| Misma VM/instancia | Clase pequena, demo autocontenida, administracion simple. | `http://hapi:8080/fhir` |
+| Otra VM/instancia | HAPI debe vivir separado, se desea aislar datos/volumenes o compartir HAPI con otros servicios. | `http://IP-PRIVADA-HAPI:8080/fhir` o `https://hapi.interno/fhir` |
+
+En ambos casos, PostgreSQL es una dependencia interna de HAPI. NestJS nunca se
+conecta a las tablas: solo habla con HAPI por la API FHIR R4.
+
+### Opcion 1: RCE, HAPI y PostgreSQL en la misma VM
+
+Esta opcion usa imagenes publicadas para `web` y `api`, y agrega HAPI/PostgreSQL
+con `compose.hapi.yaml`.
+
+En `.env` usar como minimo:
+
+```text
+RCE_API_IMAGE=ghcr.io/OWNER/REPO-api:1.0.0
+RCE_WEB_IMAGE=ghcr.io/OWNER/REPO-web:1.0.0
+HAPI_BASE_URL=http://hapi:8080/fhir
+HAPI_DB_NAME=hapi
+HAPI_DB_USER=hapi
+HAPI_DB_PASSWORD=una-contrasena-larga-para-postgres-hapi
+CORS_ORIGINS=https://rce.institucion.cl
+ANONYMOUS_SESSION_SECRET=un-secreto-largo-y-unico
+CLASSROOM_TEACHER_PASSCODE=clave-docente-real
+```
+
+Levantar:
+
+```bash
+docker compose --env-file .env -f compose.deploy.yaml -f compose.hapi.yaml pull
+docker compose --env-file .env -f compose.deploy.yaml -f compose.hapi.yaml up -d
+docker compose --env-file .env -f compose.deploy.yaml -f compose.hapi.yaml ps
+```
+
+Con esta combinacion deberian quedar arriba `web`, `api`, `hapi`, `postgres` y,
+si `COMPOSE_PROFILES=local-translator`, tambien `cql-translator`.
+
+Para poblar ese HAPI con pacientes sinteticos:
+
+```bash
+docker compose --env-file .env -f compose.deploy.yaml -f compose.hapi.yaml --profile seed-data build synthea-seed
+docker compose --env-file .env -f compose.deploy.yaml -f compose.hapi.yaml --profile seed-data run --rm synthea-seed
+```
+
+El volumen `hapi-postgres-data` conserva los datos de HAPI. No usar
+`docker compose down --volumes` salvo que se quiera borrar la base.
+
+### Opcion 2: HAPI y PostgreSQL en otra VM
+
+Esta opcion separa el repositorio FHIR. Desde la perspectiva del RCE, ese HAPI
+se configura igual que un HAPI externo.
+
+En la VM de HAPI:
+
+```bash
+cp .env.server.example hapi.env
+```
+
+Configurar en `hapi.env`:
+
+```text
+HAPI_BIND_ADDRESS=0.0.0.0
+HAPI_PORT=8080
+HAPI_DB_NAME=hapi
+HAPI_DB_USER=hapi
+HAPI_DB_PASSWORD=una-contrasena-larga-para-postgres-hapi
+```
+
+Levantar solo HAPI y PostgreSQL:
+
+```bash
+docker compose --env-file hapi.env -f compose.hapi.yaml up -d postgres hapi
+docker compose --env-file hapi.env -f compose.hapi.yaml ps
+```
+
+En la VM del RCE, configurar `.env` con la URL privada de ese HAPI:
+
+```text
+HAPI_BASE_URL=http://IP-PRIVADA-HAPI:8080/fhir
+```
+
+Y levantar el RCE normalmente:
+
+```bash
+docker compose --env-file .env -f compose.deploy.yaml up -d
+```
+
+Importante: si HAPI esta en otra VM, publicar `8080` solo en red privada, VPN o
+firewall restringido a la VM del RCE. No exponer HAPI ni PostgreSQL directamente
+a Internet para los alumnos.
+
+### Consideracion para nube
+
+El mismo criterio aplica en nube: puedes desplegar todo en una instancia con
+Docker Compose, o separar HAPI/PostgreSQL en otra instancia privada. Si quieres
+usar PostgreSQL gestionado por el proveedor cloud, se necesita una configuracion
+HAPI especifica para esa base gestionada; el `compose.hapi.yaml` incluido usa un
+PostgreSQL en contenedor con volumen Docker.
 
 ## Entorno local de pruebas con HAPI propio
 
@@ -477,6 +616,77 @@ No se debe usar este job para poblar el HAPI institucional del docente. Si se
 requiere cargar datos en un servidor institucional, debe definirse una carga
 controlada, autorizada y separada del entorno real.
 
+## CI/CD
+
+El repositorio incluye dos workflows de GitHub Actions:
+
+| Workflow | Archivo | Cuando corre | Que verifica o publica |
+| --- | --- | --- | --- |
+| CI | `.github/workflows/ci.yml` | Pull request, push a `main`/`master`, manual | `npm ci`, lint, format check, typecheck API/web, tests API, build API/web, SDD y build de imagenes Docker. |
+| Publish Containers | `.github/workflows/publish-containers.yml` | Push a `main`, tag `v*.*.*`, manual | Publica imagenes `api` y `web` en GHCR con tags `sha-<commit>` y, si hay release tag, `<version>`. |
+
+Las imagenes se publican como:
+
+```text
+ghcr.io/OWNER/REPO-api:sha-abc123def456
+ghcr.io/OWNER/REPO-web:sha-abc123def456
+```
+
+Para una entrega versionada:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+El workflow publicara tambien:
+
+```text
+ghcr.io/OWNER/REPO-api:1.0.0
+ghcr.io/OWNER/REPO-web:1.0.0
+```
+
+Despues, en el servidor o plataforma cloud, actualizar `.env`:
+
+```text
+RCE_API_IMAGE=ghcr.io/OWNER/REPO-api:1.0.0
+RCE_WEB_IMAGE=ghcr.io/OWNER/REPO-web:1.0.0
+```
+
+Y desplegar:
+
+```bash
+docker compose --env-file .env -f compose.deploy.yaml pull
+docker compose --env-file .env -f compose.deploy.yaml up -d
+```
+
+Si el mismo servidor tambien levanta HAPI/PostgreSQL propios, usar el overlay:
+
+```bash
+docker compose --env-file .env -f compose.deploy.yaml -f compose.hapi.yaml pull
+docker compose --env-file .env -f compose.deploy.yaml -f compose.hapi.yaml up -d
+```
+
+Si el registry es privado, el servidor debe hacer login antes de `pull`:
+
+```bash
+docker login ghcr.io
+```
+
+### VM vs nube
+
+La diferencia principal no esta en el codigo, sino en quien termina HTTPS y como
+llegan las variables de entorno:
+
+- En una VM clasica, lo normal es usar Docker Compose + Nginx/Caddy/Traefik y
+  guardar `.env` en el servidor.
+- En una nube gestionada, se usan las mismas imagenes `api` y `web`, pero las
+  variables se cargan desde el panel de secretos/configuracion del proveedor.
+- En ambos casos, el navegador debe entrar por una sola URL publica del RCE y el
+  contenedor `api` debe poder llegar al `HAPI_BASE_URL`.
+- Si HAPI usa certificado TLS de CA interna, montar el certificado y definir
+  `NODE_EXTRA_CA_CERTS` dentro del runtime de `api`.
+
 ## Operacion diaria
 
 Ver contenedores:
@@ -584,6 +794,24 @@ aptos para docencia.
 El backend guarda reglas como `Library` FHIR con CQL y ELM. El HAPI configurado
 debe permitir escritura de `Library`. Si el servidor externo es solo lectura, la
 autoria CQL no podra completarse contra ese HAPI.
+
+### La regla valida pero no aparece una card
+
+Una regla compuesta solo produce una card cuando la expresion configurada
+devuelve exactamente `true`. Para separar errores de traduccion, ejecucion y
+datos FHIR se incluyen tres pruebas:
+
+```bash
+npm run test:cql-templates -- --translator http://localhost:8081
+npm run test:complex-engine -- --translator http://localhost:8081
+npm run test:complex-e2e -- --synthetic-patient-id ID
+```
+
+La primera traduce todas las plantillas con el servicio oficial. La segunda
+evalua ELM con el motor instalado y una matriz de hechos FHIR. La tercera crea,
+valida y publica la regla en HAPI, modifica solo el sandbox actual e invoca
+`patient-view` tanto por la API de la interfaz como por CDS Hooks estandar.
+Usar exclusivamente el identificador de un paciente sintetico de docencia.
 
 ## Principios no negociables
 

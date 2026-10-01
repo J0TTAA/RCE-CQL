@@ -21,6 +21,9 @@
     "lint": "npm run lint --workspace @rce-cql/api",
     "format:check": "npm run format:check --workspace @rce-cql/api",
     "test": "npm run test --workspace @rce-cql/api",
+    "test:complex-engine": "node scripts/complex-cql-engine-smoke.mjs",
+    "test:cql-templates": "npm run build --workspace @rce-cql/api && node scripts/cql-templates-smoke.mjs",
+    "test:complex-e2e": "node scripts/complex-patient-view-smoke.mjs",
     "typecheck": "npm run typecheck --workspace @rce-cql/api",
     "typecheck:web": "npm run typecheck --workspace @rce-cql/web"
   }

@@ -1,0 +1,72 @@
+name: rce-cql
+
+services:
+  cql-translator:
+    image: cqframework/cql-translation-service:v2.9.0
+    profiles: ['local-translator']
+    ports:
+      - '${CQL_TRANSLATOR_BIND_ADDRESS:-127.0.0.1}:${CQL_TRANSLATOR_PORT:-8081}:8080'
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+  api:
+    image: ${RCE_API_IMAGE:?Set RCE_API_IMAGE with the published API image}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      API_PREFIX: api/v1
+      HAPI_BASE_URL: ${HAPI_BASE_URL:?Set HAPI_BASE_URL to the external FHIR R4 base URL}
+      HAPI_AUTH_BEARER_TOKEN: ${HAPI_AUTH_BEARER_TOKEN:-}
+      CQL_TRANSLATOR_BASE_URL: ${CQL_TRANSLATOR_BASE_URL:-http://cql-translator:8080}
+      DEPENDENCY_TIMEOUT_MS: ${DEPENDENCY_TIMEOUT_MS:-10000}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS to the public RCE origin}
+      ANONYMOUS_CLASSROOM_ENABLED: ${ANONYMOUS_CLASSROOM_ENABLED:-true}
+      ANONYMOUS_SESSION_SECRET: ${ANONYMOUS_SESSION_SECRET:?Set ANONYMOUS_SESSION_SECRET}
+      ANONYMOUS_SESSION_COOKIE_NAME: ${ANONYMOUS_SESSION_COOKIE_NAME:-rce_session}
+      ANONYMOUS_SESSION_COOKIE_SECURE: ${ANONYMOUS_SESSION_COOKIE_SECURE:-true}
+      ANONYMOUS_SESSION_COOKIE_SAMESITE: ${ANONYMOUS_SESSION_COOKIE_SAMESITE:-Lax}
+      ANONYMOUS_SESSION_TTL_HOURS: ${ANONYMOUS_SESSION_TTL_HOURS:-8}
+      CLASSROOM_DEFAULT_ID: ${CLASSROOM_DEFAULT_ID:-clase-rce-cql}
+      CLASSROOM_TEACHER_PASSCODE: ${CLASSROOM_TEACHER_PASSCODE:?Set CLASSROOM_TEACHER_PASSCODE}
+      NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-}
+    depends_on:
+      cql-translator:
+        condition: service_started
+        required: false
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/v1/health/live').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    ports:
+      - '${API_BIND_ADDRESS:-127.0.0.1}:${API_PORT:-3000}:3000'
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+  web:
+    image: ${RCE_WEB_IMAGE:?Set RCE_WEB_IMAGE with the published web image}
+    environment:
+      API_ORIGIN: http://api:3000
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-5173}:5173'
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+networks:
+  rce-cql:
+    driver: bridge

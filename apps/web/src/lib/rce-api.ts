@@ -9,6 +9,10 @@ import type {
   ServicesStatus,
   SessionContext,
   ValidationResult,
+  OrderCatalogItem,
+  OrderInput,
+  OrderReviewResult,
+  RuleTemplate,
 } from '../types';
 
 export class RceApiError extends Error {
@@ -65,6 +69,18 @@ export interface PatientUpdateResult {
 }
 
 export interface RceUiApi {
+  getOrderCatalog(): Promise<OrderCatalogItem[]>;
+  getRuleTemplates(): Promise<RuleTemplate[]>;
+  reviewOrders(
+    patientId: string,
+    hook: 'order-select' | 'order-sign',
+    orders: OrderInput[],
+    selections?: string[],
+  ): Promise<OrderReviewResult>;
+  confirmOrders(
+    patientId: string,
+    reviewId: string,
+  ): Promise<{ confirmed: true; orderCount: number }>;
   getSession(): Promise<SessionContext>;
   setRole(role: SessionContext['role'], teacherPasscode?: string): Promise<SessionContext>;
   resetSandbox(): Promise<SessionContext>;
@@ -92,6 +108,37 @@ export function createHttpRceApi(): RceUiApi {
 }
 
 class HttpRceApi implements RceUiApi {
+  getRuleTemplates(): Promise<RuleTemplate[]> {
+    return this.request('/ui/orders/templates');
+  }
+  getOrderCatalog(): Promise<OrderCatalogItem[]> {
+    return this.request('/ui/orders/catalog');
+  }
+
+  reviewOrders(
+    patientId: string,
+    hook: 'order-select' | 'order-sign',
+    orders: OrderInput[],
+    selections?: string[],
+  ): Promise<OrderReviewResult> {
+    return this.request(`/ui/orders/${encodeURIComponent(patientId)}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ hook, orders, selections }),
+    });
+  }
+
+  confirmOrders(
+    patientId: string,
+    reviewId: string,
+  ): Promise<{ confirmed: true; orderCount: number }> {
+    return this.request(
+      `/ui/orders/${encodeURIComponent(patientId)}/reviews/${encodeURIComponent(reviewId)}/confirm`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ confirmed: true }),
+      },
+    );
+  }
   private session: SessionContext | null = null;
   private sessionPromise: Promise<SessionContext> | null = null;
 

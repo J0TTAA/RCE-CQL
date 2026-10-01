@@ -3,6 +3,38 @@ export type DependencyState = 'up' | 'degraded' | 'down';
 export type CdsSeverity = 'info' | 'warning' | 'critical';
 export type Lifecycle = 'draft' | 'validated' | 'published' | 'disabled' | 'retired';
 export type RuleHook = 'patient-view' | 'order-select' | 'order-sign';
+export interface OrderCatalogItem {
+  id: string;
+  label: string;
+  kind: 'medication' | 'laboratory' | 'procedure';
+  resourceType: 'MedicationRequest' | 'ServiceRequest';
+  system: string;
+  code: string;
+  unit?: string;
+  route?: string;
+}
+export interface OrderInput {
+  id: string;
+  catalogId: string;
+  dose?: number;
+  frequency?: number;
+  durationDays?: number;
+  priority: 'routine' | 'urgent';
+}
+export interface OrderReviewResult {
+  hook: 'order-select' | 'order-sign';
+  reviewId?: string;
+  cards: CdsCard[];
+  activity: ActivityEntry;
+}
+export interface RuleTemplate {
+  id: string;
+  label: string;
+  hook: RuleHook;
+  summary: string;
+  detail: string;
+  cql: string;
+}
 export type RuleScope = 'sandbox' | 'shared';
 export type PatientGender = 'male' | 'female' | 'other' | 'unknown';
 export type DemoEncounterType = 'none' | 'ambulatory' | 'emergency' | 'inpatient';

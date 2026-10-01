@@ -66,12 +66,16 @@ Respuesta esperada cuando una regla aplica:
 | Service ID | Hook | Estado |
 | --- | --- | --- |
 | `rce-patient-view` | `patient-view` | Implementado para reglas por paciente |
-| `rce-order-select` | `order-select` | Implementado como facade por paciente + prefetch |
-| `rce-order-sign` | `order-sign` | Implementado como facade por paciente + prefetch |
+| `rce-order-select` | `order-select` | Ordenes pendientes y seleccion actual en `context` |
+| `rce-order-sign` | `order-sign` | Revision de ordenes pendientes antes de confirmar |
 
-Los hooks de orden aun no tienen UI especializada de ordenes. Si el cliente CDS
-envia recursos FHIR en `prefetch`, Nest los agrega al bundle efectivo solo para
-esa invocacion CQL.
+La ficha tiene **Recetar / indicar** con medicamentos, examenes y procedimientos.
+Los hooks de orden requieren `context.draftOrders`; `order-select` ademas requiere
+`context.selections`. Se aceptan `MedicationRequest` y `ServiceRequest` R4.
+Si se envia `prefetch`, Nest incorpora esos recursos solo para esa evaluacion;
+las ordenes del contexto tienen prioridad ante referencias coincidentes.
+Consulta [flujos y ejercicios](./CDS_HOOKS_WORKFLOWS.md) para crear reglas,
+probar ambos momentos y confirmar ordenes solo en el sandbox.
 
 ## Sandbox libre de reglas CQL
 
@@ -81,11 +85,11 @@ El sistema no queda limitado a las reglas de ejemplo. Las reglas disponibles en
 Para crear una regla nueva sin cambiar codigo:
 
 1. Escribir CQL en el editor del RCE.
-2. Definir metadata: nombre, version, hook, expresion booleana, summary, detail e
-   indicator.
+2. Definir metadata: nombre, hook, expresion booleana, summary, detail e indicator.
+   La version se asigna automaticamente.
 3. Validar para obtener ELM desde CQL Translation Service.
 4. Probar contra uno o mas pacientes.
-5. Publicar y activar como docente.
+5. Publicar y activar en mi sandbox como alumno o docente; compartir requiere docente.
 
 La regla participa en CDS Hooks si cumple:
 

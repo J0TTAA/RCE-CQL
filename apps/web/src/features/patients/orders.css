@@ -1,0 +1,121 @@
+.orders-workflow {
+  padding: 20px 0;
+  border-top: 1px solid var(--color-border);
+}
+.orders-workflow fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.orders-heading,
+.order-row header,
+.order-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.orders-heading {
+  margin-bottom: 16px;
+}
+.orders-heading h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.orders-intro {
+  margin: 5px 0 0;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+.orders-heading h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.order-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+.orders-list {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+.order-row {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 14px;
+  background: var(--color-surface);
+  min-width: 0;
+}
+.order-row header {
+  margin-bottom: 12px;
+}
+.order-row strong {
+  overflow-wrap: anywhere;
+  flex: 1;
+}
+.order-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 12px;
+}
+.orders-workflow .field,
+.orders-workflow .select,
+.orders-workflow .input {
+  min-width: 0;
+  width: 100%;
+}
+.orders-empty {
+  color: var(--color-muted);
+  padding: 12px 0;
+}
+.pending-orders-title {
+  margin: 16px 0 0;
+  font-size: 15px;
+}
+.orders-progress,
+.orders-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.orders-success {
+  color: var(--color-success);
+}
+.order-results {
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.order-results .cds-card {
+  margin-bottom: 12px;
+}
+.order-actions {
+  margin-top: 16px;
+}
+.order-hook-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+@media (max-width: 600px) {
+  .order-picker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .order-actions .button {
+    width: 100%;
+    white-space: normal;
+  }
+  .order-hook-actions .button {
+    width: 100%;
+    white-space: normal;
+  }
+}

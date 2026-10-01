@@ -2,6 +2,12 @@ import { Injectable, NotFoundException, UnprocessableEntityException } from '@ne
 import { createHash } from 'node:crypto';
 import cql from 'cql-execution';
 import * as cqlfhir from 'cql-exec-fhir';
+import {
+  ORDER_SYSTEM,
+  ORDER_SANDBOX_TAG,
+  readOrderReview,
+  isSignedOrderReview,
+} from '../../fhir/application/sandbox-orders';
 import { CqlTranslatorPort } from '../../cql/application/cql-translator.port';
 import {
   FhirGatewayPort,
@@ -283,6 +289,8 @@ export interface HookEvaluationInput {
   persistActivity?: boolean;
   correlationId?: string;
   additionalResources?: FhirResource[];
+  contextResources?: FhirResource[];
+  parameters?: Record<string, unknown>;
 }
 
 @Injectable()
@@ -767,7 +775,7 @@ export class UiService {
     patientId: string,
     sandboxId: string,
   ): Promise<FhirBundle> {
-    const bundle = await this.fhir.patientEverything(patientId);
+    const bundle = structuredClone(await this.fhir.patientEverything(patientId));
     const overlay = await this.getPatientOverlay(patientId, sandboxId);
     if (overlay.birthDate) {
       const patient = firstResourceOfType(bundle, 'Patient');
@@ -786,6 +794,32 @@ export class UiService {
     applyMedicationOverlay(bundle, patientId, overlay.medications);
     applyEncounterOverlay(bundle, patientId, overlay.encounterType);
     applyClinicalResourceOverlay(bundle, patientId, overlay.clinicalResources);
+    const orderBundle = await this.fhir.search('Basic', {
+      code: `${ORDER_SYSTEM}|signed`,
+      subject: `Patient/${patientId}`,
+      _tag: `${ORDER_SANDBOX_TAG}|${sandboxId}`,
+      _count: '1000',
+    });
+    if ((orderBundle.total ?? 0) > (orderBundle.entry?.length ?? 0)) {
+      throw new UnprocessableEntityException(
+        'Hay demasiadas ordenes para esta sesion. Reinicia el sandbox para continuar.',
+      );
+    }
+    for (const record of resourcesOfType(orderBundle, 'Basic')) {
+      const review = readOrderReview(record, patientId, sandboxId);
+      if (review && isSignedOrderReview(record)) {
+        const signed = review.resources.map((resource) => ({ ...resource, status: 'active' }));
+        const keys = new Set(
+          signed.map((resource) => resourceKey(resource.resourceType, resource.id)),
+        );
+        bundle.entry = [
+          ...signed.map((resource) => ({ resource })),
+          ...(bundle.entry ?? []).filter(
+            (entry) => !keys.has(resourceKey(entry.resource?.resourceType, entry.resource?.id)),
+          ),
+        ];
+      }
+    }
     return bundle;
   }
 
@@ -915,7 +949,7 @@ export class UiService {
         display:
           codeDisplay(objectField(medication, 'medicationCodeableConcept')) || 'MedicationRequest',
         dose: dosageText(medication),
-        route: '',
+        route: codeDisplay(objectField(firstArrayItem(medication.dosageInstruction), 'route')),
         status: stringField(medication, 'status'),
         startDate: dateLike(medication, 'authoredOn') || '',
       }));
@@ -1162,18 +1196,27 @@ export class UiService {
       this.patientBundleWithOverlay(input.patientId, input.sandboxId),
     ]);
     appendAdditionalResources(bundle, input.additionalResources);
+    if (input.contextResources?.length) {
+      const keys = new Set(
+        input.contextResources.map((resource) => resourceKey(resource.resourceType, resource.id)),
+      );
+      bundle.entry = (bundle.entry ?? []).filter(
+        (entry) => !keys.has(resourceKey(entry.resource?.resourceType, entry.resource?.id)),
+      );
+      appendAdditionalResources(bundle, input.contextResources);
+    }
     const patient = firstResourceOfType(bundle, 'Patient');
     const cards: CdsCard[] = [];
     const warnings: string[] = [];
     const consideredResources = [
       `Patient/${input.patientId}`,
-      ...(input.additionalResources ?? [])
+      ...(input.contextResources ?? [])
         .map((resource) => resourceKey(resource.resourceType, resource.id))
         .filter((key) => key),
     ];
     for (const rule of rules) {
       try {
-        const result = await this.evaluateRule(rule, bundle);
+        const result = await this.evaluateRule(rule, bundle, input.parameters);
         consideredResources.push(...result.consideredResources);
         warnings.push(...result.warnings);
         if (result.applies) {
@@ -1208,10 +1251,11 @@ export class UiService {
   private async evaluateRule(
     rule: ClinicalRule,
     bundle: FhirBundle,
+    parameters?: Record<string, unknown>,
   ): Promise<{ applies: boolean; consideredResources: string[]; warnings: string[] }> {
     const elmText = await this.elmForRule(rule);
     const library = new cql.Library(JSON.parse(elmText));
-    const executor = new cql.Executor(library);
+    const executor = new cql.Executor(library, undefined, parameters);
     const patientSource = cqlfhir.PatientSource.FHIRv401();
     patientSource.loadBundles([bundle]);
     const results = await executor.exec_expression(
@@ -1223,11 +1267,20 @@ export class UiService {
     const patientResults = results.patientResults as Record<string, Record<string, unknown>>;
     const expressionResults = patientResults[patientId] ?? Object.values(patientResults)[0] ?? {};
     const value = expressionResults[rule.metadata.expression];
+    const evaluated = results.evaluatedRecords as Array<{ getId?: () => string }>;
+    const evaluatedIds = new Set(evaluated.map((record) => record.getId?.()).filter(Boolean));
     return {
       applies: value === true,
-      consideredResources: [`Patient/${patientId}`],
+      consideredResources: [
+        ...new Set([
+          `Patient/${patientId}`,
+          ...(bundle.entry ?? [])
+            .filter((entry) => entry.resource?.id && evaluatedIds.has(entry.resource.id))
+            .map((entry) => resourceKey(entry.resource?.resourceType, entry.resource?.id)),
+        ]),
+      ],
       warnings:
-        value === undefined
+        value === undefined || value === null
           ? [`La expresion "${rule.metadata.expression}" no produjo resultado.`]
           : [],
     };
@@ -1273,7 +1326,8 @@ export class UiService {
       id: `act-${hash(`${input.correlationId}:${Date.now()}`).slice(0, 24)}`,
       date: new Date().toISOString(),
       cardsCount: input.cards.length,
-      result: input.cards.length > 0 ? 'success' : 'no-aplica',
+      result:
+        input.warnings.length > 0 ? 'error' : input.cards.length > 0 ? 'success' : 'no-aplica',
       maxSeverity: maxSeverity(input.cards),
       ...input,
     };

@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify code and SDD
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint API
+        run: npm run lint
+
+      - name: Check API format
+        run: npm run format:check
+
+      - name: Typecheck API
+        run: npm run typecheck
+
+      - name: Typecheck web
+        run: npm run typecheck:web
+
+      - name: Test API
+        run: npm test
+
+      - name: Build API
+        run: npm run build
+
+      - name: Build web
+        run: npm run build:web
+
+      - name: Validate SDD
+        shell: pwsh
+        run: ./scripts/validate-sdd.ps1
+
+  containers:
+    name: Validate container builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build API image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          load: false
+          tags: rce-cql-api:ci
+
+      - name: Build web image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          load: false
+          tags: rce-cql-web:ci
+
+      - name: Validate local compose syntax
+        run: docker compose --env-file .env.example config
+
+      - name: Validate deploy compose syntax
+        env:
+          RCE_API_IMAGE: ghcr.io/example/rce-cql-api:ci
+          RCE_WEB_IMAGE: ghcr.io/example/rce-cql-web:ci
+        run: docker compose --env-file .env.server.example -f compose.deploy.yaml config
+
+      - name: Validate managed HAPI compose syntax
+        run: docker compose --env-file .env.server.example -f compose.hapi.yaml config
+
+      - name: Validate deploy compose with managed HAPI syntax
+        env:
+          RCE_API_IMAGE: ghcr.io/example/rce-cql-api:ci
+          RCE_WEB_IMAGE: ghcr.io/example/rce-cql-web:ci
+          HAPI_BASE_URL: http://hapi:8080/fhir
+        run: docker compose --env-file .env.server.example -f compose.deploy.yaml -f compose.hapi.yaml config

@@ -8,6 +8,7 @@ import {
   type FhirResource,
 } from '../../fhir/application/fhir-gateway.port';
 import { UiService } from './ui.service';
+import { buildDraftOrders, reviewResource } from '../../fhir/application/sandbox-orders';
 
 describe('UiService patient mapping', () => {
   it('maps sparse FHIR Patient resources without inventing clinical values', async () => {
@@ -84,5 +85,210 @@ class NoopTranslator extends CqlTranslatorPort {
 
   checkHealth(): Promise<DependencyHealth> {
     return Promise.resolve({ name: 'cql-translator', status: 'up', latencyMs: 0, details: {} });
+  }
+}
+
+describe('UiService order evaluation with the installed CQL engine', () => {
+  it('evaluates pending resources and parameters, overriding a persisted version only for this call', async () => {
+    const gateway = new OrderTestGateway();
+    const service = new UiService(gateway, new NoopTranslator());
+    const input = { patientId: 'patient-1', sandboxId: 'sandbox-a', hook: 'order-select' as const };
+    const [draft] = buildDraftOrders(
+      'patient-1',
+      [
+        {
+          id: 'd1577c69-dfbe-44ad-ba6d-3e05e953b2ea',
+          catalogId: 'amoxicillin',
+          priority: 'routine',
+        },
+      ],
+      false,
+    );
+    gateway.bundle.entry!.push({ resource: { ...draft, status: 'active' } });
+    const reference = `MedicationRequest/${draft!.id}`;
+    const positive = await service.evaluateHook({
+      ...input,
+      contextResources: [draft!],
+      parameters: { Selections: [reference] },
+    });
+    assert.equal(positive.cards.length, 1, JSON.stringify(positive.activity));
+    assert.deepEqual(positive.activity.warnings, []);
+    assert.ok(positive.activity.consideredResources.includes(reference));
+    const notSelected = await service.evaluateHook({
+      ...input,
+      contextResources: [draft!],
+      parameters: { Selections: [] },
+    });
+    assert.equal(notSelected.cards.length, 0);
+    const anotherSession = await service.evaluateHook({
+      ...input,
+      sandboxId: 'sandbox-b',
+      parameters: { Selections: [reference] },
+    });
+    assert.equal(anotherSession.cards.length, 0);
+    assert.equal(gateway.bundle.entry![1]!.resource!.status, 'active');
+    assert.equal((await service.evaluateHook({ ...input, hook: 'order-sign' })).cards.length, 0);
+  });
+
+  it('materializes confirmed orders only for their sandbox and leaves pending reviews invisible', async () => {
+    const gateway = new OrderTestGateway();
+    const service = new UiService(gateway, new NoopTranslator());
+    const resources = buildDraftOrders(
+      'patient-1',
+      [{ id: 'd1577c69-dfbe-44ad-ba6d-3e05e953b2ea', catalogId: 'hba1c', priority: 'routine' }],
+      true,
+    );
+    const review = {
+      patientId: 'patient-1',
+      sandboxId: 'sandbox-a',
+      resources,
+      expiresAt: new Date().toISOString(),
+      decision: '',
+    };
+    gateway.orders.push(reviewResource('orders-confirmed', review, true));
+    gateway.orders.push(
+      reviewResource('orders-pending', {
+        ...review,
+        resources: [{ ...resources[0], id: 'pending' }],
+      }),
+    );
+    assert.equal((await service.getPatient('patient-1', 'sandbox-a')).serviceRequests.length, 1);
+    assert.equal((await service.getPatient('patient-1', 'sandbox-b')).serviceRequests.length, 0);
+  });
+});
+
+// ELM de contrato minimo: existe una receta draft cuya referencia esta en Selections.
+// El test usa cql-execution/cql-exec-fhir reales, sin traductor ni servidor HAPI.
+const orderElmFixture = {
+  library: {
+    identifier: { id: 'OrderContract', version: '1.0.0' },
+    schemaIdentifier: { id: 'urn:hl7-org:elm', version: 'r1' },
+    usings: { def: [{ localIdentifier: 'FHIR', uri: 'http://hl7.org/fhir', version: '4.0.1' }] },
+    parameters: {
+      def: [
+        {
+          name: 'Selections',
+          parameterTypeSpecifier: {
+            type: 'ListTypeSpecifier',
+            elementType: { type: 'NamedTypeSpecifier', name: '{urn:hl7-org:elm-types:r1}String' },
+          },
+        },
+      ],
+    },
+    statements: {
+      def: [
+        {
+          name: 'Aplica',
+          context: 'Patient',
+          expression: {
+            type: 'Exists',
+            operand: {
+              type: 'Query',
+              source: [
+                {
+                  alias: 'M',
+                  expression: {
+                    type: 'Retrieve',
+                    dataType: '{http://hl7.org/fhir}MedicationRequest',
+                  },
+                },
+              ],
+              where: {
+                type: 'And',
+                operand: [
+                  {
+                    type: 'Equal',
+                    operand: [
+                      {
+                        type: 'Property',
+                        path: 'value',
+                        source: { type: 'Property', scope: 'M', path: 'status' },
+                      },
+                      {
+                        type: 'Literal',
+                        valueType: '{urn:hl7-org:elm-types:r1}String',
+                        value: 'draft',
+                      },
+                    ],
+                  },
+                  {
+                    type: 'In',
+                    operand: [
+                      {
+                        type: 'Concatenate',
+                        operand: [
+                          {
+                            type: 'Literal',
+                            valueType: '{urn:hl7-org:elm-types:r1}String',
+                            value: 'MedicationRequest/',
+                          },
+                          {
+                            type: 'Property',
+                            path: 'value',
+                            source: { type: 'Property', scope: 'M', path: 'id' },
+                          },
+                        ],
+                      },
+                      { type: 'ParameterRef', name: 'Selections' },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+    },
+  },
+};
+
+class OrderTestGateway extends SparseFhirGateway {
+  readonly bundle: FhirBundle = {
+    resourceType: 'Bundle',
+    type: 'collection',
+    entry: [{ resource: { resourceType: 'Patient', id: 'patient-1' } }],
+  };
+  readonly orders: FhirResource[] = [];
+  constructor() {
+    super({ resourceType: 'Patient', id: 'patient-1' });
+  }
+  private library: FhirResource = {
+    resourceType: 'Library',
+    id: 'rule-orders',
+    status: 'active',
+    name: 'OrderContract',
+    version: '1.0.0',
+    meta: { tag: [{ system: 'https://rce-cql.local/fhir/tags/rule', code: 'cql-rule' }] },
+    extension: [
+      {
+        url: 'https://rce-cql.local/fhir/StructureDefinition/rule-hook',
+        valueCode: 'order-select',
+      },
+      { url: 'https://rce-cql.local/fhir/StructureDefinition/rule-activation', valueBoolean: true },
+      {
+        url: 'https://rce-cql.local/fhir/StructureDefinition/rule-lifecycle',
+        valueCode: 'published',
+      },
+    ],
+    content: [
+      {
+        contentType: 'application/elm+json',
+        data: Buffer.from(JSON.stringify(orderElmFixture)).toString('base64'),
+      },
+    ],
+  };
+  override read(type: string, id: string): Promise<FhirResource | null> {
+    return type === 'Library' ? Promise.resolve(this.library) : super.read(type, id);
+  }
+  override search(type: string): Promise<FhirBundle> {
+    return Promise.resolve({
+      resourceType: 'Bundle',
+      entry: (type === 'Library' ? [this.library] : type === 'Basic' ? this.orders : []).map(
+        (resource) => ({ resource }),
+      ),
+    });
+  }
+  override patientEverything(): Promise<FhirBundle> {
+    return Promise.resolve(this.bundle);
   }
 }

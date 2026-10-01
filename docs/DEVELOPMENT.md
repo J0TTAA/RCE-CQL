@@ -52,6 +52,10 @@ institucional.
 La plantilla `.env.example` habilita `local-hapi` y `local-translator`, por lo
 que este modo crea toda la plataforma sintetica.
 
+Este Compose local construye API y web con sus Dockerfiles multi-stage; no es un
+modo de desarrollo con hot reload. El despliegue de VM usa imagenes ya
+publicadas desde esos mismos Dockerfiles, sin compilar en la VM.
+
 ```powershell
 Copy-Item .env.example .env
 docker compose up -d --build

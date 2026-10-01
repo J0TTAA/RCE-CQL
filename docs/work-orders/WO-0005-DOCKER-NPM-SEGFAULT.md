@@ -14,15 +14,15 @@ de dependencias de API, dependencias de produccion y web.
 
 ## Objetivo
 
-Producir imagenes nuevas de API y web con un build limpio, sin cambiar versiones
-de Node ni el comportamiento del runtime.
+Producir imagenes nuevas de API y web con un build limpio, manteniendo la
+compatibilidad con el runtime y sin aplicar flags de mitigacion al runtime.
 
 ## Cambio aprobado
 
-Fijar Node `24.21.0` y pasar `NODE_OPTIONS=--jitless` solo en las etapas de
-build que ejecutan npm. La opcion evita Maglev durante instalaciones y
-compilacion; no se copia a las etapas runtime. Mantener Alpine, no cambiar el
-lockfile y no reemplazar npm.
+Fijar Node `24.21.0` y pasar `NODE_OPTIONS=--jitless` solo al comando `npm ci`.
+No aplicar la opcion a `npm run build`: Vite necesita WebAssembly. Los stages
+runtime tampoco heredan la opcion. Mantener Alpine, no cambiar el lockfile y no
+reemplazar npm.
 
 ## Aceptacion
 

@@ -119,6 +119,16 @@ export interface PatientSummary {
   sandboxTouched?: boolean;
 }
 
+export interface SandboxOrderItem {
+  id: string;
+  resourceType: 'MedicationRequest' | 'ServiceRequest';
+  code: string;
+  display: string;
+  status: string;
+  intent: string;
+  authoredOn: string;
+}
+
 export interface PatientDetail extends PatientSummary {
   birthDate: string | null;
   editableClinicalData: EditableClinicalData;
@@ -182,6 +192,7 @@ export interface PatientDetail extends PatientSummary {
     intent: string;
     authoredOn: string;
   }>;
+  sandboxOrders: SandboxOrderItem[];
   timeline: Array<{ id: string; date: string; kind: string; label: string }>;
 }
 
@@ -341,8 +352,10 @@ export class UiService {
   }
 
   async getPatient(patientId: string, sandboxId: string): Promise<PatientDetail> {
-    const overlay = await this.getPatientOverlay(patientId, sandboxId);
-    const bundle = await this.patientBundleWithOverlay(patientId, sandboxId);
+    const { bundle, overlay, sandboxOrders } = await this.patientBundleWithOverlay(
+      patientId,
+      sandboxId,
+    );
     const patient = firstResourceOfType(bundle, 'Patient');
     if (!patient) {
       throw new NotFoundException('Paciente no encontrado en HAPI.');
@@ -359,6 +372,7 @@ export class UiService {
       cards.cards,
       hasPatientOverlay(overlay),
       overlay,
+      sandboxOrders,
     );
   }
 
@@ -611,7 +625,7 @@ export class UiService {
   async testRule(id: string, patientId: string, sandboxId: string): Promise<RuleTestResult> {
     const startedAt = performance.now();
     const rule = await this.getRule(id, sandboxId);
-    const bundle = await this.patientBundleWithOverlay(patientId, sandboxId);
+    const { bundle } = await this.patientBundleWithOverlay(patientId, sandboxId);
     const patient = firstResourceOfType(bundle, 'Patient');
     if (!patient) {
       throw new NotFoundException('Paciente no encontrado en HAPI.');
@@ -774,9 +788,10 @@ export class UiService {
   private async patientBundleWithOverlay(
     patientId: string,
     sandboxId: string,
-  ): Promise<FhirBundle> {
+  ): Promise<{ bundle: FhirBundle; overlay: PatientOverlay; sandboxOrders: SandboxOrderItem[] }> {
     const bundle = structuredClone(await this.fhir.patientEverything(patientId));
     const overlay = await this.getPatientOverlay(patientId, sandboxId);
+    const sandboxOrders: SandboxOrderItem[] = [];
     if (overlay.birthDate) {
       const patient = firstResourceOfType(bundle, 'Patient');
       if (patient) {
@@ -808,7 +823,16 @@ export class UiService {
     for (const record of resourcesOfType(orderBundle, 'Basic')) {
       const review = readOrderReview(record, patientId, sandboxId);
       if (review && isSignedOrderReview(record)) {
-        const signed = review.resources.map((resource) => ({ ...resource, status: 'active' }));
+        const signed = review.resources.map((resource) => ({
+          ...resource,
+          status: 'active',
+        }));
+        sandboxOrders.push(
+          ...signed.flatMap((resource) => {
+            const item = sandboxOrderFromResource(resource);
+            return item ? [item] : [];
+          }),
+        );
         const keys = new Set(
           signed.map((resource) => resourceKey(resource.resourceType, resource.id)),
         );
@@ -820,7 +844,7 @@ export class UiService {
         ];
       }
     }
-    return bundle;
+    return { bundle, overlay, sandboxOrders };
   }
 
   private async getPatientOverlay(patientId: string, sandboxId: string): Promise<PatientOverlay> {
@@ -917,6 +941,7 @@ export class UiService {
     cards: CdsCard[],
     sandboxTouched: boolean,
     overlay: PatientOverlay,
+    sandboxOrders: SandboxOrderItem[],
   ): PatientDetail {
     const birthDate = optionalDateField(patient, 'birthDate');
     const age = ageFromBirthDate(birthDate);
@@ -1054,6 +1079,7 @@ export class UiService {
       procedures,
       immunizations,
       serviceRequests,
+      sandboxOrders,
       timeline: [
         ...encounters.map((item) => ({
           id: `enc-${item.id}`,
@@ -1191,10 +1217,11 @@ export class UiService {
   }> {
     const startedAt = performance.now();
     const persistActivity = input.persistActivity ?? false;
-    const [rules, bundle] = await Promise.all([
+    const [rules, bundleView] = await Promise.all([
       this.listRules(input.sandboxId, { hook: input.hook, activation: 'active' }),
       this.patientBundleWithOverlay(input.patientId, input.sandboxId),
     ]);
+    const { bundle } = bundleView;
     appendAdditionalResources(bundle, input.additionalResources);
     if (input.contextResources?.length) {
       const keys = new Set(
@@ -2033,6 +2060,26 @@ function genderLabel(gender: string): string {
       >
     )[gender] ?? 'sin dato'
   );
+}
+
+function sandboxOrderFromResource(resource: FhirResource): SandboxOrderItem | undefined {
+  if (resource.resourceType !== 'MedicationRequest' && resource.resourceType !== 'ServiceRequest') {
+    return undefined;
+  }
+  const medication = resource.resourceType === 'MedicationRequest';
+  const codeableConcept = medication
+    ? objectField(resource, 'medicationCodeableConcept')
+    : objectField(resource, 'code');
+  const coding = firstArrayItem(objectField(codeableConcept, 'coding'));
+  return {
+    id: String(resource.id ?? ''),
+    resourceType: resource.resourceType,
+    code: typeof coding.code === 'string' ? coding.code : '',
+    display: codeDisplay(codeableConcept) || (medication ? 'Medicamento' : 'Solicitud clínica'),
+    status: stringField(resource, 'status'),
+    intent: stringField(resource, 'intent'),
+    authoredOn: dateLike(resource, 'authoredOn'),
+  };
 }
 
 function codeDisplay(resource: unknown): string {

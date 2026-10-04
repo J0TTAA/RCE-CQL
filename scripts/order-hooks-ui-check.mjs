@@ -57,6 +57,7 @@ try {
       procedures: [],
       immunizations: [],
       serviceRequests: [],
+      sandboxOrders: [],
       timeline: [],
       editableClinicalData: { birthDate: null, gender: 'unknown', clinicalResources: [] },
     };
@@ -159,7 +160,22 @@ try {
         }
       } else if (path.endsWith('/confirm')) {
         confirmations.push(request.postDataJSON());
-        payload = { confirmed: true, orderCount: 1 };
+        patient.sandboxOrders = reviews.at(-1).orders.map((order) => {
+          const item = ORDER_CATALOG.find((entry) => entry.id === order.catalogId);
+          return {
+            id: order.id,
+            resourceType: item.resourceType,
+            code: item.code,
+            display: item.label,
+            status: 'active',
+            intent: 'order',
+            authoredOn: '2026-10-04',
+          };
+        });
+        patient.serviceRequests = patient.sandboxOrders.filter(
+          (order) => order.resourceType === 'ServiceRequest',
+        );
+        payload = { confirmed: true, orderCount: patient.sandboxOrders.length };
       } else {
         status = 404;
         payload = { message: `Unexpected UI test route: ${path}` };
@@ -173,15 +189,17 @@ try {
     await page.goto(`${base}/patients/ui-patient`);
     await page.getByRole('button', { name: 'Recetar / indicar' }).click();
     await page.getByLabel('Medicamento, examen o procedimiento').selectOption('amoxicillin');
-    await page.getByRole('button', { name: 'Agregar orden', exact: true }).click();
-    await page.getByRole('heading', { name: 'Al seleccionar la orden' }).waitFor();
+    const add = page.getByRole('button', { name: 'Agregar a órdenes pendientes', exact: true });
+    await add.click();
+    await page.getByRole('heading', { name: 'Revisión al agregar la orden' }).waitFor();
     assert.equal(reviews[0].hook, 'order-select');
     assert.match(
       reviews[0].orders[0].id,
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
     );
     assert.deepEqual(reviews[0].selections, [reviews[0].orders[0].id]);
-    const sign = page.getByRole('button', { name: 'Revisar antes de firmar' });
+    await page.getByText('Sin órdenes firmadas en este sandbox.', { exact: true }).waitFor();
+    const sign = page.getByRole('button', { name: 'Firmar órdenes', exact: true });
     await sign.click();
     assert.equal(await page.locator('.orders-workflow input:invalid').count(), 3);
     assert.equal(reviews.length, 1, 'Incomplete medication must not reach the API');
@@ -189,12 +207,17 @@ try {
     await page.getByLabel('Veces al dia', { exact: true }).fill('3');
     await page.getByLabel('Duracion (dias)', { exact: true }).fill('5');
     await sign.click();
-    const confirm = page.getByRole('button', { name: 'Confirmar ordenes en mi sandbox' });
+    const confirm = page.getByRole('button', { name: 'Firmar y guardar órdenes', exact: true });
     await confirm.waitFor();
     assert.equal(reviews.at(-1).hook, 'order-sign');
     assert.equal(reviews.at(-1).orders[0].dose, 500);
     await page.getByLabel('Dosis (mg)', { exact: true }).fill('250');
     assert.equal(await confirm.count(), 0, 'Editing invalidates the review');
+    await page.getByLabel('Medicamento, examen o procedimiento').selectOption('hba1c');
+    await add.click();
+    await page.getByRole('heading', { name: 'Revisión al agregar la orden' }).waitFor();
+    assert.equal(reviews.at(-1).hook, 'order-select');
+    assert.equal(reviews.at(-1).orders.length, 2);
     failNext = true;
     await sign.click();
     await page.getByText('Prueba UI: servicio no disponible.', { exact: true }).waitFor();
@@ -222,10 +245,29 @@ try {
     assert.deepEqual(outside, [], 'Form controls stay in the viewport');
     const readsBefore = patientReads;
     await confirm.click();
-    await page.getByText('1 ordenes confirmadas en mi sandbox.', { exact: true }).waitFor();
-    await page.getByText('Sin ordenes pendientes.', { exact: true }).waitFor();
+    await page.getByText('2 ordenes confirmadas en mi sandbox.', { exact: true }).waitFor();
+    await page.getByText('Sin órdenes pendientes.', { exact: true }).waitFor();
     assert.deepEqual(confirmations, [{ confirmed: true }]);
     assert.ok(patientReads > readsBefore, 'Confirmation refreshes the patient');
+    for (const item of patient.sandboxOrders) {
+      assert.equal(await page.getByRole('cell', { name: item.display, exact: true }).count(), 1);
+    }
+    assert.equal(
+      await page.getByRole('heading', { name: 'Solicitudes del historial del paciente' }).count(),
+      0,
+      'Sandbox-only requests must not leave an empty history section',
+    );
+    await page.reload();
+    await page.getByRole('button', { name: 'Recetar / indicar' }).click();
+    await page.getByRole('cell', { name: patient.sandboxOrders[0].display, exact: true }).waitFor();
+    for (const item of patient.sandboxOrders) {
+      assert.equal(await page.getByRole('cell', { name: item.display, exact: true }).count(), 1);
+    }
+    assert.deepEqual(confirmations, [{ confirmed: true }], 'Reopening must not submit orders');
+    await page.screenshot({
+      path: resolve(output, `signed-orders-${viewport.width}.png`),
+      fullPage: true,
+    });
     await page.goto(`${base}/rules/new`);
     await page.getByLabel('Punto de partida').selectOption('diabetes-order');
     await page.screenshot({
@@ -240,7 +282,7 @@ try {
     results.push({
       viewport,
       checks:
-        'selection, UUID, required inputs, sign, invalidation, API error, confirmation, refresh, templates, overflow',
+        'selection, UUID, required inputs, sign, invalidation, API error, confirmation, refresh, medication/service visibility, no duplicates, reopening, templates, overflow',
       passed: true,
     });
     await context.close();

@@ -28,6 +28,7 @@ describe('UiService patient mapping', () => {
     assert.deepEqual(detail.conditions, []);
     assert.deepEqual(detail.observations, []);
     assert.deepEqual(detail.timeline, []);
+    assert.deepEqual(detail.sandboxOrders, []);
   });
 });
 
@@ -135,7 +136,17 @@ describe('UiService order evaluation with the installed CQL engine', () => {
     const service = new UiService(gateway, new NoopTranslator());
     const resources = buildDraftOrders(
       'patient-1',
-      [{ id: 'd1577c69-dfbe-44ad-ba6d-3e05e953b2ea', catalogId: 'hba1c', priority: 'routine' }],
+      [
+        { id: 'd1577c69-dfbe-44ad-ba6d-3e05e953b2ea', catalogId: 'hba1c', priority: 'routine' },
+        {
+          id: 'd1577c69-dfbe-44ad-ba6d-3e05e953b2eb',
+          catalogId: 'amoxicillin',
+          dose: 500,
+          frequency: 3,
+          durationDays: 7,
+          priority: 'routine',
+        },
+      ],
       true,
     );
     const review = {
@@ -152,8 +163,33 @@ describe('UiService order evaluation with the installed CQL engine', () => {
         resources: [{ ...resources[0], id: 'pending' }],
       }),
     );
-    assert.equal((await service.getPatient('patient-1', 'sandbox-a')).serviceRequests.length, 1);
-    assert.equal((await service.getPatient('patient-1', 'sandbox-b')).serviceRequests.length, 0);
+    const sandboxA = await service.getPatient('patient-1', 'sandbox-a');
+    const sandboxB = await service.getPatient('patient-1', 'sandbox-b');
+    assert.equal(sandboxA.serviceRequests.length, 1);
+    assert.equal(sandboxA.sandboxOrders.length, 2);
+    assert.deepEqual(sandboxA.sandboxOrders.map((order) => order.resourceType).sort(), [
+      'MedicationRequest',
+      'ServiceRequest',
+    ]);
+    assert.deepEqual(
+      sandboxA.sandboxOrders.map((order) => [order.code, order.status, order.intent]),
+      [
+        ['4548-4', 'active', 'order'],
+        ['308182', 'active', 'order'],
+      ],
+    );
+    assert.ok(sandboxA.sandboxOrders.every((order) => order.display && order.authoredOn));
+    assert.deepEqual(
+      (await service.getPatient('patient-1', 'sandbox-a')).sandboxOrders,
+      sandboxA.sandboxOrders,
+    );
+    assert.equal(sandboxB.sandboxOrders.length, 0);
+    assert.deepEqual(sandboxB.serviceRequests, []);
+    assert.deepEqual(sandboxB.medications, []);
+    assert.deepEqual(
+      gateway.bundle.entry?.map((entry) => entry.resource?.resourceType),
+      ['Patient'],
+    );
   });
 });
 

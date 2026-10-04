@@ -132,6 +132,16 @@ export interface ServiceRequestItem {
   authoredOn: string;
 }
 
+export interface SandboxOrderItem {
+  id: string;
+  resourceType: 'MedicationRequest' | 'ServiceRequest';
+  code: string;
+  display: string;
+  status: string;
+  intent: string;
+  authoredOn: string;
+}
+
 export interface EditableClinicalResource {
   id: string;
   type: EditableClinicalResourceType;
@@ -188,6 +198,7 @@ export interface PatientDetail extends PatientSummary {
   procedures: ProcedureItem[];
   immunizations: ImmunizationItem[];
   serviceRequests: ServiceRequestItem[];
+  sandboxOrders: SandboxOrderItem[];
   timeline: TimelineItem[];
 }
 

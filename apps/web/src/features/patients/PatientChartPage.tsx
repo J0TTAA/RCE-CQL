@@ -60,6 +60,13 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
 
   const displayedPatient = patientDetail ?? patient.data;
   const displayedCards = visibleCards ?? cards.data ?? [];
+  const sandboxOrders = displayedPatient?.sandboxOrders ?? [];
+  const historicalServiceRequests = (displayedPatient?.serviceRequests ?? []).filter(
+    (item) =>
+      !sandboxOrders.some(
+        (order) => order.resourceType === 'ServiceRequest' && order.id === item.id,
+      ),
+  );
 
   const refreshCards = async () => {
     setRefreshingCards(true);
@@ -213,16 +220,40 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                   />
                 </div>
                 {tab === 'ordenes' ? (
-                  <ResourceTable
-                    rows={displayedPatient.serviceRequests.map((item) => [
-                      item.display,
-                      item.code,
-                      item.status,
-                      item.intent,
-                      formatDate(item.authoredOn),
-                    ])}
-                    headers={['Orden', 'Codigo', 'Estado', 'Intencion', 'Fecha']}
-                  />
+                  <>
+                    <h3>Órdenes guardadas en mi sandbox</h3>
+                    {sandboxOrders.length ? (
+                      <ResourceTable
+                        rows={sandboxOrders.map((item) => [
+                          item.display,
+                          item.resourceType === 'MedicationRequest'
+                            ? 'Medicamento'
+                            : 'Examen o procedimiento',
+                          item.status,
+                          item.intent,
+                          formatDate(item.authoredOn),
+                        ])}
+                        headers={['Orden', 'Tipo', 'Estado', 'Intención', 'Fecha']}
+                      />
+                    ) : (
+                      <p>Sin órdenes firmadas en este sandbox.</p>
+                    )}
+                    {historicalServiceRequests.length ? (
+                      <>
+                        <h3>Solicitudes del historial del paciente</h3>
+                        <ResourceTable
+                          rows={historicalServiceRequests.map((item) => [
+                            item.display,
+                            item.code,
+                            item.status,
+                            item.intent,
+                            formatDate(item.authoredOn),
+                          ])}
+                          headers={['Solicitud', 'Código', 'Estado', 'Intención', 'Fecha']}
+                        />
+                      </>
+                    ) : null}
+                  </>
                 ) : null}
                 {tab === 'cds' ? <CdsRail cards={displayedCards} embedded /> : null}
               </Panel>

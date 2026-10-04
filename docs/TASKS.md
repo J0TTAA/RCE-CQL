@@ -217,6 +217,12 @@ CQL instalado, aislamiento por sandbox, confirmacion idempotente y revision UI
 en escritorio/movil. Permanece en `REVIEW` hasta ejecutar el smoke contra HAPI
 y CQL Translation Service reales.
 
+Revision de visibilidad de ordenes de TASK-5.8:
+`docs/evidence/M3/runs/20261004-orders-visibility/summary.md`. API y web pasan
+las comprobaciones locales; el test visual comprueba recetas y examenes
+confirmados sin duplicados y al reabrir la ficha. La integracion con HAPI y
+traductor reales sigue pendiente y no se cambia el estado a `DONE`.
+
 Evidencia parcial de TASK-5.14:
 `docs/evidence/M3/runs/20260916T054508Z/summary.md`. La traduccion real y la
 matriz del motor pasaron. Los tres endpoints CDS Hooks pasaron con NestJS real y

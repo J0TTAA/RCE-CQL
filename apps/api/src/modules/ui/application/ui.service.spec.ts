@@ -9,6 +9,53 @@ import {
 } from '../../fhir/application/fhir-gateway.port';
 import { UiService } from './ui.service';
 import { buildDraftOrders, reviewResource } from '../../fhir/application/sandbox-orders';
+import { ORDER_RULE_TEMPLATES } from '../../cds-hooks/application/order-rule-templates';
+
+describe('UiService blank rule creation', () => {
+  it('saves a minimal CQL base as an inactive sandbox draft without translating it', async () => {
+    const template = ORDER_RULE_TEMPLATES[0]!;
+    assert.equal(template.id, 'blank');
+    assert.equal(template.label, 'En blanco');
+    const gateway = new SparseFhirGateway({ resourceType: 'Patient', id: 'synthetic-patient' });
+    let saved: FhirResource | undefined;
+    gateway.update = (_type, _id, resource) => {
+      saved = resource;
+      return Promise.resolve(resource);
+    };
+    const translator = new NoopTranslator();
+    translator.translate = () => {
+      throw new Error('Draft creation must not invoke translation.');
+    };
+    const service = new UiService(gateway, translator);
+    const rule = await service.createRule(
+      'sandbox-test',
+      {
+        title: 'Nueva regla CQL',
+        name: 'ReglaManual',
+        hook: 'patient-view',
+        expression: 'Aplica',
+        summary: template.summary,
+        detail: template.detail,
+        indicator: 'info',
+      },
+      template.cql,
+    );
+    assert.equal(saved?.resourceType, 'Library');
+    assert.equal(rule.lifecycle, 'draft');
+    assert.equal(rule.activation, false);
+    assert.equal(rule.scope, 'sandbox');
+    assert.equal(rule.hook, 'patient-view');
+    assert.equal(rule.title, 'Nueva regla CQL');
+    assert.match(rule.cql, /^library ReglaManual version '0\.1\.0'/);
+    assert.ok(rule.cql.includes("using FHIR version '4.0.1'"));
+    assert.ok(rule.cql.includes('define "Aplica":\n  false'));
+    const content = saved?.content as Array<{ contentType: string }>;
+    assert.deepEqual(
+      content.map((entry) => entry.contentType),
+      ['text/cql'],
+    );
+  });
+});
 
 describe('UiService patient mapping', () => {
   it('maps sparse FHIR Patient resources without inventing clinical values', async () => {

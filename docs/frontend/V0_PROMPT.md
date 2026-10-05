@@ -65,10 +65,12 @@ Crea navegacion funcional entre:
 - /patients: listado de pacientes.
 - /patients/:id: ficha clinica.
 - /rules: catalogo de reglas.
-- /rules/new: nueva regla.
+- /rules/new: catalogo con modal de punto de partida; En blanco por defecto.
 - /rules/:id: workspace CQL.
 - /rules/:id/test: prueba con paciente.
 - /activity: actividad CDS.
+Nueva regla abre ese modal y Crear regla navega al workspace /rules/:id solo
+despues de crear el borrador. Cancelar no guarda una regla.
 La pantalla inicial debe ser /rules/rule-adult-risk para mostrar la experiencia
 central desde el primer viewport.
 

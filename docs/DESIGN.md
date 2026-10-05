@@ -210,9 +210,20 @@ Rutas:
 | `/patients`       | Busqueda de pacientes sinteticos.     |
 | `/patients/:id`   | Ficha clinica y cards activas.        |
 | `/rules`          | Catalogo de reglas y versiones.       |
-| `/rules/new`      | Nuevo borrador.                       |
+| `/rules/new`      | Catalogo con modal de nuevo borrador. |
 | `/rules/:id`      | Editor, metadata, diagnosticos y ELM. |
 | `/rules/:id/test` | Prueba contra paciente.               |
+
+La accion `Nueva regla` abre un modal sobre el catalogo para elegir el punto de
+partida, con `En blanco` seleccionado por defecto. Las bases CQL se obtienen de
+NestJS, incluidas las plantillas de ejercicios existentes. `En blanco` contiene
+la estructura minima FHIR R4 y una expresion `Aplica` inicialmente falsa, sin
+criterios clinicos predefinidos. Abrir, seleccionar o cancelar no crea recursos.
+Solo `Crear regla` envia la creacion del borrador; tras la respuesta correcta se
+navega al editor completo en `/rules/:id`. El borrador permanece inactivo. Ante
+un error se conserva el modal y la seleccion, sin reintentar escrituras de forma
+automatica. El modal mantiene el foco de teclado y permite cancelar con Escape
+cuando no hay una creacion en curso.
 
 Componentes principales:
 

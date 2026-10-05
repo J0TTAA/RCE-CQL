@@ -7,14 +7,15 @@ import {
   MoreHorizontal,
   Power,
   PowerOff,
+  RotateCw,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import './rule-templates.css';
 import { useRce } from '../../app/app-context';
 import { Link, useRouter } from '../../app/router';
 import { lifecycleLabel } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
-import type { ClinicalRule, Lifecycle, Role, RuleHook } from '../../types';
+import type { ClinicalRule, Lifecycle, Role, RuleHook, RuleTemplate } from '../../types';
 import {
   AsyncState,
   Badge,
@@ -30,8 +31,9 @@ import {
 export function RulesPage({ createMode = false }: { createMode?: boolean }) {
   const router = useRouter();
   const { api, role } = useRce();
+  const creationPending = useRef(false);
   const [creating, setCreating] = useState(false);
-  const [templateId, setTemplateId] = useState('age');
+  const [templateId, setTemplateId] = useState('blank');
   const [createError, setCreateError] = useState('');
   const templates = useAsync(() => api.getRuleTemplates(), [api]);
   const [query, setQuery] = useState('');
@@ -46,6 +48,19 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
   );
   const rules = useAsync(() => api.listRules(filters), [filters, role]);
 
+  useEffect(() => {
+    if (createMode) {
+      setTemplateId('blank');
+      setCreateError('');
+    }
+  }, [createMode]);
+
+  const closeCreation = () => {
+    if (!creationPending.current) {
+      router.navigate('/rules', { replace: true });
+    }
+  };
+
   const toggleActivation = async (rule: ClinicalRule) => {
     setActivationBusy(rule.id);
     try {
@@ -58,13 +73,14 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
 
   const createRule = async () => {
     const template = templates.data?.find((item) => item.id === templateId);
-    if (template && !creating) {
+    if (template && !templates.loading && !templates.error && !creationPending.current) {
       const name = `Regla${Date.now().toString()}`;
+      creationPending.current = true;
       setCreating(true);
       setCreateError('');
       try {
         const rule = await api.createRule(template.cql, {
-          title: template.label,
+          title: template.id === 'blank' ? 'Nueva regla CQL' : template.label,
           name,
           version: '0.1.0',
           hook: template.hook,
@@ -77,50 +93,11 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
       } catch (error) {
         setCreateError(error instanceof Error ? error.message : 'No se pudo crear la regla.');
       } finally {
+        creationPending.current = false;
         setCreating(false);
       }
     }
   };
-
-  if (createMode) {
-    return (
-      <section className="page">
-        <h1>Nueva regla CQL</h1>
-        <div className="rule-template-picker">
-          <Field label="Punto de partida">
-            <SelectInput
-              value={templateId}
-              disabled={creating || templates.loading}
-              onChange={(event) => setTemplateId(event.target.value)}
-            >
-              {(templates.data ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.label}
-                </option>
-              ))}
-            </SelectInput>
-          </Field>
-          <div className="header-actions">
-            <Button onClick={() => router.navigate('/rules')} disabled={creating}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => void createRule()}
-              disabled={creating || !templates.data?.length}
-            >
-              {creating ? 'Creando regla...' : 'Crear regla'}
-            </Button>
-          </div>
-          {createError || templates.error ? (
-            <p className="state-error" role="alert">
-              {createError || templates.error}
-            </p>
-          ) : null}
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="page">
@@ -245,6 +222,25 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
           </table>
         </div>
       </AsyncState>
+      {createMode ? (
+        <RuleCreationDialog
+          templates={templates.data ?? []}
+          templateId={templateId}
+          loading={templates.loading}
+          creating={creating}
+          error={createError || templates.error}
+          canCreate={
+            !creating &&
+            !templates.loading &&
+            !templates.error &&
+            Boolean(templates.data?.some((item) => item.id === templateId))
+          }
+          onSelect={setTemplateId}
+          onClose={closeCreation}
+          onCreate={() => void createRule()}
+          onReload={templates.error ? templates.reload : undefined}
+        />
+      ) : null}
       <RuleActionsDialog
         rule={actionRule}
         role={role}
@@ -264,6 +260,126 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
         }}
       />
     </section>
+  );
+}
+
+function RuleCreationDialog({
+  templates,
+  templateId,
+  loading,
+  creating,
+  error,
+  canCreate,
+  onSelect,
+  onClose,
+  onCreate,
+  onReload,
+}: {
+  templates: RuleTemplate[];
+  templateId: string;
+  loading: boolean;
+  creating: boolean;
+  error: string | null;
+  canCreate: boolean;
+  onSelect: (id: string) => void;
+  onClose: () => void;
+  onCreate: () => void;
+  onReload?: () => void;
+}) {
+  const container = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    container.current?.querySelector<HTMLElement>('button')?.focus();
+    return () => {
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      container.current?.querySelector<HTMLSelectElement>('select:not(:disabled)')?.focus();
+    }
+  }, [loading]);
+
+  return (
+    <div
+      ref={container}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          onClose();
+        } else if (event.key === 'Tab') {
+          const controls = container.current?.querySelectorAll<HTMLElement>(
+            'button:not(:disabled), select:not(:disabled)',
+          );
+          const first = controls?.[0];
+          const last = controls?.[controls.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last?.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first?.focus();
+          }
+        }
+      }}
+    >
+      <Modal
+        open
+        title="Nueva regla CQL"
+        onClose={onClose}
+        footer={
+          <>
+            <Button type="button" onClick={onClose} disabled={creating}>
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit" form="rule-creation-form" disabled={!canCreate}>
+              <FilePlus2 size={16} aria-hidden />
+              {creating ? 'Creando regla...' : 'Crear regla'}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id="rule-creation-form"
+          className="rule-template-picker"
+          aria-busy={loading || creating}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (canCreate) onCreate();
+          }}
+        >
+          <Field label="Punto de partida">
+            <SelectInput
+              value={templateId}
+              disabled={creating || loading || Boolean(onReload)}
+              onChange={(event) => onSelect(event.target.value)}
+            >
+              {loading ? <option value={templateId}>Cargando...</option> : null}
+              {templates.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </SelectInput>
+          </Field>
+          {error ? (
+            <p className="state-error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {onReload ? (
+            <Button type="button" onClick={onReload} disabled={loading}>
+              <RotateCw size={16} aria-hidden />
+              Reintentar
+            </Button>
+          ) : null}
+        </form>
+      </Modal>
+    </div>
   );
 }
 

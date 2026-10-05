@@ -58,13 +58,18 @@ Rutas objetivo:
 | `/patients`       | Catalogo de pacientes | Tabla + filtros               |
 | `/patients/:id`   | Ficha clinica         | Cabecera + tabs + rail CDS    |
 | `/rules`          | Catalogo de reglas    | Tabla + filtros               |
-| `/rules/new`      | Nueva regla           | Metadata + editor             |
+| `/rules/new`      | Nueva regla           | Catalogo + modal de base CQL   |
 | `/rules/:id`      | Workspace de regla    | Monaco + inspector            |
 | `/rules/:id/test` | Prueba                | Selector paciente + resultado |
 | `/activity`       | Actividad CDS         | Tabla cronologica + detalle   |
 
 La ruta inicial es `/patients`. El alumno puede abrir pacientes reales de HAPI
 o crear una regla desde `/rules/new`.
+
+`Nueva regla` abre el modal `Punto de partida` sobre el catalogo, con `En blanco`
+por defecto y las plantillas entregadas por NestJS. Cancelar no crea recursos.
+Al confirmar `Crear regla`, se guarda un borrador inactivo y se navega a
+`/rules/:id`, donde permanece el editor completo con metadata y CQL.
 
 ## 4. Shell de aplicacion
 

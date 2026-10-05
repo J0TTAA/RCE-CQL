@@ -1,6 +1,20 @@
 // Ejercicios de interoperabilidad, no protocolos ni recomendaciones terapeuticas.
 export const ORDER_RULE_TEMPLATES = [
   {
+    id: 'blank',
+    label: 'En blanco',
+    hook: 'patient-view',
+    summary: 'Regla personalizada',
+    detail: 'Resultado de la regla CQL definida en este sandbox.',
+    cql: `library RceNuevaRegla version '0.1.0'
+using FHIR version '4.0.1'
+context Patient
+
+define "Aplica":
+  false
+`,
+  },
+  {
     id: 'age',
     label: 'Edad al abrir la ficha',
     hook: 'patient-view',

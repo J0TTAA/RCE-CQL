@@ -242,7 +242,7 @@ Objetivo: permitir modificar pacientes y observar cambios en las reglas dentro d
 | TASK-6.5  | Implementar ClinicalDataChanged y reevaluacion sincrona.                          | 6.3, 5.4             | REQ-F-030, REQ-F-031, REQ-F-042              | L      | TODO   |
 | TASK-6.6  | Implementar validacion y aplicacion idempotente de sugerencias.                   | 6.3, 6.4, 3.11, 5.5  | REQ-F-038, REQ-F-039, REQ-F-040, AC-008      | L      | TODO   |
 | TASK-6.7  | Crear SPA React/Vite y cliente tipado de API.                                     | 1.1, 1.7             | REQ-I-001, REQ-I-005                         | M      | TODO   |
-| TASK-6.8  | Implementar catalogo de reglas y estados visuales.                                | 6.7, 3.8             | REQ-F-017, REQ-NF-020                        | M      | TODO   |
+| TASK-6.8  | Implementar catalogo de reglas y estados visuales.                                | 6.7, 3.8             | REQ-F-017, REQ-NF-020                        | M      | REVIEW |
 | TASK-6.9  | Integrar Monaco, metadata sin version manual, guardado y markers.                 | 6.7, 4.5             | REQ-F-002, REQ-F-004 a REQ-F-007, REQ-NF-018 | L      | TODO   |
 | TASK-6.10 | Implementar ElmViewer y RuleTestPanel.                                            | 6.9, 5.3             | REQ-F-007, REQ-F-018 a REQ-F-021             | M      | TODO   |
 | TASK-6.11 | Implementar PatientChart, formularios clinicos y CRUD guiado de recursos sandbox. | 6.2 a 6.5, 6.7, 6.14 | REQ-F-025 a REQ-F-031, REQ-D-011             | L      | REVIEW |
@@ -253,6 +253,12 @@ Objetivo: permitir modificar pacientes y observar cambios en las reglas dentro d
 | TASK-6.16 | Mostrar trazabilidad CDS Hooks pedagogica para explicar CQL y HL7 FHIR.           | 5.4 a 5.7, 6.7       | REQ-F-032 a REQ-F-037, REQ-F-056             | M      | REVIEW |
 
 Gate `M4`: editar un paciente desde la UI hace aparecer o desaparecer una card sin salir del RCE.
+
+Revision parcial de TASK-6.8 (WO-0006): creacion mediante modal sobre el catalogo,
+opcion `En blanco` y navegacion al editor despues de guardar el borrador.
+`docs/evidence/M2/runs/20261005-rule-creation-modal/summary.md` registra tests de
+API y UI en escritorio/movil. La prueba contra HAPI y traductor reales queda
+pendiente; no se declara `DONE` ni se cierra TASK-8.11.
 
 Evidencia parcial de TASK-6.11 y TASK-6.14:
 `docs/evidence/M1/runs/20260727T082410Z/summary.md`. Permanecen en `REVIEW`

@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:21.0.12_8-jdk-alpine-3.24
 
 ENV JAVA_TOOL_OPTIONS="-XX:+UseSerialGC -XX:TieredStopAtLevel=1 -Xms128m -Xmx1024m -XX:ErrorFile=/tmp/rce-synthea-hs-err-%p.log"
 

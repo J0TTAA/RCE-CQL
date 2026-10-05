@@ -79,6 +79,24 @@ seed_status() {
   ' <<<"${marker}"
 }
 
+verify_completed_seed() {
+  local expected_date
+  expected_date="${REFERENCE_DATE:0:4}-${REFERENCE_DATE:4:2}-${REFERENCE_DATE:6:2}"
+
+  curl --fail --silent --show-error "${HAPI_BASE_URL}/Basic/${SEED_ID}" |
+    jq --exit-status \
+      --argjson expected "${EXPECTED_PATIENTS}" \
+      --arg date "${expected_date}" '
+        .resourceType == "Basic"
+        and (
+          first(.extension[]? | select(.url == "https://rce-cql.local/fhir/StructureDefinition/expected-patients") | .valueInteger) == $expected
+        )
+        and (
+          first(.extension[]? | select(.url == "https://rce-cql.local/fhir/StructureDefinition/reference-date") | .valueDate) == $date
+        )
+      ' >/dev/null || fail 'El HAPI ya tiene otro numero de pacientes o fecha de seed; conserva esos datos y revisa la configuracion antes de continuar.'
+}
+
 put_marker() {
   local status="$1"
   local response_file="${WORK_DIR}/marker-response.json"
@@ -330,11 +348,12 @@ main() {
   status="$(seed_status)"
   case "${status}" in
     completed)
+      verify_completed_seed
       log "Dataset ${TAG_CODE} is already loaded; nothing to do"
       exit 0
       ;;
     loading)
-      fail 'A previous load was interrupted. Reset the local HAPI volume before retrying.'
+      fail 'A previous load was interrupted. Inspect the partial resources and restore from backup if needed; the seed will not overwrite them automatically.'
       ;;
     missing)
       ;;

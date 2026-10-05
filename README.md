@@ -35,6 +35,7 @@ Versiones candidatas y estado de verificacion:
 8. [docs/CLINICAL_RULE_DEMO.md](./docs/CLINICAL_RULE_DEMO.md): demos clinicas.
 9. [docs/CDS_HOOKS_STANDARD.md](./docs/CDS_HOOKS_STANDARD.md): API CDS Hooks.
 10. [docs/CDS_HOOKS_WORKFLOWS.md](./docs/CDS_HOOKS_WORKFLOWS.md): recetas, examenes y ejercicios con `order-select` y `order-sign`.
+11. [docs/deploy/AWS_SINGLE_VM.md](./docs/deploy/AWS_SINGLE_VM.md): una VM AWS con HTTPS, HAPI propio y ocho pacientes sinteticos.
 
 Validar coherencia SDD:
 
@@ -60,6 +61,7 @@ deben exponerse directamente a los alumnos en un despliegue normal.
 
 | Caso | Archivo base | Perfiles Compose | Resultado |
 | --- | --- | --- | --- |
+| Aula en una VM AWS con HAPI propio y HTTPS | `.env.aws.example` + `compose.deploy.yaml` + `compose.hapi.yaml` + `compose.aws.yaml` | `local-translator` | [Guia paso a paso](./docs/deploy/AWS_SINGLE_VM.md): Caddy, HAPI, PostgreSQL y ocho pacientes sinteticos iniciales. |
 | Servidor con HAPI institucional existente | `.env.server.example` | `local-translator` | Levanta web, API y traductor; usa el HAPI externo configurado. |
 | HAPI externo y traductor externo | `.env.server.example` | vacio | Levanta solo web y API; ambos motores externos se configuran por URL. |
 | Servidor con imagenes publicadas por CI/CD | `.env.server.example` + `compose.deploy.yaml` | `local-translator` o vacio | No compila en la VM; descarga imagenes versionadas desde un registry. |

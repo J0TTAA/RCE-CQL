@@ -1,0 +1,49 @@
+name: rce-cql
+
+x-aws-logging: &aws-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
+services:
+  api:
+    logging: *aws-logging
+
+  web:
+    logging: *aws-logging
+
+  cql-translator:
+    logging: *aws-logging
+
+  postgres:
+    logging: *aws-logging
+
+  hapi:
+    logging: *aws-logging
+
+  synthea-seed:
+    logging: *aws-logging
+
+  caddy:
+    image: caddy:2.11.4-alpine
+    logging: *aws-logging
+    environment:
+      RCE_DOMAIN: ${RCE_DOMAIN:?Set RCE_DOMAIN to the public DNS name}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      web:
+        condition: service_started
+    networks:
+      - rce-cql
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

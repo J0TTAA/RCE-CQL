@@ -113,6 +113,7 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-022 | CI/CD con imagenes versionadas                  | El servidor o nube no siempre debe compilar codigo fuente para desplegar el RCE.                                                          | GitHub Actions valida SDD/codigo/builds y publica `api`/`web` en GHCR con tags por commit o release; `compose.deploy.yaml` consume imagenes exactas contra HAPI externo.                                                                                                      |
 | ADR-023 | HAPI administrado como overlay de despliegue | El RCE debe poder operar contra un HAPI existente o levantar un HAPI propio en la misma instancia o en otra VM. | `compose.hapi.yaml` define HAPI/PostgreSQL y seed opcional; se combina con `compose.deploy.yaml` para usar imagenes publicadas o se ejecuta solo en una VM FHIR separada. |
 | ADR-025 | Desactivar Maglev solo durante instalaciones npm | Node 24.18.x puede producir `SIGSEGV` bajo contencion de CPU por un fallo reportado en V8 Maglev; BuildKit ejecuta varias instalaciones npm en paralelo. | Solo los comandos `npm ci` usan `NODE_OPTIONS=--jitless`; Vite compila sin esta opcion para conservar WebAssembly, y los stages runtime mantienen JIT. |
+| ADR-026 | VM de aula con HTTPS y datos sinteticos acotados | Una clase pequena necesita una ruta reproducible en una sola VM sin compilar API/web ni exponer HAPI. | `compose.deploy.yaml`, `compose.hapi.yaml` y `compose.aws.yaml` comparten la red privada; Caddy publica solo 80/443, el seed opcional carga ocho pacientes y las imagenes API/web se fijan al commit publicado. |
 
 ### ADR-024 - Flujo de ordenes educativo
 
@@ -1044,6 +1045,20 @@ configuracion HAPI especifica para esa base externa. Esa variante no modifica
 los contratos del RCE, pero debe tratarse como cambio de operacion y validar
 `/metadata`, `Library`, lectura de pacientes, escritura de overlays y evaluacion
 CQL antes de una clase.
+
+### 15.6 VM de aula en AWS
+
+`compose.aws.yaml` agrega Caddy sobre la topologia de una sola instancia de
+15.5. El dominio HTTPS llega a `web`, que sirve el frontend y reenvia `/api/`
+a Nest. `api`, HAPI, PostgreSQL y el traductor permanecen en la red Docker; los
+puertos de diagnostico de web/API/HAPI/traductor solo enlazan a `127.0.0.1`.
+Los volumenes persistentes son `hapi-postgres-data`, `caddy-data` y
+`caddy-config`. Las credenciales viven en `.env` con permisos restrictivos y
+no se versionan. El overlay rota los logs JSON de cada servicio para acotar
+el consumo de disco. El seed Synthea usa un numero pequeno de pacientes de base y
+mantiene la marca idempotente actual para evitar duplicados al repetir el job.
+La guia operativa esta en `docs/deploy/AWS_SINGLE_VM.md`.
+
 ## 16. Realizacion de atributos de calidad
 
 | Atributo          | Tacticas de diseno                                                                                   |

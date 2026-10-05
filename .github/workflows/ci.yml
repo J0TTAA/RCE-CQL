@@ -103,3 +103,8 @@ jobs:
           RCE_WEB_IMAGE: ghcr.io/example/rce-cql-web:ci
           HAPI_BASE_URL: http://hapi:8080/fhir
         run: docker compose --env-file .env.server.example -f compose.deploy.yaml -f compose.hapi.yaml config
+
+      - name: Validate AWS single-VM compose and shell scripts
+        run: |
+          bash -n scripts/prepare-aws-env.sh scripts/deploy-aws-vm.sh infra/synthea/generate-and-load.sh
+          docker compose --env-file .env.aws.example -f compose.deploy.yaml -f compose.hapi.yaml -f compose.aws.yaml --profile local-translator --profile seed-data config --quiet

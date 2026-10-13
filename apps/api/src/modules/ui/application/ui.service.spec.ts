@@ -6,6 +6,7 @@ import {
   FhirGatewayPort,
   type FhirBundle,
   type FhirResource,
+  type FhirSearchOptions,
 } from '../../fhir/application/fhir-gateway.port';
 import { UiService } from './ui.service';
 import { buildDraftOrders, reviewResource } from '../../fhir/application/sandbox-orders';
@@ -60,7 +61,14 @@ describe('UiService blank rule creation', () => {
 describe('UiService patient mapping', () => {
   it('maps sparse FHIR Patient resources without inventing clinical values', async () => {
     const patient: FhirResource = { resourceType: 'Patient', id: 'patient-sparse' };
-    const service = new UiService(new SparseFhirGateway(patient), new NoopTranslator());
+    const gateway = new SparseFhirGateway(patient);
+    const originalEverything = gateway.patientEverything.bind(gateway);
+    let everythingCalls = 0;
+    gateway.patientEverything = (id) => {
+      everythingCalls++;
+      return originalEverything(id);
+    };
+    const service = new UiService(gateway, new NoopTranslator());
 
     const [summary] = await service.listPatients('sandbox-a', {});
     const detail = await service.getPatient('patient-sparse', 'sandbox-a');
@@ -76,6 +84,33 @@ describe('UiService patient mapping', () => {
     assert.deepEqual(detail.observations, []);
     assert.deepEqual(detail.timeline, []);
     assert.deepEqual(detail.sandboxOrders, []);
+    assert.deepEqual(detail.cards, []);
+    assert.equal(everythingCalls, 1);
+  });
+
+  it('shares only base patient list requests across concurrent sandboxes', async () => {
+    const gateway = new SparseFhirGateway({ resourceType: 'Patient', id: 'patient-1' });
+    const originalSearch = gateway.search.bind(gateway);
+    const originalRead = gateway.read.bind(gateway);
+    const calls = new Map<string, number>();
+    const overlayReads: string[] = [];
+    gateway.search = async (type) => {
+      calls.set(type, (calls.get(type) ?? 0) + 1);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      return originalSearch(type);
+    };
+    gateway.read = (type, id) => {
+      if (type === 'Basic') overlayReads.push(id);
+      return originalRead(type, id);
+    };
+    const service = new UiService(gateway, new NoopTranslator());
+    await Promise.all(
+      Array.from({ length: 10 }, (_, index) => service.listPatients(`sandbox-${index}`, {})),
+    );
+    assert.deepEqual(Object.fromEntries(calls), { Patient: 1, Condition: 1, Encounter: 1 });
+    assert.equal(new Set(overlayReads).size, 10);
+    await service.listPatients('sandbox-a', {});
+    assert.deepEqual(Object.fromEntries(calls), { Patient: 1, Condition: 1, Encounter: 1 });
   });
 });
 
@@ -363,12 +398,21 @@ class OrderTestGateway extends SparseFhirGateway {
   override read(type: string, id: string): Promise<FhirResource | null> {
     return type === 'Library' ? Promise.resolve(this.library) : super.read(type, id);
   }
-  override search(type: string): Promise<FhirBundle> {
+  override search(
+    type: string,
+    _params?: Record<string, string>,
+    options?: FhirSearchOptions,
+  ): Promise<FhirBundle> {
     return Promise.resolve({
       resourceType: 'Bundle',
-      entry: (type === 'Library' ? [this.library] : type === 'Basic' ? this.orders : []).map(
-        (resource) => ({ resource }),
-      ),
+      entry: (options?.fresh
+        ? type === 'Library'
+          ? [this.library]
+          : type === 'Basic'
+            ? this.orders
+            : []
+        : []
+      ).map((resource) => ({ resource })),
     });
   }
   override patientEverything(): Promise<FhirBundle> {

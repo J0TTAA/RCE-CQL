@@ -1,0 +1,21 @@
+{
+  "scope": "UI ONLY; mocked HTTP; not clinical integration",
+  "results": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "checks": "selection, UUID, required inputs, sign, invalidation, API error, confirmation, refresh, medication/service visibility, no duplicates, reopening, templates, overflow",
+      "passed": true
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "checks": "selection, UUID, required inputs, sign, invalidation, API error, confirmation, refresh, medication/service visibility, no duplicates, reopening, templates, overflow",
+      "passed": true
+    }
+  ]
+}

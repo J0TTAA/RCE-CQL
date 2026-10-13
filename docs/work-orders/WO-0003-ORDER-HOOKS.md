@@ -44,6 +44,29 @@ reciba. Resultado local: `docs/evidence/M3/runs/20261001T112034Z/summary.md`.
 Falta repetir la comprobacion manual sobre el Compose de Fedora con el codigo
 actualizado, por lo que el Work Order permanece en `REVIEW`.
 
+### Revision de frescura de lecturas
+
+Las busquedas HAPI de reglas, actividad y ordenes confirmadas solicitan
+`Cache-Control: no-cache` para evitar reutilizar un resultado vacio anterior
+a una publicacion o firma. La interfaz de ordenes distingue cero reglas
+activas de reglas evaluadas que no generaron cards. Falta verificar este
+comportamiento contra el HAPI real de Fedora antes de cerrar `TASK-5.8`.
+
+### Confirmacion visible y concurrencia de aula
+
+La respuesta de confirmacion incluye las ordenes firmadas del sandbox. La ficha
+las muestra al recibir esa respuesta y luego reconcilia con la lectura fresca
+de HAPI, conservando las ordenes confirmadas incluso si la primera busqueda
+devuelve un resultado anterior. El detalle del paciente devuelve tambien las
+cards de `patient-view`, para evitar una segunda evaluacion y una segunda
+lectura `Patient/$everything` al abrir la ficha. Las consultas simultaneas al
+listado y a los indices de pacientes base comparten la misma solicitud en
+curso; la cache de 30 segundos sigue restringida a esos datos base.
+
+Pruebas locales y capturas: `docs/evidence/M3/runs/20261013-order-refresh/summary.md`.
+No se midio todavia la carga de 10 alumnos ni se ejecuto el smoke contra HAPI
+real; `TASK-5.8` permanece en `REVIEW`.
+
 ### Revision antes de publicar: 2026-10-04
 
 Se repitieron las validaciones de API y web con Node 24.19.0. La prueba visual

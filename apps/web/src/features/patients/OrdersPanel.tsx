@@ -13,14 +13,14 @@ import {
   SeverityBadge,
   TextInput,
 } from '../../components/ui/primitives';
-import type { OrderInput, OrderReviewResult } from '../../types';
+import type { OrderInput, OrderReviewResult, SandboxOrderItem } from '../../types';
 
 export function OrdersPanel({
   patientId,
   onConfirmed,
 }: {
   patientId: string;
-  onConfirmed: () => Promise<void>;
+  onConfirmed: (orders: SandboxOrderItem[]) => Promise<void>;
 }) {
   const { api } = useRce();
   const catalog = useAsync(() => api.getOrderCatalog(), []);
@@ -77,7 +77,7 @@ export function OrdersPanel({
       setResult(null);
       setNotice(`${confirmation.orderCount} ordenes confirmadas en mi sandbox.`);
       try {
-        await onConfirmed();
+        await onConfirmed(confirmation.orders);
       } catch {
         setError(
           'Las ordenes se guardaron, pero no se pudo actualizar la ficha. Vuelve a abrirla.',
@@ -165,7 +165,9 @@ export function OrdersPanel({
             </div>
           ) : null}
           {orders.length === 0 ? <p className="orders-empty">Sin órdenes pendientes.</p> : null}
-          {orders.length ? <h3 className="pending-orders-title">Órdenes pendientes de firma</h3> : null}
+          {orders.length ? (
+            <h3 className="pending-orders-title">Órdenes pendientes de firma</h3>
+          ) : null}
           <div className="orders-list">
             {orders.map((order, index) => {
               const item = catalog.data?.find((entry) => entry.id === order.catalogId);
@@ -263,7 +265,9 @@ export function OrdersPanel({
           <RotateCw size={16} className="spin-icon" aria-hidden />
           {activeHook === 'order-select'
             ? 'Revisando la orden seleccionada...'
-            : 'Revisando las órdenes antes de firmar...'}
+            : activeHook === 'order-sign'
+              ? 'Revisando las órdenes antes de firmar...'
+              : 'Guardando y actualizando la ficha...'}
         </p>
       ) : null}
       {error ? (
@@ -291,6 +295,11 @@ export function OrdersPanel({
             <div role="alert" className="state-box state-error">
               {result.activity.warnings.join(' ')}
             </div>
+          ) : result.activity.rules.length === 0 ? (
+            <p role="status">
+              No hay reglas {result.hook} publicadas y activas visibles en este sandbox. Revisa el
+              hook, la activación y el alcance en Reglas CQL.
+            </p>
           ) : result.cards.length === 0 ? (
             <p>
               {result.hook === 'order-select'

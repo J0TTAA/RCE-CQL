@@ -173,6 +173,7 @@ export interface PatientSummary {
 }
 
 export interface PatientDetail extends PatientSummary {
+  cards: CdsCard[];
   birthDate: string | null;
   editableClinicalData: {
     birthDate: string | null;

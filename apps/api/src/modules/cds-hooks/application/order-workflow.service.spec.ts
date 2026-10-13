@@ -179,10 +179,17 @@ describe('Sandbox order workflow', () => {
     const stored = fixture.records.get(reviewed.reviewId!)!;
     assert.equal(isSignedOrderReview(stored), false);
     assert.equal(readOrderReview(stored, 'patient-1', 'sandbox-a')?.resources[0]?.status, 'draft');
-    await fixture.service.confirm('patient-1', 'sandbox-a', reviewed.reviewId!);
+    const confirmed = await fixture.service.confirm('patient-1', 'sandbox-a', reviewed.reviewId!);
+    assert.deepEqual(
+      confirmed.orders.map((order) => [order.id, order.display, order.status]),
+      [[orderId, 'Amoxicilina 500 mg (capsula)', 'active']],
+    );
     assert.equal(isSignedOrderReview(fixture.records.get(reviewed.reviewId!)!), true);
     const writes = fixture.writes();
-    await fixture.service.confirm('patient-1', 'sandbox-a', reviewed.reviewId!);
+    assert.deepEqual(
+      await fixture.service.confirm('patient-1', 'sandbox-a', reviewed.reviewId!),
+      confirmed,
+    );
     assert.equal(fixture.writes(), writes);
     assert.equal(fixture.records.size, 1);
   });

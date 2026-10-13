@@ -10,7 +10,7 @@ describe('HapiFhirHttpAdapter', () => {
   let lastRequest: Parameters<DependencyHttpClient['request']> | undefined;
   const request: DependencyHttpClient['request'] = (...args) => {
     lastRequest = args;
-    return Promise.resolve(nextResponse);
+    return Promise.resolve(nextResponse.clone());
   };
   let adapter: HapiFhirHttpAdapter;
 
@@ -75,6 +75,20 @@ describe('HapiFhirHttpAdapter', () => {
     assert.deepEqual(lastRequest?.[2]?.headers, {
       accept: 'application/fhir+json',
       authorization: 'Bearer test-token',
+    });
+  });
+
+  it('bypasses HAPI search-result reuse only when a fresh search is requested', async () => {
+    nextResponse = Response.json({ resourceType: 'Bundle', type: 'searchset', entry: [] });
+
+    await adapter.search('Library', { _tag: 'rules' });
+    assert.deepEqual(lastRequest?.[2]?.headers, { accept: 'application/fhir+json' });
+
+    await adapter.search('Library', { _tag: 'rules' }, { fresh: true });
+    assert.equal(lastRequest?.[1], 'http://hapi:8080/fhir/Library?_tag=rules');
+    assert.deepEqual(lastRequest?.[2]?.headers, {
+      accept: 'application/fhir+json',
+      'cache-control': 'no-cache',
     });
   });
 

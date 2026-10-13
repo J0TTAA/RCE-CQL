@@ -13,6 +13,7 @@ import type {
   OrderInput,
   OrderReviewResult,
   RuleTemplate,
+  SandboxOrderItem,
 } from '../types';
 
 export class RceApiError extends Error {
@@ -80,7 +81,7 @@ export interface RceUiApi {
   confirmOrders(
     patientId: string,
     reviewId: string,
-  ): Promise<{ confirmed: true; orderCount: number }>;
+  ): Promise<{ confirmed: true; orderCount: number; orders: SandboxOrderItem[] }>;
   getSession(): Promise<SessionContext>;
   setRole(role: SessionContext['role'], teacherPasscode?: string): Promise<SessionContext>;
   resetSandbox(): Promise<SessionContext>;
@@ -130,7 +131,7 @@ class HttpRceApi implements RceUiApi {
   confirmOrders(
     patientId: string,
     reviewId: string,
-  ): Promise<{ confirmed: true; orderCount: number }> {
+  ): Promise<{ confirmed: true; orderCount: number; orders: SandboxOrderItem[] }> {
     return this.request(
       `/ui/orders/${encodeURIComponent(patientId)}/reviews/${encodeURIComponent(reviewId)}/confirm`,
       {

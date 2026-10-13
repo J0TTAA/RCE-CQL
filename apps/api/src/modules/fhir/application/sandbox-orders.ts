@@ -14,6 +14,39 @@ export interface OrderInput {
   priority: 'routine' | 'urgent';
 }
 
+export interface SignedOrderSummary {
+  id: string;
+  resourceType: 'MedicationRequest' | 'ServiceRequest';
+  code: string;
+  display: string;
+  status: string;
+  intent: string;
+  authoredOn: string;
+}
+
+export function signedOrderSummary(resource: FhirResource): SignedOrderSummary | undefined {
+  if (resource.resourceType !== 'MedicationRequest' && resource.resourceType !== 'ServiceRequest') {
+    return undefined;
+  }
+  const medication = resource.resourceType === 'MedicationRequest';
+  const concept = (medication ? resource.medicationCodeableConcept : resource.code) as
+    { text?: unknown; coding?: Array<{ code?: unknown; display?: unknown }> } | undefined;
+  const coding = concept?.coding?.[0];
+  return {
+    id: String(resource.id ?? ''),
+    resourceType: resource.resourceType,
+    code: typeof coding?.code === 'string' ? coding.code : '',
+    display:
+      (typeof concept?.text === 'string' && concept.text) ||
+      (typeof coding?.display === 'string' && coding.display) ||
+      (typeof coding?.code === 'string' && coding.code) ||
+      (medication ? 'Medicamento' : 'Solicitud clinica'),
+    status: 'active',
+    intent: typeof resource.intent === 'string' ? resource.intent : '',
+    authoredOn: typeof resource.authoredOn === 'string' ? resource.authoredOn.slice(0, 10) : '',
+  };
+}
+
 export interface OrderCatalogItem {
   id: string;
   label: string;

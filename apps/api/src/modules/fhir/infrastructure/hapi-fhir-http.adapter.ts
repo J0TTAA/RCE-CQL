@@ -8,6 +8,7 @@ import {
   FhirGatewayPort,
   type FhirBundle,
   type FhirResource,
+  type FhirSearchOptions,
 } from '../application/fhir-gateway.port';
 
 interface CapabilityStatementSubset {
@@ -83,10 +84,17 @@ export class HapiFhirHttpAdapter implements FhirGatewayPort {
     };
   }
 
-  async search(resourceType: string, params: Record<string, string> = {}): Promise<FhirBundle> {
+  async search(
+    resourceType: string,
+    params: Record<string, string> = {},
+    options: FhirSearchOptions = {},
+  ): Promise<FhirBundle> {
     const response = await this.request(
       `${this.baseUrl}/${encodeURIComponent(resourceType)}?${new URLSearchParams(params).toString()}`,
-      { method: 'GET' },
+      {
+        method: 'GET',
+        ...(options.fresh ? { headers: { 'cache-control': 'no-cache' } } : {}),
+      },
     );
     return this.parseBundle(response, `search ${resourceType}`);
   }

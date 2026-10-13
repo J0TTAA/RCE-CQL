@@ -14,9 +14,17 @@ export interface FhirResource {
   [key: string]: unknown;
 }
 
+export interface FhirSearchOptions {
+  fresh?: boolean;
+}
+
 export abstract class FhirGatewayPort {
   abstract checkHealth(): Promise<DependencyHealth>;
-  abstract search(resourceType: string, params?: Record<string, string>): Promise<FhirBundle>;
+  abstract search(
+    resourceType: string,
+    params?: Record<string, string>,
+    options?: FhirSearchOptions,
+  ): Promise<FhirBundle>;
   abstract read(resourceType: string, id: string): Promise<FhirResource | null>;
   abstract create(resource: FhirResource): Promise<FhirResource>;
   abstract update(resourceType: string, id: string, resource: FhirResource): Promise<FhirResource>;

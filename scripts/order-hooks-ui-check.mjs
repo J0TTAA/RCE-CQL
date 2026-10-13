@@ -36,6 +36,12 @@ try {
     const confirmations = [];
     let failNext = false;
     let patientReads = 0;
+    let cardReads = 0;
+    let holdPostConfirmRead = false;
+    let releasePostConfirmRead;
+    const postConfirmRead = new Promise((resolve) => {
+      releasePostConfirmRead = resolve;
+    });
     let created;
     const patient = {
       id: 'ui-patient',
@@ -49,6 +55,7 @@ try {
       lastEncounter: '',
       cdsStatus: 'none',
       cdsCount: 0,
+      cards: [],
       conditions: [],
       observations: [],
       medications: [],
@@ -86,9 +93,17 @@ try {
       else if (path === '/ui/orders/templates') payload = ORDER_RULE_TEMPLATES;
       else if (path === '/ui/patients/ui-patient') {
         patientReads++;
-        payload = patient;
-      } else if (path === '/ui/patients/ui-patient/cards') payload = [];
-      else if (path === '/ui/patients') payload = [patient];
+        if (holdPostConfirmRead) {
+          holdPostConfirmRead = false;
+          payload = { ...patient, sandboxOrders: [], serviceRequests: [] };
+          await postConfirmRead;
+        } else {
+          payload = patient;
+        }
+      } else if (path === '/ui/patients/ui-patient/cards') {
+        cardReads++;
+        payload = [];
+      } else if (path === '/ui/patients') payload = [patient];
       else if (path === '/ui/rules' && request.method() === 'GET') payload = [];
       else if (path === '/ui/rules' && request.method() === 'POST') {
         created = request.postDataJSON();
@@ -175,7 +190,12 @@ try {
         patient.serviceRequests = patient.sandboxOrders.filter(
           (order) => order.resourceType === 'ServiceRequest',
         );
-        payload = { confirmed: true, orderCount: patient.sandboxOrders.length };
+        holdPostConfirmRead = true;
+        payload = {
+          confirmed: true,
+          orderCount: patient.sandboxOrders.length,
+          orders: patient.sandboxOrders,
+        };
       } else {
         status = 404;
         payload = { message: `Unexpected UI test route: ${path}` };
@@ -245,9 +265,19 @@ try {
     assert.deepEqual(outside, [], 'Form controls stay in the viewport');
     const readsBefore = patientReads;
     await confirm.click();
+    await page.getByRole('cell', { name: patient.sandboxOrders[0].display, exact: true }).waitFor();
+    const refreshed = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname.endsWith('/ui/patients/ui-patient') &&
+        response.request().method() === 'GET',
+    );
+    releasePostConfirmRead();
+    await refreshed;
+    await page.evaluate(() => new Promise(requestAnimationFrame));
     await page.getByText('2 ordenes confirmadas en mi sandbox.', { exact: true }).waitFor();
     await page.getByText('Sin órdenes pendientes.', { exact: true }).waitFor();
     assert.deepEqual(confirmations, [{ confirmed: true }]);
+    assert.equal(cardReads, 0, 'Patient detail already carries patient-view cards');
     assert.ok(patientReads > readsBefore, 'Confirmation refreshes the patient');
     for (const item of patient.sandboxOrders) {
       assert.equal(await page.getByRole('cell', { name: item.display, exact: true }).count(), 1);

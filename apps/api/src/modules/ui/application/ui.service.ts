@@ -7,6 +7,8 @@ import {
   ORDER_SANDBOX_TAG,
   readOrderReview,
   isSignedOrderReview,
+  signedOrderSummary,
+  type SignedOrderSummary,
 } from '../../fhir/application/sandbox-orders';
 import { CqlTranslatorPort } from '../../cql/application/cql-translator.port';
 import {
@@ -119,17 +121,10 @@ export interface PatientSummary {
   sandboxTouched?: boolean;
 }
 
-export interface SandboxOrderItem {
-  id: string;
-  resourceType: 'MedicationRequest' | 'ServiceRequest';
-  code: string;
-  display: string;
-  status: string;
-  intent: string;
-  authoredOn: string;
-}
+export type SandboxOrderItem = SignedOrderSummary;
 
 export interface PatientDetail extends PatientSummary {
+  cards: CdsCard[];
   birthDate: string | null;
   editableClinicalData: EditableClinicalData;
   conditions: Array<{
@@ -309,6 +304,8 @@ export class UiService {
   private readonly listCacheTtlMs = 30_000;
   private patientSearchCache: CachedValue<FhirBundle> | null = null;
   private clinicalSummaryIndexCache: CachedValue<Map<string, PatientClinicalSummary>> | null = null;
+  private patientSearchInFlight: Promise<FhirBundle> | null = null;
+  private clinicalSummaryIndexInFlight: Promise<Map<string, PatientClinicalSummary>> | null = null;
 
   constructor(
     private readonly fhir: FhirGatewayPort,
@@ -351,7 +348,11 @@ export class UiService {
       });
   }
 
-  async getPatient(patientId: string, sandboxId: string): Promise<PatientDetail> {
+  async getPatient(
+    patientId: string,
+    sandboxId: string,
+    precomputedCards?: CdsCard[],
+  ): Promise<PatientDetail> {
     const { bundle, overlay, sandboxOrders } = await this.patientBundleWithOverlay(
       patientId,
       sandboxId,
@@ -360,12 +361,12 @@ export class UiService {
     if (!patient) {
       throw new NotFoundException('Paciente no encontrado en HAPI.');
     }
-    const cards = await this.evaluateHook({
-      patientId,
-      sandboxId,
-      hook: 'patient-view',
-      persistActivity: false,
-    });
+    const cards = precomputedCards
+      ? { cards: precomputedCards }
+      : await this.evaluateActiveRules(
+          { patientId, sandboxId, hook: 'patient-view', persistActivity: false },
+          bundle,
+        );
     return this.patientBundleToDetail(
       patient,
       bundle,
@@ -400,7 +401,7 @@ export class UiService {
       hook: 'patient-view',
       persistActivity: true,
     });
-    const detail = await this.getPatient(patientId, sandboxId);
+    const detail = await this.getPatient(patientId, sandboxId, evaluation.cards);
     return { patient: detail, cards: evaluation.cards, activity: evaluation.activity };
   }
 
@@ -426,10 +427,14 @@ export class UiService {
     sandboxId: string,
     filters: Record<string, string | undefined>,
   ): Promise<ClinicalRule[]> {
-    const bundle = await this.fhir.search('Library', {
-      _count: '100',
-      _tag: `${RULE_TAG_SYSTEM}|${RULE_TAG_CODE}`,
-    });
+    const bundle = await this.fhir.search(
+      'Library',
+      {
+        _count: '100',
+        _tag: `${RULE_TAG_SYSTEM}|${RULE_TAG_CODE}`,
+      },
+      { fresh: true },
+    );
     const rules = resourcesOfType(bundle, 'Library')
       .filter((resource) => !hasAnySandboxTag(resource) || hasSandboxTag(resource, sandboxId))
       .map((library) => this.libraryToRule(library, sandboxId))
@@ -660,10 +665,14 @@ export class UiService {
     sandboxId: string,
     filters: Record<string, string | undefined>,
   ): Promise<ActivityEntry[]> {
-    const bundle = await this.fhir.search('Basic', {
-      _count: '100',
-      _tag: `${ACTIVITY_TAG_SYSTEM}|${ACTIVITY_TAG_CODE}`,
-    });
+    const bundle = await this.fhir.search(
+      'Basic',
+      {
+        _count: '100',
+        _tag: `${ACTIVITY_TAG_SYSTEM}|${ACTIVITY_TAG_CODE}`,
+      },
+      { fresh: true },
+    );
     return resourcesOfType(bundle, 'Basic')
       .filter((resource) => !hasAnySandboxTag(resource) || hasSandboxTag(resource, sandboxId))
       .map((resource) => this.basicToActivity(resource))
@@ -687,19 +696,24 @@ export class UiService {
     if (cached) {
       return cached;
     }
-    const tagged = await this.fhir.search('Patient', {
-      _count: '50',
-      _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
+    this.patientSearchInFlight ??= (async () => {
+      const tagged = await this.fhir.search('Patient', {
+        _count: '50',
+        _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
+      });
+      if ((tagged.total ?? 0) > 0 || (tagged.entry?.length ?? 0) > 0) {
+        this.patientSearchCache = this.cacheValue(tagged);
+        return tagged;
+      }
+      const fallback = await this.fhir.search('Patient', { _count: '50' });
+      if ((fallback.total ?? 0) > 0 || (fallback.entry?.length ?? 0) > 0) {
+        this.patientSearchCache = this.cacheValue(fallback);
+      }
+      return fallback;
+    })().finally(() => {
+      this.patientSearchInFlight = null;
     });
-    if ((tagged.total ?? 0) > 0 || (tagged.entry?.length ?? 0) > 0) {
-      this.patientSearchCache = this.cacheValue(tagged);
-      return tagged;
-    }
-    const fallback = await this.fhir.search('Patient', { _count: '50' });
-    if ((fallback.total ?? 0) > 0 || (fallback.entry?.length ?? 0) > 0) {
-      this.patientSearchCache = this.cacheValue(fallback);
-    }
-    return fallback;
+    return this.patientSearchInFlight;
   }
 
   private async patientToSummary(
@@ -736,53 +750,58 @@ export class UiService {
     if (cached) {
       return cached;
     }
-    const index = new Map<string, PatientClinicalSummary>();
-    try {
-      const [conditions, encounters] = await Promise.all([
-        this.fhir.search('Condition', {
-          _count: '1000',
-          _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
-        }),
-        this.fhir.search('Encounter', {
-          _count: '1000',
-          _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
-        }),
-      ]);
-      for (const condition of resourcesOfType(conditions, 'Condition')) {
-        const patientId = patientIdFromReference(
-          stringField(objectField(condition, 'subject'), 'reference'),
-        );
-        if (!patientId) {
-          continue;
+    this.clinicalSummaryIndexInFlight ??= (async () => {
+      const index = new Map<string, PatientClinicalSummary>();
+      try {
+        const [conditions, encounters] = await Promise.all([
+          this.fhir.search('Condition', {
+            _count: '1000',
+            _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
+          }),
+          this.fhir.search('Encounter', {
+            _count: '1000',
+            _tag: `${DATASET_TAG_SYSTEM}|${DATASET_TAG_CODE}`,
+          }),
+        ]);
+        for (const condition of resourcesOfType(conditions, 'Condition')) {
+          const patientId = patientIdFromReference(
+            stringField(objectField(condition, 'subject'), 'reference'),
+          );
+          if (!patientId) {
+            continue;
+          }
+          const clinicalStatus = codeDisplay(objectField(condition, 'clinicalStatus'));
+          const display = codeDisplay(condition);
+          if (!clinicalStatus.toLowerCase().includes('active') || !display) {
+            continue;
+          }
+          const summary = ensureClinicalSummary(index, patientId);
+          if (!summary.activeConditions.includes(display) && summary.activeConditions.length < 4) {
+            summary.activeConditions.push(display);
+          }
         }
-        const clinicalStatus = codeDisplay(objectField(condition, 'clinicalStatus'));
-        const display = codeDisplay(condition);
-        if (!clinicalStatus.toLowerCase().includes('active') || !display) {
-          continue;
+        for (const encounter of resourcesOfType(encounters, 'Encounter')) {
+          const patientId = patientIdFromReference(
+            stringField(objectField(encounter, 'subject'), 'reference'),
+          );
+          const date = periodStart(encounter);
+          if (!patientId || !date) {
+            continue;
+          }
+          const summary = ensureClinicalSummary(index, patientId);
+          if (!summary.lastEncounter || date > summary.lastEncounter) {
+            summary.lastEncounter = date;
+          }
         }
-        const summary = ensureClinicalSummary(index, patientId);
-        if (!summary.activeConditions.includes(display) && summary.activeConditions.length < 4) {
-          summary.activeConditions.push(display);
-        }
+      } catch {
+        return index;
       }
-      for (const encounter of resourcesOfType(encounters, 'Encounter')) {
-        const patientId = patientIdFromReference(
-          stringField(objectField(encounter, 'subject'), 'reference'),
-        );
-        const date = periodStart(encounter);
-        if (!patientId || !date) {
-          continue;
-        }
-        const summary = ensureClinicalSummary(index, patientId);
-        if (!summary.lastEncounter || date > summary.lastEncounter) {
-          summary.lastEncounter = date;
-        }
-      }
-    } catch {
+      this.clinicalSummaryIndexCache = this.cacheValue(index);
       return index;
-    }
-    this.clinicalSummaryIndexCache = this.cacheValue(index);
-    return index;
+    })().finally(() => {
+      this.clinicalSummaryIndexInFlight = null;
+    });
+    return this.clinicalSummaryIndexInFlight;
   }
 
   private async patientBundleWithOverlay(
@@ -809,12 +828,16 @@ export class UiService {
     applyMedicationOverlay(bundle, patientId, overlay.medications);
     applyEncounterOverlay(bundle, patientId, overlay.encounterType);
     applyClinicalResourceOverlay(bundle, patientId, overlay.clinicalResources);
-    const orderBundle = await this.fhir.search('Basic', {
-      code: `${ORDER_SYSTEM}|signed`,
-      subject: `Patient/${patientId}`,
-      _tag: `${ORDER_SANDBOX_TAG}|${sandboxId}`,
-      _count: '1000',
-    });
+    const orderBundle = await this.fhir.search(
+      'Basic',
+      {
+        code: `${ORDER_SYSTEM}|signed`,
+        subject: `Patient/${patientId}`,
+        _tag: `${ORDER_SANDBOX_TAG}|${sandboxId}`,
+        _count: '1000',
+      },
+      { fresh: true },
+    );
     if ((orderBundle.total ?? 0) > (orderBundle.entry?.length ?? 0)) {
       throw new UnprocessableEntityException(
         'Hay demasiadas ordenes para esta sesion. Reinicia el sandbox para continuar.',
@@ -829,7 +852,7 @@ export class UiService {
         }));
         sandboxOrders.push(
           ...signed.flatMap((resource) => {
-            const item = sandboxOrderFromResource(resource);
+            const item = signedOrderSummary(resource);
             return item ? [item] : [];
           }),
         );
@@ -1045,6 +1068,7 @@ export class UiService {
     };
     return {
       ...summary,
+      cards,
       birthDate,
       editableClinicalData: {
         birthDate,
@@ -1211,7 +1235,10 @@ export class UiService {
     };
   }
 
-  private async evaluateActiveRules(input: HookEvaluationInput): Promise<{
+  private async evaluateActiveRules(
+    input: HookEvaluationInput,
+    preparedBundle?: FhirBundle,
+  ): Promise<{
     cards: CdsCard[];
     activity: ActivityEntry;
   }> {
@@ -1219,7 +1246,9 @@ export class UiService {
     const persistActivity = input.persistActivity ?? false;
     const [rules, bundleView] = await Promise.all([
       this.listRules(input.sandboxId, { hook: input.hook, activation: 'active' }),
-      this.patientBundleWithOverlay(input.patientId, input.sandboxId),
+      preparedBundle
+        ? Promise.resolve({ bundle: preparedBundle })
+        : this.patientBundleWithOverlay(input.patientId, input.sandboxId),
     ]);
     const { bundle } = bundleView;
     appendAdditionalResources(bundle, input.additionalResources);
@@ -2060,26 +2089,6 @@ function genderLabel(gender: string): string {
       >
     )[gender] ?? 'sin dato'
   );
-}
-
-function sandboxOrderFromResource(resource: FhirResource): SandboxOrderItem | undefined {
-  if (resource.resourceType !== 'MedicationRequest' && resource.resourceType !== 'ServiceRequest') {
-    return undefined;
-  }
-  const medication = resource.resourceType === 'MedicationRequest';
-  const codeableConcept = medication
-    ? objectField(resource, 'medicationCodeableConcept')
-    : objectField(resource, 'code');
-  const coding = firstArrayItem(objectField(codeableConcept, 'coding'));
-  return {
-    id: String(resource.id ?? ''),
-    resourceType: resource.resourceType,
-    code: typeof coding.code === 'string' ? coding.code : '',
-    display: codeDisplay(codeableConcept) || (medication ? 'Medicamento' : 'Solicitud clínica'),
-    status: stringField(resource, 'status'),
-    intent: stringField(resource, 'intent'),
-    authoredOn: dateLike(resource, 'authoredOn'),
-  };
 }
 
 function codeDisplay(resource: unknown): string {

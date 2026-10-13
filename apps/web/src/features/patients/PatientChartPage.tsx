@@ -11,6 +11,7 @@ import type {
   EditableClinicalResource,
   EditableClinicalResourceType,
   PatientDetail,
+  SandboxOrderItem,
 } from '../../types';
 import {
   AsyncState,
@@ -40,26 +41,24 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
   const { api } = useRce();
   const [tab, setTab] = useState<PatientTab>('resumen');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [patientDetail, setPatientDetail] = useState<PatientDetail | null>(null);
-  const [visibleCards, setVisibleCards] = useState<CdsCard[] | null>(null);
+  const [patientDetail, setPatientDetail] = useState<{
+    patientId: string;
+    value: PatientDetail;
+  } | null>(null);
+  const [visibleCards, setVisibleCards] = useState<{
+    patientId: string;
+    value: CdsCard[];
+  } | null>(null);
   const [refreshingCards, setRefreshingCards] = useState(false);
   const patient = useAsync(() => api.getPatient(patientId), [patientId]);
-  const cards = useAsync(() => api.getPatientCards(patientId), [patientId]);
-
-  useEffect(() => {
-    if (patient.data) {
-      setPatientDetail(patient.data);
-    }
-  }, [patient.data]);
-
-  useEffect(() => {
-    if (cards.data) {
-      setVisibleCards(cards.data);
-    }
-  }, [cards.data]);
-
-  const displayedPatient = patientDetail ?? patient.data;
-  const displayedCards = visibleCards ?? cards.data ?? [];
+  const displayedPatient =
+    patientDetail?.patientId === patientId
+      ? patientDetail.value
+      : patient.data?.id === patientId
+        ? patient.data
+        : null;
+  const displayedCards =
+    visibleCards?.patientId === patientId ? visibleCards.value : (displayedPatient?.cards ?? []);
   const sandboxOrders = displayedPatient?.sandboxOrders ?? [];
   const historicalServiceRequests = (displayedPatient?.serviceRequests ?? []).filter(
     (item) =>
@@ -72,16 +71,18 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
     setRefreshingCards(true);
     try {
       const nextCards = await api.getPatientCards(patientId);
-      setVisibleCards(nextCards);
-      setPatientDetail((current) =>
-        current
-          ? {
-              ...current,
-              cdsCount: nextCards.length,
-              cdsStatus: maxCardSeverity(nextCards),
-            }
-          : current,
-      );
+      setVisibleCards({ patientId, value: nextCards });
+      if (displayedPatient) {
+        setPatientDetail({
+          patientId,
+          value: {
+            ...displayedPatient,
+            cards: nextCards,
+            cdsCount: nextCards.length,
+            cdsStatus: maxCardSeverity(nextCards),
+          },
+        });
+      }
     } finally {
       setRefreshingCards(false);
     }
@@ -213,9 +214,28 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                   <OrdersPanel
                     key={patientId}
                     patientId={patientId}
-                    onConfirmed={async () => {
-                      setPatientDetail(await api.getPatient(patientId));
-                      await refreshCards();
+                    onConfirmed={async (confirmedOrders) => {
+                      if (displayedPatient) {
+                        setPatientDetail({
+                          patientId,
+                          value: {
+                            ...displayedPatient,
+                            sandboxOrders: mergeSandboxOrders(
+                              displayedPatient.sandboxOrders,
+                              confirmedOrders,
+                            ),
+                          },
+                        });
+                      }
+                      const updated = await api.getPatient(patientId);
+                      setPatientDetail({
+                        patientId,
+                        value: {
+                          ...updated,
+                          sandboxOrders: mergeSandboxOrders(updated.sandboxOrders, confirmedOrders),
+                        },
+                      });
+                      setVisibleCards({ patientId, value: updated.cards });
                     }}
                   />
                 </div>
@@ -258,9 +278,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                 {tab === 'cds' ? <CdsRail cards={displayedCards} embedded /> : null}
               </Panel>
               <aside className="chart-rail">
-                <AsyncState loading={cards.loading && !visibleCards} error={cards.error}>
-                  <CdsRail cards={displayedCards} />
-                </AsyncState>
+                <CdsRail cards={displayedCards} />
               </aside>
             </div>
             <PatientDataDrawer
@@ -268,8 +286,8 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
               open={drawerOpen}
               onClose={() => setDrawerOpen(false)}
               onUpdated={(result) => {
-                setPatientDetail(result.patient);
-                setVisibleCards(result.cards);
+                setPatientDetail({ patientId, value: result.patient });
+                setVisibleCards({ patientId, value: result.cards });
               }}
             />
           </>
@@ -1405,6 +1423,17 @@ function createClinicalResource(
 
 function todayInput(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function mergeSandboxOrders(
+  current: SandboxOrderItem[],
+  confirmed: SandboxOrderItem[],
+): SandboxOrderItem[] {
+  const merged = new Map(current.map((order) => [order.id, order]));
+  for (const order of confirmed) {
+    merged.set(order.id, order);
+  }
+  return [...merged.values()];
 }
 
 function maxCardSeverity(cards: CdsCard[]): PatientDetail['cdsStatus'] {

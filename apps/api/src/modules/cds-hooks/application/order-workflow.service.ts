@@ -7,6 +7,7 @@ import {
   ORDER_CATALOG,
   readOrderReview,
   reviewResource,
+  signedOrderSummary,
 } from '../../fhir/application/sandbox-orders';
 import type { ActivityEntry } from '../../ui/application/ui.service';
 import type { ReviewOrdersDto } from '../presentation/order-workflow.dto';
@@ -67,8 +68,12 @@ export class OrderWorkflowService {
     const stored = await this.fhir.read('Basic', reviewId);
     const review = readOrderReview(stored, patientId, sandboxId);
     if (!review || !stored) throw new NotFoundException('Revision no encontrada en tu sandbox.');
+    const orders = review.resources.flatMap((resource) => {
+      const summary = signedOrderSummary(resource);
+      return summary ? [summary] : [];
+    });
     if (isSignedOrderReview(stored))
-      return { confirmed: true, orderCount: review.resources.length };
+      return { confirmed: true, orderCount: review.resources.length, orders };
     if (Date.parse(review.expiresAt) < Date.now())
       throw new ConflictException('La revision vencio. Vuelve a revisar antes de confirmar.');
     const evaluation = await this.cds.evaluate('rce-order-sign', sandboxId, {
@@ -94,7 +99,7 @@ export class OrderWorkflowService {
     }
     // La identidad de la revision es estable: confirmar dos veces no crea dos recetas.
     await this.fhir.update('Basic', reviewId, reviewResource(reviewId, review, true));
-    return { confirmed: true, orderCount: review.resources.length };
+    return { confirmed: true, orderCount: review.resources.length, orders };
   }
 }
 

@@ -114,6 +114,7 @@ No disena internamente HAPI, PostgreSQL, Monaco, el traductor CQL ni el CQL Engi
 | ADR-023 | HAPI administrado como overlay de despliegue | El RCE debe poder operar contra un HAPI existente o levantar un HAPI propio en la misma instancia o en otra VM. | `compose.hapi.yaml` define HAPI/PostgreSQL y seed opcional; se combina con `compose.deploy.yaml` para usar imagenes publicadas o se ejecuta solo en una VM FHIR separada. |
 | ADR-025 | Desactivar Maglev solo durante instalaciones npm | Node 24.18.x puede producir `SIGSEGV` bajo contencion de CPU por un fallo reportado en V8 Maglev; BuildKit ejecuta varias instalaciones npm en paralelo. | Solo los comandos `npm ci` usan `NODE_OPTIONS=--jitless`; Vite compila sin esta opcion para conservar WebAssembly, y los stages runtime mantienen JIT. |
 | ADR-026 | VM de aula con HTTPS y datos sinteticos acotados | Una clase pequena necesita una ruta reproducible en una sola VM sin compilar API/web ni exponer HAPI. | `compose.deploy.yaml`, `compose.hapi.yaml` y `compose.aws.yaml` comparten la red privada; Caddy publica solo 80/443, el seed opcional carga ocho pacientes y las imagenes API/web se fijan al commit publicado. |
+| ADR-027 | Confirmacion visible y cache base compartida | La busqueda FHIR puede demorar en reflejar una firma y varios alumnos pueden abrir el mismo catalogo a la vez. | La confirmacion devuelve el resumen de las ordenes que acaba de guardar; la ficha lo muestra inmediatamente y reconcilia con una lectura fresca. Solo el listado y los indices clinicos de pacientes base comparten consultas en curso y TTL corto; reglas, overlays, ordenes y cards no comparten cache entre sandboxes. |
 
 ### ADR-024 - Flujo de ordenes educativo
 
@@ -135,6 +136,13 @@ se exige revisar nuevamente. La confirmacion actualiza el mismo `Basic`,
 por lo que reenviarla no duplica ordenes. Las ordenes confirmadas se
 materializan como recursos R4 activos en el bundle efectivo; no se altera
 el paciente base ni se envia una receta a una farmacia.
+
+HAPI puede reutilizar resultados de busquedas recientes. Las consultas de
+`Library` para reglas activas y de `Basic` para ordenes firmadas o actividad
+solicitan `Cache-Control: no-cache` por medio del adapter FHIR para reflejar
+publicaciones y confirmaciones inmediatamente, incluso con HAPI externo.
+Validar CQL comprueba su traduccion a ELM; una card se verifica por separado
+al ejecutar el hook con el contexto FHIR del paciente y revisar la actividad.
 
 Documentacion y escenarios: [Guia de hooks](./CDS_HOOKS_WORKFLOWS.md).
 Alcance: REQ-F-033, REQ-F-039, REQ-F-052, REQ-F-053; TASK-5.8.

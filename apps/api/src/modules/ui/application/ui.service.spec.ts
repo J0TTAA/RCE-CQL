@@ -273,6 +273,59 @@ describe('UiService order evaluation with the installed CQL engine', () => {
       ['Patient'],
     );
   });
+
+  it('returns only clinical FHIR JSON visible to the current sandbox', async () => {
+    const gateway = new OrderTestGateway();
+    gateway.bundle.entry!.push(
+      {
+        resource: {
+          resourceType: 'Observation',
+          id: 'base-observation',
+          status: 'final',
+          subject: { reference: 'Patient/patient-1' },
+        },
+      },
+      {
+        resource: {
+          resourceType: 'Condition',
+          id: 'foreign-condition',
+          meta: {
+            tag: [{ system: 'https://rce-cql.local/fhir/tags/sandbox', code: 'sandbox-b' }],
+          },
+        },
+      },
+      { resource: { resourceType: 'Basic', id: 'technical-overlay' } },
+    );
+    const [order] = buildDraftOrders(
+      'patient-1',
+      [{ id: 'd1577c69-dfbe-44ad-ba6d-3e05e953b2ea', catalogId: 'hba1c', priority: 'routine' }],
+      true,
+    );
+    gateway.orders.push(
+      reviewResource(
+        'confirmed-for-a',
+        {
+          patientId: 'patient-1',
+          sandboxId: 'sandbox-a',
+          resources: [order!],
+          expiresAt: new Date().toISOString(),
+          decision: '',
+        },
+        true,
+      ),
+    );
+    const service = new UiService(gateway, new NoopTranslator());
+    const sandboxA = await service.getPatientFhirResources('patient-1', 'sandbox-a');
+    const sandboxB = await service.getPatientFhirResources('patient-1', 'sandbox-b');
+
+    assert.ok(sandboxA.some((resource) => resource.resourceType === 'Patient'));
+    assert.ok(sandboxA.some((resource) => resource.id === 'base-observation'));
+    assert.ok(sandboxA.some((resource) => resource.resourceType === 'ServiceRequest'));
+    assert.ok(!sandboxA.some((resource) => resource.id === 'foreign-condition'));
+    assert.ok(!sandboxA.some((resource) => resource.resourceType === 'Basic'));
+    assert.ok(!sandboxB.some((resource) => resource.resourceType === 'ServiceRequest'));
+    assert.ok(sandboxB.some((resource) => resource.id === 'foreign-condition'));
+  });
 });
 
 // ELM de contrato minimo: existe una receta draft cuya referencia esta en Selections.

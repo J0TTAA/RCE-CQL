@@ -156,6 +156,7 @@ El flujo educativo esperado es:
 | REQ-F-029 | El sistema DEBE soportar cambios atomicos de varios recursos mediante un Bundle `transaction`.                | MUST      | Integracion   |
 | REQ-F-030 | Despues de una escritura clinica exitosa, el sistema DEBE reevaluar las reglas aplicables.                    | MUST      | E2E           |
 | REQ-F-031 | La respuesta posterior al cambio DEBE permitir actualizar las cards visibles sin recargar toda la aplicacion. | MUST      | E2E           |
+| REQ-F-057 | La ficha DEBE permitir inspeccionar, solo en lectura, el JSON FHIR R4 del paciente y sus recursos clinicos efectivos en el sandbox actual, sin exponer overlays tecnicos ni datos de otro sandbox. | SHOULD | Contrato/E2E |
 
 ### 9.4 CDS Hooks y recomendaciones
 

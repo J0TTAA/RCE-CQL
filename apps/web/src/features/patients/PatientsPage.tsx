@@ -28,7 +28,10 @@ export function PatientsPage() {
   const [cohort, setCohort] = useState<Cohort | 'all'>('all');
   const [alertState, setAlertState] = useState<'all' | 'with-alerts' | 'without-alerts'>('all');
   const filters = useMemo(() => ({ query, cohort, alertState }), [alertState, cohort, query]);
-  const patients = useAsync(() => api.listPatients(filters), [filters]);
+  const patients = useAsync(() => api.listPatients(filters), [filters], {
+    refreshIntervalMs: 15000,
+    refreshOnFocus: true,
+  });
 
   return (
     <section className="page">

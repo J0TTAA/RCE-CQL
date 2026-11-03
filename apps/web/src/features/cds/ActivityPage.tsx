@@ -27,7 +27,10 @@ export function ActivityPage() {
   const [result, setResult] = useState<ResultFilter>('all');
   const [selected, setSelected] = useState<ActivityEntry | null>(null);
   const filters = useMemo(() => ({ hook, severity, result }), [hook, result, severity]);
-  const activity = useAsync(() => api.listActivity(filters), [filters]);
+  const activity = useAsync(() => api.listActivity(filters), [filters], {
+    refreshIntervalMs: 8000,
+    refreshOnFocus: true,
+  });
 
   return (
     <section className="page">

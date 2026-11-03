@@ -37,6 +37,17 @@ const FIRST_PUBLISHED_RULE_VERSION = '1.0.0';
 const RULE_VERSION_PATTERN = /^[0-9]+(\.[0-9]+){0,2}(-[A-Za-z0-9.-]+)?$/;
 const CQL_LIBRARY_DECLARATION_PATTERN =
   /^([ \t]*library[ \t]+)[A-Za-z][A-Za-z0-9_]*(?:[ \t]+version[ \t]+'[^']*')?([ \t]*)$/m;
+const VISIBLE_PATIENT_RESOURCE_TYPES = new Set([
+  'Patient',
+  'Condition',
+  'Observation',
+  'MedicationRequest',
+  'AllergyIntolerance',
+  'Encounter',
+  'Procedure',
+  'Immunization',
+  'ServiceRequest',
+]);
 
 export type Severity = 'info' | 'warning' | 'critical';
 export type Lifecycle = 'draft' | 'validated' | 'published' | 'disabled' | 'retired';
@@ -375,6 +386,27 @@ export class UiService {
       overlay,
       sandboxOrders,
     );
+  }
+
+  async getPatientFhirResources(patientId: string, sandboxId: string): Promise<FhirResource[]> {
+    const { bundle } = await this.patientBundleWithOverlay(patientId, sandboxId);
+    if (!resourcesOfType(bundle, 'Patient').some((resource) => resource.id === patientId)) {
+      throw new NotFoundException('Paciente no encontrado en HAPI.');
+    }
+    return (bundle.entry ?? [])
+      .map((entry) => entry.resource)
+      .filter((resource): resource is FhirResource =>
+        Boolean(
+          resource?.resourceType && VISIBLE_PATIENT_RESOURCE_TYPES.has(resource.resourceType),
+        ),
+      )
+      .filter((resource) => resource.resourceType !== 'Patient' || resource.id === patientId)
+      .filter(
+        (resource) =>
+          !hasAnySandboxTag(resource) ||
+          hasSandboxTag(resource, sandboxId) ||
+          hasTag(resource, SANDBOX_TAG_SYSTEM, 'bundle-overlay'),
+      );
   }
 
   async updatePatientClinicalData(

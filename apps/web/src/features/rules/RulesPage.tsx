@@ -46,7 +46,10 @@ export function RulesPage({ createMode = false }: { createMode?: boolean }) {
     () => ({ query, lifecycle, hook, activation }),
     [activation, hook, lifecycle, query],
   );
-  const rules = useAsync(() => api.listRules(filters), [filters, role]);
+  const rules = useAsync(() => api.listRules(filters), [filters, role], {
+    refreshIntervalMs: 5000,
+    refreshOnFocus: true,
+  });
 
   useEffect(() => {
     if (createMode) {

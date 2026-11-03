@@ -3,6 +3,7 @@ import {
   Controller,
   ForbiddenException,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -36,6 +37,7 @@ export class UiController {
   ) {}
 
   @Get('patients')
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Listar pacientes desde HAPI FHIR' })
   listPatients(
     @Req() request: Request,
@@ -47,6 +49,7 @@ export class UiController {
   }
 
   @Get('patients/:id')
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Obtener ficha clinica FHIR del paciente' })
   getPatient(
     @Req() request: Request,
@@ -57,7 +60,20 @@ export class UiController {
     return this.ui.getPatient(id, session.sandboxId);
   }
 
+  @Get('patients/:id/fhir-resources')
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({ summary: 'Inspeccionar recursos FHIR efectivos del paciente en el sandbox' })
+  getPatientFhirResources(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+    @Param('id') id: string,
+  ) {
+    const session = this.session(request, response);
+    return this.ui.getPatientFhirResources(id, session.sandboxId);
+  }
+
   @Get('patients/:id/cards')
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Evaluar reglas activas y retornar cards CDS' })
   getPatientCards(
     @Req() request: Request,
@@ -81,6 +97,7 @@ export class UiController {
   }
 
   @Get('rules')
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Listar reglas CQL guardadas como FHIR Library' })
   listRules(
     @Req() request: Request,
@@ -103,6 +120,7 @@ export class UiController {
   }
 
   @Get('rules/:id')
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Obtener regla CQL desde HAPI' })
   getRule(
     @Req() request: Request,
@@ -181,6 +199,7 @@ export class UiController {
   }
 
   @Get('activity')
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Listar ejecuciones CDS guardadas en HAPI' })
   listActivity(
     @Req() request: Request,

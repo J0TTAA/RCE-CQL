@@ -864,6 +864,86 @@ dd {
   gap: 14px;
 }
 
+.fhir-json-viewer,
+.fhir-json-list {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.fhir-json-toolbar,
+.fhir-json-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+
+.fhir-json-toolbar {
+  justify-content: space-between;
+}
+
+.fhir-json-title h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.fhir-json-count {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.fhir-json-toolbar .field {
+  min-width: 160px;
+}
+
+.fhir-json-item {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+}
+
+.fhir-json-item summary {
+  display: flex;
+  min-width: 0;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.fhir-json-item summary strong {
+  font-size: 13px;
+}
+
+.fhir-json-chevron {
+  flex: 0 0 auto;
+  color: var(--color-muted);
+}
+
+.fhir-json-item[open] .fhir-json-chevron {
+  transform: rotate(90deg);
+}
+
+.fhir-json-item summary code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fhir-json-item pre {
+  max-height: 500px;
+  overflow: auto;
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .chart-rail {
   position: sticky;
   top: 74px;

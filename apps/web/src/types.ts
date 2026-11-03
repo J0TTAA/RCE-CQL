@@ -203,6 +203,12 @@ export interface PatientDetail extends PatientSummary {
   timeline: TimelineItem[];
 }
 
+export interface FhirJsonResource {
+  resourceType: string;
+  id?: string;
+  [key: string]: unknown;
+}
+
 export interface CdsSuggestion {
   action: 'create' | 'update' | 'delete';
   resourceType: string;

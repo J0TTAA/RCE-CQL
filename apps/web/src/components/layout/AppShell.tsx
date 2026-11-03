@@ -30,6 +30,7 @@ const nav = [
 
 export function AppShell() {
   const router = useRouterState();
+  const { session } = useRce();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
 
@@ -50,7 +51,12 @@ export function AppShell() {
       ) : null}
       <div className="app-main">
         <Topbar onOpenNav={() => setMobileNav(true)} />
-        <main id="main-content" className="route-view" tabIndex={-1}>
+        <main
+          key={session?.sandboxId ?? 'session-pending'}
+          id="main-content"
+          className="route-view"
+          tabIndex={-1}
+        >
           {router.route.name === 'patients' ? <PatientsPage /> : null}
           {router.route.name === 'patient' ? (
             <PatientChartPage patientId={router.route.patientId} />

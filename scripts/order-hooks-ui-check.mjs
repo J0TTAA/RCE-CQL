@@ -37,6 +37,7 @@ try {
     let failNext = false;
     let patientReads = 0;
     let cardReads = 0;
+    let fhirReads = 0;
     let holdPostConfirmRead = false;
     let releasePostConfirmRead;
     const postConfirmRead = new Promise((resolve) => {
@@ -91,6 +92,24 @@ try {
         };
       else if (path === '/ui/orders/catalog') payload = ORDER_CATALOG;
       else if (path === '/ui/orders/templates') payload = ORDER_RULE_TEMPLATES;
+      else if (path === '/ui/patients/ui-patient/fhir-resources') {
+        fhirReads++;
+        payload = [
+          { resourceType: 'Patient', id: patient.id, name: [{ text: patient.name }] },
+          {
+            resourceType: 'Observation',
+            id: 'ui-observation',
+            status: 'final',
+            valueQuantity: { value: 6.5, unit: '%' },
+          },
+          ...patient.sandboxOrders.map((order) => ({
+            resourceType: order.resourceType,
+            id: order.id,
+            status: order.status,
+            subject: { reference: `Patient/${patient.id}` },
+          })),
+        ];
+      }
       else if (path === '/ui/patients/ui-patient') {
         patientReads++;
         if (holdPostConfirmRead) {
@@ -207,6 +226,14 @@ try {
       });
     });
     await page.goto(`${base}/patients/ui-patient`);
+    assert.equal(fhirReads, 0, 'FHIR JSON is not loaded with the chart');
+    await page.getByRole('button', { name: 'FHIR JSON', exact: true }).click();
+    await page.getByRole('heading', { name: 'FHIR JSON' }).waitFor();
+    await page.getByLabel('Tipo de recurso').selectOption('Observation');
+    await page.locator('.fhir-json-item summary').click();
+    await page.getByText('"value": 6.5', { exact: false }).waitFor();
+    assert.equal(fhirReads, 1);
+    await page.getByRole('button', { name: 'Órdenes CDS' }).click();
     await page.getByRole('button', { name: 'Recetar / indicar' }).click();
     await page.getByLabel('Medicamento, examen o procedimiento').selectOption('amoxicillin');
     const add = page.getByRole('button', { name: 'Agregar a órdenes pendientes', exact: true });
@@ -282,6 +309,16 @@ try {
     for (const item of patient.sandboxOrders) {
       assert.equal(await page.getByRole('cell', { name: item.display, exact: true }).count(), 1);
     }
+    await page.getByRole('button', { name: 'FHIR JSON', exact: true }).click();
+    await page.getByLabel('Tipo de recurso').selectOption('ServiceRequest');
+    await page.locator('.fhir-json-item summary').click();
+    await page.getByText('"status": "active"', { exact: false }).waitFor();
+    assert.equal(fhirReads, 2, 'Confirmed orders invalidate the JSON snapshot');
+    await page.screenshot({
+      path: resolve(output, `fhir-json-${viewport.width}.png`),
+      fullPage: true,
+    });
+    await page.getByRole('button', { name: 'Órdenes CDS' }).click();
     assert.equal(
       await page.getByRole('heading', { name: 'Solicitudes del historial del paciente' }).count(),
       0,
@@ -312,7 +349,7 @@ try {
     results.push({
       viewport,
       checks:
-        'selection, UUID, required inputs, sign, invalidation, API error, confirmation, refresh, medication/service visibility, no duplicates, reopening, templates, overflow',
+        'selection, UUID, required inputs, sign, invalidation, API error, confirmation, refresh, medication/service visibility, FHIR JSON lazy load/filter/expand/refresh, no duplicates, reopening, templates, overflow',
       passed: true,
     });
     await context.close();

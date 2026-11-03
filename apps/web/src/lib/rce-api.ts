@@ -3,6 +3,7 @@ import type {
   ClinicalRule,
   CdsCard,
   PatientDetail,
+  FhirJsonResource,
   PatientSummary,
   RuleHook,
   RuleTestResult,
@@ -88,6 +89,7 @@ export interface RceUiApi {
   getServicesStatus(): Promise<ServicesStatus>;
   listPatients(filters?: PatientFilters): Promise<PatientSummary[]>;
   getPatient(id: string): Promise<PatientDetail>;
+  getPatientFhirResources(id: string): Promise<FhirJsonResource[]>;
   getPatientCards(id: string): Promise<CdsCard[]>;
   updatePatient(input: PatientUpdateInput): Promise<PatientUpdateResult>;
   listRules(filters?: RuleFilters): Promise<ClinicalRule[]>;
@@ -200,6 +202,12 @@ class HttpRceApi implements RceUiApi {
     return this.request(`/ui/patients/${encodeURIComponent(id)}`);
   }
 
+  getPatientFhirResources(id: string): Promise<FhirJsonResource[]> {
+    return this.request(`/ui/patients/${encodeURIComponent(id)}/fhir-resources`, {
+      cache: 'no-store',
+    });
+  }
+
   getPatientCards(id: string): Promise<CdsCard[]> {
     return this.request(`/ui/patients/${encodeURIComponent(id)}/cards`);
   }
@@ -295,6 +303,7 @@ class HttpRceApi implements RceUiApi {
     }
     const response = await fetch(`${API_PREFIX}${path}`, {
       ...init,
+      ...(init.method === undefined || init.method === 'GET' ? { cache: 'no-store' } : {}),
       credentials: 'include',
       headers: {
         accept: 'application/json',

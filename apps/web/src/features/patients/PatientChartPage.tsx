@@ -5,6 +5,7 @@ import { Link } from '../../app/router';
 import { formatAge, formatDate, shortId } from '../../lib/formatters';
 import { useAsync } from '../../lib/use-async';
 import { OrdersPanel } from './OrdersPanel';
+import { FhirJsonViewer } from './FhirJsonViewer';
 import type {
   CdsCard,
   DemoEncounterType,
@@ -35,6 +36,7 @@ type PatientTab =
   | 'procedimientos'
   | 'inmunizaciones'
   | 'ordenes'
+  | 'fhir'
   | 'cds';
 
 export function PatientChartPage({ patientId }: { patientId: string }) {
@@ -50,6 +52,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
     value: CdsCard[];
   } | null>(null);
   const [refreshingCards, setRefreshingCards] = useState(false);
+  const [fhirRevision, setFhirRevision] = useState(0);
   const patient = useAsync(() => api.getPatient(patientId), [patientId]);
   const displayedPatient =
     patientDetail?.patientId === patientId
@@ -114,6 +117,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                       'procedimientos',
                       'inmunizaciones',
                       'ordenes',
+                      'fhir',
                     ] as PatientTab[]
                   ).map((item) => (
                     <button
@@ -122,7 +126,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                       onClick={() => setTab(item)}
                       type="button"
                     >
-                      {item === 'ordenes' ? 'Órdenes CDS' : item}
+                      {item === 'ordenes' ? 'Órdenes CDS' : item === 'fhir' ? 'FHIR JSON' : item}
                     </button>
                   ))}
                   <button
@@ -236,6 +240,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                         },
                       });
                       setVisibleCards({ patientId, value: updated.cards });
+                      setFhirRevision((value) => value + 1);
                     }}
                   />
                 </div>
@@ -275,6 +280,14 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
                     ) : null}
                   </>
                 ) : null}
+                <div hidden={tab !== 'fhir'}>
+                  <FhirJsonViewer
+                    key={patientId}
+                    patientId={patientId}
+                    active={tab === 'fhir'}
+                    revision={fhirRevision}
+                  />
+                </div>
                 {tab === 'cds' ? <CdsRail cards={displayedCards} embedded /> : null}
               </Panel>
               <aside className="chart-rail">
@@ -288,6 +301,7 @@ export function PatientChartPage({ patientId }: { patientId: string }) {
               onUpdated={(result) => {
                 setPatientDetail({ patientId, value: result.patient });
                 setVisibleCards({ patientId, value: result.cards });
+                setFhirRevision((value) => value + 1);
               }}
             />
           </>
@@ -596,7 +610,6 @@ function PatientDataDrawer({
     try {
       setSaveError(null);
       setStage('validating');
-      await new Promise((resolve) => window.setTimeout(resolve, 280));
       setStage('saving');
       const result = await api.updatePatient({
         patientId: patient.id,
@@ -616,7 +629,6 @@ function PatientDataDrawer({
         clinicalResources: formValidation.values.clinicalResources,
       });
       setStage('reevaluating');
-      await new Promise((resolve) => window.setTimeout(resolve, 360));
       setStage('updated');
       onUpdated(result);
     } catch (error) {

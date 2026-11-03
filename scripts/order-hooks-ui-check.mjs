@@ -109,8 +109,7 @@ try {
             subject: { reference: `Patient/${patient.id}` },
           })),
         ];
-      }
-      else if (path === '/ui/patients/ui-patient') {
+      } else if (path === '/ui/patients/ui-patient') {
         patientReads++;
         if (holdPostConfirmRead) {
           holdPostConfirmRead = false;
@@ -336,7 +335,7 @@ try {
       fullPage: true,
     });
     await page.goto(`${base}/rules/new`);
-    await page.getByLabel('Punto de partida').selectOption('diabetes-order');
+    await page.getByLabel('Punto de partida').selectOption('order-sign-hba1c');
     await page.screenshot({
       path: resolve(output, `templates-${viewport.width}.png`),
       fullPage: true,

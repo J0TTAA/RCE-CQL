@@ -161,7 +161,19 @@ try {
       () => !document.querySelector('#rule-creation-form select')?.disabled,
     );
     assert.equal(await choice.inputValue(), 'blank');
-    assert.equal(await choice.locator('option').count(), ORDER_RULE_TEMPLATES.length);
+    assert.deepEqual(
+      await choice
+        .locator('option')
+        .evaluateAll((options) => options.map((option) => option.value)),
+      [
+        'blank',
+        'patient-view-adult',
+        'order-select-amoxicillin',
+        'order-sign-hba1c',
+        'patient-view-diabetes-four-facts',
+      ],
+      'Only the blank starting point and four demo rules are offered',
+    );
     await assertCatalog();
     await assertFits();
     await page.screenshot({
@@ -179,7 +191,7 @@ try {
     );
     await page.keyboard.press('Shift+Tab');
     assert.equal(await create.evaluate((el) => el === document.activeElement), true);
-    await choice.selectOption('allergy-order');
+    await choice.selectOption('order-select-amoxicillin');
     await modal.getByRole('button', { name: 'Cancelar', exact: true }).click();
     await page.waitForURL('**/rules');
     assert.equal(await page.getByLabel('Buscar regla', { exact: true }).inputValue(), 'sintetica');
@@ -243,12 +255,12 @@ try {
       () => !document.querySelector('#rule-creation-form select')?.disabled,
     );
     assert.equal(await choice.inputValue(), 'blank');
-    await choice.selectOption('diabetes-order');
+    await choice.selectOption('order-sign-hba1c');
     creationFailure = true;
     await create.click();
     await modal.getByRole('alert').waitFor();
     assert.equal(creations.length, 2, 'No automatic retry on a failed write');
-    assert.equal(await choice.inputValue(), 'diabetes-order');
+    assert.equal(await choice.inputValue(), 'order-sign-hba1c');
     assert.equal(new URL(page.url()).pathname, '/rules/new');
     await assertFits();
     await page.screenshot({
@@ -261,7 +273,7 @@ try {
     assert.equal(await page.getByLabel('Hook').inputValue(), 'order-sign');
     assert.equal(
       creations[2].cql,
-      ORDER_RULE_TEMPLATES.find((item) => item.id === 'diabetes-order').cql,
+      ORDER_RULE_TEMPLATES.find((item) => item.id === 'order-sign-hba1c').cql,
     );
     assert.equal(await modal.count(), 0);
     assert.deepEqual(unexpected, []);

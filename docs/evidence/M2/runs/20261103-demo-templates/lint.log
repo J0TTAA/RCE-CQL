@@ -1,0 +1,7 @@
+
+> rce-cql@0.1.0 lint
+> npm run lint --workspace @rce-cql/api
+
+
+> @rce-cql/api@0.1.0 lint
+> eslint src --max-warnings=0

@@ -46,10 +46,10 @@ assert.notEqual(sessionA.sandboxId, sessionB.sandboxId);
 await a(`/ui/patients/${patientId}`);
 const templates = await a('/ui/orders/templates');
 const names = {};
-for (const id of ['allergy-order', 'diabetes-order']) {
+for (const id of ['order-select-amoxicillin', 'order-sign-hba1c']) {
   const template = templates.find((item) => item.id === id);
   assert.ok(template, `Falta plantilla ${id}`);
-  const name = `Smoke${id === 'allergy-order' ? 'Allergy' : 'Diabetes'}${Date.now()}`;
+  const name = `Smoke${id === 'order-select-amoxicillin' ? 'Selection' : 'Signature'}${Date.now()}`;
   const rule = await a(
     '/ui/rules',
     'POST',
@@ -73,18 +73,6 @@ for (const id of ['allergy-order', 'diabetes-order']) {
   await a(`/ui/rules/${rule.id}/publish`, 'POST', undefined, 201);
   names[id] = name;
 }
-await a(`/ui/patients/${patientId}`, 'PATCH', {
-  diabetesCondition: true,
-  clinicalResources: [
-    {
-      id: 'smoke-allergy',
-      type: 'allergy',
-      code: 'penicillin',
-      status: 'active',
-      date: new Date().toISOString().slice(0, 10),
-    },
-  ],
-});
 const medication = {
   id: randomUUID(),
   catalogId: 'amoxicillin',
@@ -99,13 +87,13 @@ const selected = await a(`/ui/orders/${patientId}/review`, 'POST', {
   selections: [medication.id],
 });
 assert.deepEqual(selected.activity.warnings, []);
-assert.ok(selected.cards.some((card) => card.ruleName === names['allergy-order']));
+assert.ok(selected.cards.some((card) => card.ruleName === names['order-select-amoxicillin']));
 const negative = await a(`/ui/orders/${patientId}/review`, 'POST', {
   hook: 'order-select',
   orders: [{ ...medication, catalogId: 'lisinopril' }],
   selections: [medication.id],
 });
-assert.ok(!negative.cards.some((card) => card.ruleName === names['allergy-order']));
+assert.ok(!negative.cards.some((card) => card.ruleName === names['order-select-amoxicillin']));
 
 const request = {
   hook: 'order-select',
@@ -135,12 +123,16 @@ const request = {
   },
 };
 const standard = await a('/cds-services/rce-order-select', 'POST', request);
-assert.ok(standard.cards.some((card) => card.source.label.startsWith(names['allergy-order'])));
+assert.ok(
+  standard.cards.some((card) => card.source.label.startsWith(names['order-select-amoxicillin'])),
+);
 const other = await b('/cds-services/rce-order-select', 'POST', {
   ...request,
   hookInstance: randomUUID(),
 });
-assert.ok(!other.cards.some((card) => card.source.label.startsWith(names['allergy-order'])));
+assert.ok(
+  !other.cards.some((card) => card.source.label.startsWith(names['order-select-amoxicillin'])),
+);
 
 const lab = { id: randomUUID(), catalogId: 'hba1c', priority: 'routine' };
 const reviewed = await a(`/ui/orders/${patientId}/review`, 'POST', {
@@ -148,7 +140,7 @@ const reviewed = await a(`/ui/orders/${patientId}/review`, 'POST', {
   orders: [lab],
 });
 assert.deepEqual(reviewed.activity.warnings, []);
-assert.ok(reviewed.cards.some((card) => card.ruleName === names['diabetes-order']));
+assert.ok(reviewed.cards.some((card) => card.ruleName === names['order-sign-hba1c']));
 assert.ok(reviewed.reviewId);
 const standardSign = await a('/cds-services/rce-order-sign', 'POST', {
   hook: 'order-sign',
@@ -174,7 +166,9 @@ const standardSign = await a('/cds-services/rce-order-sign', 'POST', {
     },
   },
 });
-assert.ok(standardSign.cards.some((card) => card.source.label.startsWith(names['diabetes-order'])));
+assert.ok(
+  standardSign.cards.some((card) => card.source.label.startsWith(names['order-sign-hba1c'])),
+);
 await b(
   `/ui/orders/${patientId}/reviews/${reviewed.reviewId}/confirm`,
   'POST',
@@ -188,12 +182,12 @@ const detailA = await a(`/ui/patients/${patientId}`);
 const detailB = await b(`/ui/patients/${patientId}`);
 assert.equal(detailA.serviceRequests.filter((item) => item.id === lab.id).length, 1);
 assert.ok(!detailB.serviceRequests.some((item) => item.id === lab.id));
-await a(`/ui/patients/${patientId}`, 'PATCH', { diabetesCondition: false });
-const noDiabetes = await a(`/ui/orders/${patientId}/review`, 'POST', {
+const otherExam = await a(`/ui/orders/${patientId}/review`, 'POST', {
   hook: 'order-sign',
-  orders: [{ ...lab, id: randomUUID() }],
+  orders: [{ ...lab, id: randomUUID(), catalogId: 'creatinine' }],
 });
-assert.ok(!noDiabetes.cards.some((card) => card.ruleName === names['diabetes-order']));
+assert.deepEqual(otherExam.activity.warnings, []);
+assert.ok(!otherExam.cards.some((card) => card.ruleName === names['order-sign-hba1c']));
 console.log(
   'OK: CQL -> traductor real -> ELM -> Library FHIR -> order-select/order-sign -> cards; confirmacion e aislamiento verificados.',
 );

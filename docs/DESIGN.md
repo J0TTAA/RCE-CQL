@@ -149,6 +149,17 @@ al ejecutar el hook con el contexto FHIR del paciente y revisar la actividad.
 Documentacion y escenarios: [Guia de hooks](./CDS_HOOKS_WORKFLOWS.md).
 Alcance: REQ-F-033, REQ-F-039, REQ-F-052, REQ-F-053; TASK-5.8.
 
+### Catalogo docente de plantillas (2026-11-03)
+
+El selector de creacion ofrece `En blanco` y cuatro reglas: una simple para
+`patient-view` (adulto), una para `order-select` (amoxicilina seleccionada), una
+para `order-sign` (solicitud pendiente de HbA1c) y una completa para
+`patient-view` (adulto, diabetes activa, HbA1c elevada y metformina activa).
+Las reglas simples de ordenes no requieren alergias ni diagnosticos. El CQL y
+el hook provienen del catalogo de NestJS, que sustituye las antiguas plantillas
+del selector. No se migran ni eliminan las Library ya creadas por los usuarios.
+La opcion vacia no cuenta como una de las cuatro reglas docentes.
+
 ## 7. Vista de contexto
 
 ```mermaid

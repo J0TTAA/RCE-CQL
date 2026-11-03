@@ -1,58 +1,36 @@
-# Flujo de recetas y ordenes con CDS Hooks
+# Plantillas docentes y flujo de órdenes
 
-## Momentos disponibles
+El selector ofrece **En blanco** y **cuatro reglas**. Sustituye las antiguas plantillas de alergia y diabetes al ordenar; no elimina las Library ya creadas por los usuarios.
 
-| Accion en el RCE | Hook | Datos que puede consultar CQL |
-| --- | --- | --- |
-| Abrir o reevaluar la ficha | `patient-view` | Paciente y antecedentes del sandbox |
-| Agregar una receta, examen o procedimiento pendiente | `order-select` | Antecedentes y ordenes pendientes; cuales se acaban de seleccionar |
-| Pulsar **Firmar órdenes** | `order-sign` | Antecedentes y todas las ordenes pendientes, incluidos dosis y frecuencia |
+| Plantilla | Hook | Caso positivo | Caso negativo |
+| --- | --- | --- | --- |
+| Simple · patient-view: paciente adulto | patient-view | Nacimiento 1980-01-01 | Nacimiento 2012-01-01 |
+| Simple · order-select: amoxicilina | order-select | Seleccionar amoxicilina | Seleccionar lisinopril |
+| Simple · order-sign: solicitud de HbA1c | order-sign | Revisar firma con HbA1c pendiente | Revisar solo creatinina |
+| Completa · patient-view: diabetes, HbA1c y metformina | patient-view | Adulto, diabetes activa, HbA1c 7,2 %, metformina activa | Cambiar solo la edad a menor |
 
-El hook identifica **cuando evaluar**. La expresion CQL decide **si corresponde
-mostrar una card**. Un hook ejecutado correctamente puede responder sin cards.
-El catalogo inicial ofrece cuatro medicamentos, tres examenes y dos procedimientos.
-Los resultados dependen de las reglas publicadas/activas y de los datos del sandbox.
+## Preparar y publicar
 
-## Ejercicio 1: alergia al seleccionar un medicamento
+**Reglas CQL → Nueva regla → Punto de partida → elegir plantilla → Crear regla → Guardar → Validar → Publicar**. Comprobar activación en Mi sandbox. La interfaz asigna el nombre de la regla; el backend administra su versión. La opción En blanco comienza con Aplica = false.
 
-1. En **Reglas CQL > Nueva regla**, elige **Amoxicilina y alergia al seleccionar**.
-2. Pulsa **Crear regla**. Puedes editar el CQL. Conserva el hook `order-select`
-   y la expresion booleana `Aplica`.
-3. Pulsa **Validar** y luego **Publicar**. Verifica que este activa en **Mi sandbox**.
-4. Abre un paciente sintetico. En **Editar dato**, agrega una **Alergia**,
-   opcion **Penicilina**, estado **Activo**, y guarda.
-5. Pulsa **Recetar / indicar**. Selecciona **Amoxicilina 500 mg (capsula)** y
-   pulsa **Agregar a órdenes pendientes**. Si aplica, la card aparece en la
-   revisión de selección que se ejecuta al agregarla.
-6. Quita esa orden y agrega **Lisinopril**: la regla de este ejercicio no debe
-   producir card. Puede haber cards de otras reglas que hayas activado.
-7. En **Actividad CDS**, abre **Paso a paso** para identificar la seleccion,
-   el paciente, las reglas y los recursos considerados.
+## Demostrar order-select
 
-La plantilla relaciona la orden seleccionada con una alergia activa codificada.
-Es un ejercicio docente simplificado, no una comprobacion farmacologica completa.
-No cubre familias completas de antibioticos, reacciones cruzadas ni terminologia
-expandida por ValueSets.
+1. Publicar **Simple · order-select: amoxicilina**.
+2. Abrir cualquier paciente sintético. No se requiere alergia.
+3. **Recetar / indicar → Amoxicilina 500 mg → Agregar a órdenes pendientes**.
+4. La revisión de selección muestra la card de esa regla.
+5. Retirar amoxicilina y agregar lisinopril: esa card no aparece. Pueden existir cards de otras reglas.
+6. Retirar la orden pendiente antes de iniciar la siguiente escena.
 
-## Ejercicio 2: diabetes y solicitud de HbA1c antes de firmar
+## Demostrar order-sign
 
-1. Crea la plantilla **HbA1c y diabetes antes de firmar**, valida y publica.
-2. Abre un paciente sintetico y activa **Condicion activa: diabetes mellitus**
-   en **Editar dato**. Guarda el cambio.
-3. En **Recetar / indicar**, agrega **Hemoglobina glicosilada (HbA1c)**.
-4. Al agregarla se ejecuta `order-select`; esta plantilla usa `order-sign`,
-   por lo que todavia no genera su card.
-5. Pulsa **Firmar órdenes**: el RCE ejecuta `order-sign` y aparece la card
-   antes de guardar.
-6. Puedes volver a editar o pulsar **Firmar y guardar órdenes**. Esto guarda
-   la solicitud en tu sandbox; no crea un resultado de laboratorio.
-7. Para un resultado sin card, cambia la condicion de diabetes o selecciona
-   otro examen y vuelve a iniciar la firma. Si existe otra Condition de diabetes activa
-   agregada manualmente, tambien debes resolverla o retirarla.
+1. Publicar **Simple · order-sign: solicitud de HbA1c**.
+2. Agregar HbA1c desde Recetar / indicar. No se requiere diabetes.
+3. Al agregar se ejecuta order-select. Pulsar **Firmar órdenes** para ejecutar order-sign y ver su card.
+4. **Firmar y guardar órdenes** confirma la solicitud en el sandbox; no crea un resultado medido.
+5. En otra revisión, dejar solo creatinina pendiente: la regla de HbA1c no aplica, aunque haya una solicitud histórica ya confirmada.
 
-Una solicitud de examen es `ServiceRequest`. Un resultado medido se representa
-normalmente mediante `Observation`. Pedir HbA1c no significa que el paciente
-ya tenga un valor de HbA1c registrado.
+El [libreto](./LIBRETO_DEMO_PASO_A_PASO.md) contiene el CQL completo y lo que se debe decir y hacer para los cuatro ejemplos.
 
 ## Detalles para escribir otras reglas
 

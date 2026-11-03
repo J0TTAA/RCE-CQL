@@ -1,0 +1,79 @@
+
+> rce-cql@0.1.0 test
+> npm run test --workspace @rce-cql/api
+
+
+> @rce-cql/api@0.1.0 test
+> tsx --test src/common/logging/json-logger.service.spec.ts src/config/environment.spec.ts src/modules/classroom-session/application/classroom-session.service.spec.ts src/modules/cds-hooks/application/cds-hooks.service.spec.ts src/modules/cds-hooks/application/order-workflow.service.spec.ts src/modules/cql/infrastructure/cql-translation-http.adapter.spec.ts src/modules/fhir/infrastructure/hapi-fhir-http.adapter.spec.ts src/modules/health/health.service.spec.ts src/modules/ui/application/ui.service.spec.ts
+
+▶ redactLogValue
+  ✔ redacts credentials and clinical payloads recursively (1.847ms)
+  ✔ handles circular objects without failing serialization (0.1733ms)
+✔ redactLogValue (3.1448ms)
+▶ validateEnvironment
+  ✔ applies defaults to a valid configuration (12.8652ms)
+  ✔ rejects invalid dependency URLs (0.7627ms)
+  ✔ requires the teacher passcode in production (0.3731ms)
+✔ validateEnvironment (14.7273ms)
+▶ CdsHooksService
+  ✔ discovers the standard RCE CDS services (1.8639ms)
+  ✔ invokes patient-view and maps internal cards to CDS Hooks cards (0.6492ms)
+  ✔ rejects mismatched service and hook (0.7103ms)
+✔ CdsHooksService (4.3335ms)
+▶ FHIR order context
+  ✔ provides selected references and pending resources to the existing CQL engine (1.7681ms)
+  ✔ requires draftOrders and a real selection (0.6309ms)
+  ✔ rejects wrong patient, unsupported types, duplicate ids and signed selections (0.2263ms)
+  ✔ allows active orders during re-sign and does not demand selections for order-sign (0.2108ms)
+  ✔ builds R4 dosage, UCUM units, duration and service requests without invented results (0.1808ms)
+  ✔ accepts incomplete selection but rejects incomplete signing and invalid numbers (0.3786ms)
+  ✔ validates nested inputs without coercing strings and requires explicit confirmation (3.039ms)
+✔ FHIR order context (7.3104ms)
+▶ Sandbox order workflow
+  ✔ does not save orders on selection; review is pending until explicitly confirmed (1.6797ms)
+  ✔ never lets another sandbox or patient confirm a review (0.6403ms)
+  ✔ requires a new review when a rule or result changes (0.5661ms)
+  ✔ does not enable confirmation when the engine reports an evaluation error (0.179ms)
+✔ Sandbox order workflow (3.3728ms)
+▶ ClassroomSessionService
+  ✔ creates a signed anonymous session cookie (28.223ms)
+  ✔ reuses a valid cookie without changing sandbox (1.2822ms)
+  ✔ changes role while preserving the sandbox (0.8655ms)
+  ✔ resets only the browser sandbox and preserves role by default (0.6987ms)
+  ✔ rejects teacher role without the teacher passcode (0.8906ms)
+✔ ClassroomSessionService (33.355ms)
+▶ CqlTranslationHttpAdapter
+  ✔ returns ELM produced by the translator (46.8878ms)
+  ✔ preserves translator diagnostics on invalid CQL (1.0823ms)
+  ✔ rejects a successful response that is not ELM (3.1536ms)
+✔ CqlTranslationHttpAdapter (57.828ms)
+▶ HapiFhirHttpAdapter
+  ✔ accepts a FHIR R4 server with the required resources (53.3782ms)
+  ✔ sends the configured bearer token to an external HAPI (0.8948ms)
+  ✔ bypasses HAPI search-result reuse only when a fresh search is requested (1.3514ms)
+  ✔ rejects a server without the required FHIR R4 capabilities (17.7641ms)
+✔ HapiFhirHttpAdapter (75.028ms)
+▶ HealthService
+  ✔ reports ready when both mandatory dependencies are available (6.0461ms)
+  ✔ reports not ready and identifies a failed dependency (1.1924ms)
+✔ HealthService (8.3198ms)
+▶ UiService blank rule creation
+  ✔ saves a minimal CQL base as an inactive sandbox draft without translating it (1.917ms)
+✔ UiService blank rule creation (2.8071ms)
+▶ UiService patient mapping
+  ✔ maps sparse FHIR Patient resources without inventing clinical values (2.8116ms)
+  ✔ shares only base patient list requests across concurrent sandboxes (17.8801ms)
+✔ UiService patient mapping (21.7755ms)
+▶ UiService order evaluation with the installed CQL engine
+  ✔ evaluates pending resources and parameters, overriding a persisted version only for this call (263.3149ms)
+  ✔ materializes confirmed orders only for their sandbox and leaves pending reviews invisible (2.0986ms)
+  ✔ returns only clinical FHIR JSON visible to the current sandbox (0.7029ms)
+✔ UiService order evaluation with the installed CQL engine (266.4301ms)
+ℹ tests 39
+ℹ suites 12
+ℹ pass 39
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 14626.3951

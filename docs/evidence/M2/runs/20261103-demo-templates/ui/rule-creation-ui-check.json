@@ -1,0 +1,56 @@
+{
+  "results": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "status": "passed",
+      "createRequests": 3,
+      "checks": [
+        "catalog background",
+        "blank default",
+        "templates preserved",
+        "load error and retry",
+        "loading controls",
+        "cancel/close/Escape without writes",
+        "filter preservation",
+        "keyboard focus",
+        "double-submit guard",
+        "busy close guard",
+        "full editor after success",
+        "manual CQL editing",
+        "deep link",
+        "creation error without automatic retry",
+        "template hook and CQL",
+        "mobile/desktop fit"
+      ]
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": "passed",
+      "createRequests": 3,
+      "checks": [
+        "catalog background",
+        "blank default",
+        "templates preserved",
+        "load error and retry",
+        "loading controls",
+        "cancel/close/Escape without writes",
+        "filter preservation",
+        "keyboard focus",
+        "double-submit guard",
+        "busy close guard",
+        "full editor after success",
+        "manual CQL editing",
+        "deep link",
+        "creation error without automatic retry",
+        "template hook and CQL",
+        "mobile/desktop fit"
+      ]
+    }
+  ]
+}

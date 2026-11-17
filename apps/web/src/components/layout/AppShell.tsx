@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useRce } from '../../app/app-context';
 import { Link, useRouter, useRouterState } from '../../app/router';
 import { ActivityPage } from '../../features/cds/ActivityPage';
+import { FhirGuidePage } from '../../features/education/FhirGuidePage';
 import { PatientChartPage } from '../../features/patients/PatientChartPage';
 import { PatientsPage } from '../../features/patients/PatientsPage';
 import { RuleWorkspacePage } from '../../features/rules/RuleWorkspacePage';
@@ -26,6 +27,7 @@ const nav = [
   { to: '/patients', label: 'Pacientes', icon: Users },
   { to: '/rules', label: 'Reglas CQL', icon: FileCode2 },
   { to: '/activity', label: 'Actividad CDS', icon: Activity },
+  { to: '/guide', label: 'Guía FHIR', icon: BookOpenCheck },
 ];
 
 export function AppShell() {
@@ -68,6 +70,7 @@ export function AppShell() {
             <RuleWorkspacePage ruleId={router.route.ruleId} initialTab={router.route.tab} />
           ) : null}
           {router.route.name === 'activity' ? <ActivityPage /> : null}
+          {router.route.name === 'guide' ? <FhirGuidePage /> : null}
           {router.route.name === 'not-found' ? <NotFound /> : null}
         </main>
       </div>

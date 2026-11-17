@@ -8,6 +8,7 @@ export type Route =
   | { name: 'rule-new' }
   | { name: 'rule'; ruleId: string; tab?: 'metadata' | 'test' | 'elm' }
   | { name: 'activity' }
+  | { name: 'guide' }
   | { name: 'not-found' };
 
 interface RouterValue {
@@ -48,6 +49,9 @@ export function parseRoute(path: string): Route {
   }
   if (clean === '/activity') {
     return { name: 'activity' };
+  }
+  if (clean === '/guide') {
+    return { name: 'guide' };
   }
   return { name: 'not-found' };
 }

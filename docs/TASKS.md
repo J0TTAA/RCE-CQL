@@ -252,6 +252,7 @@ Objetivo: permitir modificar pacientes y observar cambios en las reglas dentro d
 | TASK-6.15 | Mostrar sesion anonima y reinicio de sandbox en la UI.                            | 6.7, 7.1             | REQ-F-051, REQ-F-054, REQ-I-007              | M      | TODO   |
 | TASK-6.16 | Mostrar trazabilidad CDS Hooks pedagogica para explicar CQL y HL7 FHIR.           | 5.4 a 5.7, 6.7       | REQ-F-032 a REQ-F-037, REQ-F-056             | M      | REVIEW |
 | TASK-6.17 | Mostrar JSON FHIR efectivo por recurso en la ficha, aislado por sandbox.          | 6.11, 6.14           | REQ-F-057, REQ-D-011, CON-010                | M      | REVIEW |
+| TASK-6.18 | Agregar guia FHIR de recursos, datos editables y flujo de reglas dentro del RCE.  | 6.7, 6.11, 6.16, 6.17 | REQ-F-058                                    | S      | DONE |
 
 Gate `M4`: editar un paciente desde la UI hace aparecer o desaparecer una card sin salir del RCE.
 

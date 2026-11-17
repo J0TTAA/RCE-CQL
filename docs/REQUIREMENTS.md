@@ -157,6 +157,7 @@ El flujo educativo esperado es:
 | REQ-F-030 | Despues de una escritura clinica exitosa, el sistema DEBE reevaluar las reglas aplicables.                    | MUST      | E2E           |
 | REQ-F-031 | La respuesta posterior al cambio DEBE permitir actualizar las cards visibles sin recargar toda la aplicacion. | MUST      | E2E           |
 | REQ-F-057 | La ficha DEBE permitir inspeccionar, solo en lectura, el JSON FHIR R4 del paciente y sus recursos clinicos efectivos en el sandbox actual, sin exponer overlays tecnicos ni datos de otro sandbox. | SHOULD | Contrato/E2E |
+| REQ-F-058 | La UI DEBERIA incluir una guia que relacione recursos FHIR con vistas del RCE, datos editables, hooks y evaluacion de reglas CQL. | SHOULD | Revision UI |
 
 ### 9.4 CDS Hooks y recomendaciones
 
@@ -304,6 +305,7 @@ Los valores siguientes son objetivos para un equipo local de demostracion:
 | AC-009 | Intentar publicar una regla compartida como alumno | La operacion se rechaza por autorizacion o queda limitada explicitamente al sandbox.       | REQ-F-045, REQ-F-046, REQ-F-055                         |
 | AC-010 | Levantar el entorno desde cero                     | Todos los servicios quedan ready con versiones fijadas.                                    | REQ-NF-002, REQ-NF-024, REQ-NF-025                      |
 | AC-011 | Abrir la misma URL desde dos navegadores           | Cada navegador recibe sandbox distinto; reglas, cambios de paciente y cards no se mezclan. | REQ-F-051 a REQ-F-054, REQ-D-010, REQ-D-011, REQ-NF-027 |
+| AC-012 | Consultar la guia FHIR desde la navegacion         | Se relacionan recursos, datos editables, vistas y hooks que existen en el RCE.             | REQ-F-058                                                |
 
 ## 14. Matriz de trazabilidad resumida
 

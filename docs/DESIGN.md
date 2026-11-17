@@ -235,6 +235,11 @@ Rutas:
 | `/rules/new`      | Catalogo con modal de nuevo borrador. |
 | `/rules/:id`      | Editor, metadata, diagnosticos y ELM. |
 | `/rules/:id/test` | Prueba contra paciente.               |
+| `/guide`          | Recursos FHIR, datos de prueba y flujo CQL/CDS Hooks. |
+
+`/guide` es una vista informativa del frontend. Relaciona recursos clinicos con
+las pestanas de la ficha, describe que datos puede variar cada sandbox y resume
+el recorrido CQL -> ELM -> motor -> card. No llama a servicios ni altera pacientes.
 
 La accion `Nueva regla` abre un modal sobre el catalogo para elegir el punto de
 partida, con `En blanco` seleccionado por defecto. Las bases CQL se obtienen de

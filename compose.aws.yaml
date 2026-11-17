@@ -21,6 +21,8 @@ services:
 
   hapi:
     logging: *aws-logging
+    environment:
+      JAVA_TOOL_OPTIONS: ${HAPI_JAVA_TOOL_OPTIONS:--Xms512m -Xmx2g -XX:+ExitOnOutOfMemoryError}
 
   synthea-seed:
     logging: *aws-logging

@@ -78,6 +78,10 @@ o mas) y genera `.env` con claves aleatorias para sesiones y PostgreSQL,
 permisos `600`, origen HTTPS y las imagenes de ese commit. No comparte las
 claves por consola ni Git. Guarda la clave docente en un gestor seguro.
 El script **no sobrescribe** un `.env` existente.
+El perfil fija por defecto el heap de HAPI en 2 GiB mediante
+`HAPI_JAVA_TOOL_OPTIONS`; ajustar este valor segun la RAM disponible. En una
+VM de 4 GiB, hacer el seed antes de iniciar web/API/traductor y vigilar
+`docker stats` y `free -h`; para la clase sigue siendo preferible 8 GiB.
 
 El segundo comando descarga las imagenes del commit, levanta todos los
 servicios, espera la API/HAPI/traductor y verifica HTTPS. `--seed` es
@@ -99,6 +103,11 @@ docker compose --env-file .env -f compose.deploy.yaml -f compose.hapi.yaml -f co
 No usar `docker compose down --volumes`: elimina los datos persistentes de
 HAPI y los certificados de Caddy. Caddy mantiene certificados/configuracion
 en volumenes; HAPI usa el volumen `hapi-postgres-data`.
+Si el seed termina con `OutOfMemoryError`, no repetirlo de inmediato: la marca
+de carga queda en estado `loading` y ya pueden existir recursos parciales.
+Revisar logs, ajustar memoria y recuperar desde un respaldo o, solo si se
+confirma que es una base nueva sin datos que conservar, reiniciar exclusivamente
+el volumen de PostgreSQL de este proyecto antes de volver a sembrar.
 
 ## 4. Verificar antes de la clase
 

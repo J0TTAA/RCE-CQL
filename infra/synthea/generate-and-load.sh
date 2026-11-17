@@ -173,7 +173,7 @@ generate_cohort() {
   local clinician_seed="$5"
   local output_dir="${WORK_DIR}/${cohort}"
 
-  ((count > 0)) || return
+  ((count > 0)) || return 0
   log "Generating ${count} patients for cohort ${cohort} (${age_range} years)"
 
   java -jar /opt/synthea.jar \

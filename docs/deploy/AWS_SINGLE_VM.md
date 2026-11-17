@@ -92,6 +92,9 @@ en HAPI: repetir `--seed` con la misma fecha/cantidad no duplica pacientes.
 Una base previamente sembrada con otra cantidad o fecha no se reduce al
 cambiar `.env`; el job falla con un mensaje. No borrar el volumen de
 PostgreSQL para intentar corregirlo sin respaldo y plan de restauracion.
+`SYNTHEA_YEARS_OF_HISTORY=10` limita la historia exportada en este perfil de
+VM; `0` conserva toda la historia y puede producir bundles grandes. El marcador
+del seed registra este valor para no confundir dos datasets distintos.
 
 Si falla, mirar primero el servicio concreto:
 

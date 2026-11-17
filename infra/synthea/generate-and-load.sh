@@ -13,6 +13,7 @@ readonly CHILD_COUNT="${SYNTHEA_CHILD_COUNT:-6}"
 readonly ADOLESCENT_COUNT="${SYNTHEA_ADOLESCENT_COUNT:-4}"
 readonly ADULT_COUNT="${SYNTHEA_ADULT_COUNT:-12}"
 readonly OLDER_ADULT_COUNT="${SYNTHEA_OLDER_ADULT_COUNT:-8}"
+readonly HISTORY_YEARS="${SYNTHEA_YEARS_OF_HISTORY:-0}"
 
 WORK_DIR=""
 LOADED_BUNDLES=0
@@ -44,6 +45,7 @@ validate_config() {
   for value in "${CHILD_COUNT}" "${ADOLESCENT_COUNT}" "${ADULT_COUNT}" "${OLDER_ADULT_COUNT}"; do
     [[ "${value}" =~ ^[0-9]+$ ]] || fail 'All cohort counts must be non-negative integers'
   done
+  [[ "${HISTORY_YEARS}" =~ ^[0-9]+$ ]] || fail 'SYNTHEA_YEARS_OF_HISTORY must be a non-negative integer'
 
   EXPECTED_PATIENTS=$((CHILD_COUNT + ADOLESCENT_COUNT + ADULT_COUNT + OLDER_ADULT_COUNT))
   ((EXPECTED_PATIENTS > 0)) || fail 'At least one synthetic patient is required'
@@ -86,6 +88,7 @@ verify_completed_seed() {
   curl --fail --silent --show-error "${HAPI_BASE_URL}/Basic/${SEED_ID}" |
     jq --exit-status \
       --argjson expected "${EXPECTED_PATIENTS}" \
+      --argjson years "${HISTORY_YEARS}" \
       --arg date "${expected_date}" '
         .resourceType == "Basic"
         and (
@@ -94,7 +97,10 @@ verify_completed_seed() {
         and (
           first(.extension[]? | select(.url == "https://rce-cql.local/fhir/StructureDefinition/reference-date") | .valueDate) == $date
         )
-      ' >/dev/null || fail 'El HAPI ya tiene otro numero de pacientes o fecha de seed; conserva esos datos y revisa la configuracion antes de continuar.'
+        and (
+          (first(.extension[]? | select(.url == "https://rce-cql.local/fhir/StructureDefinition/years-of-history") | .valueInteger) // 0) == $years
+        )
+      ' >/dev/null || fail 'El HAPI ya tiene otra cantidad de pacientes, fecha o historial de seed; conserva esos datos y revisa la configuracion antes de continuar.'
 }
 
 put_marker() {
@@ -111,6 +117,7 @@ put_marker() {
       --arg status "${status}" \
       --arg reference_date "${REFERENCE_DATE}" \
       --argjson expected "${EXPECTED_PATIENTS}" \
+      --argjson years "${HISTORY_YEARS}" \
       '{
         resourceType: "Basic",
         id: $id,
@@ -136,6 +143,10 @@ put_marker() {
           {
             url: "https://rce-cql.local/fhir/StructureDefinition/expected-patients",
             valueInteger: $expected
+          },
+          {
+            url: "https://rce-cql.local/fhir/StructureDefinition/years-of-history",
+            valueInteger: $years
           }
         ]
       }' \
@@ -178,7 +189,7 @@ generate_cohort() {
     --exporter.hospital.fhir.export=true \
     --exporter.practitioner.fhir.export=true \
     --exporter.metadata.export=false \
-    --exporter.years_of_history=0 \
+    --exporter.years_of_history="${HISTORY_YEARS}" \
     --exporter.pretty_print=false \
     --generate.only_alive_patients=true \
     --generate.append_numbers_to_person_names=true \
